@@ -1,0 +1,120 @@
+import { Session } from '../models/Session.js';
+import { SecurityPolicy } from '../models/SecurityPolicy.js';
+import { User } from '../models/User.js';
+import * as otplib from 'otplib';
+import qrcode from 'qrcode';
+
+// --- Session Management ---
+
+export const getActiveSessions = async (req, res) => {
+  try {
+    const sessions = await Session.find({ userId: req.user._id, isActive: true })
+      .sort({ lastActive: -1 });
+    res.json({ success: true, data: sessions });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const revokeSession = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const session = await Session.findOneAndUpdate(
+      { _id: id, userId: req.user._id },
+      { isActive: false },
+      { new: true }
+    );
+    if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
+    res.json({ success: true, message: 'Session revoked successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// --- Global Security Policies ---
+
+export const getSecurityPolicy = async (req, res) => {
+  try {
+    let policy = await SecurityPolicy.findOne();
+    if (!policy) {
+      policy = new SecurityPolicy();
+      await policy.save();
+    }
+    res.json({ success: true, data: policy });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const updateSecurityPolicy = async (req, res) => {
+  try {
+    const { enforceStrongPasswords, sessionTimeout, require2FA } = req.body;
+    let policy = await SecurityPolicy.findOne();
+    if (!policy) {
+      policy = new SecurityPolicy();
+    }
+    
+    if (enforceStrongPasswords !== undefined) policy.enforceStrongPasswords = enforceStrongPasswords;
+    if (sessionTimeout !== undefined) policy.sessionTimeout = sessionTimeout;
+    if (require2FA !== undefined) policy.require2FA = require2FA;
+
+    await policy.save();
+    res.json({ success: true, data: policy, message: 'Security policies updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// --- Two-Factor Authentication ---
+
+export const setup2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const secret = otplib.authenticator.generateSecret();
+    
+    user.twoFactorSecret = secret;
+    await user.save();
+
+    const otpauth = otplib.authenticator.keyuri(user.email, 'NexusHR', secret);
+    const qrCodeUrl = await qrcode.toDataURL(otpauth);
+
+    res.json({ success: true, data: { qrCodeUrl, secret } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const verify2FA = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user.twoFactorSecret) {
+      return res.status(400).json({ success: false, message: '2FA secret not found. Setup 2FA first.' });
+    }
+
+    const isValid = otplib.authenticator.check(token, user.twoFactorSecret);
+
+    if (isValid) {
+      user.isTwoFactorEnabled = true;
+      await user.save();
+      res.json({ success: true, message: '2FA enabled successfully' });
+    } else {
+      res.status(400).json({ success: false, message: 'Invalid 2FA token' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const disable2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    user.isTwoFactorEnabled = false;
+    user.twoFactorSecret = undefined;
+    await user.save();
+    res.json({ success: true, message: '2FA disabled successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

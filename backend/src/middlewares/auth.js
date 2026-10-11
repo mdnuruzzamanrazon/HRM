@@ -1,0 +1,65 @@
+import jwt from 'jsonwebtoken';
+import { User } from '../models/User.js';
+
+export const authenticate = async (req, res, next) => {
+  try {
+    let token;
+    // Check if token exists in cookies
+    if (req.cookies && req.cookies.jwt) {
+      token = req.cookies.jwt;
+    }
+
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Not authorized, no token' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    
+    // Check if user still exists
+    const user = await User.findById(decoded.id).select('-passwordHash');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(401).json({ success: false, message: 'Not authorized, account inactive' });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error(error);
+    res.status(401).json({ success: false, message: 'Not authorized, token failed' });
+  }
+};
+
+export const authorize = (roles = []) => {
+  return (req, res, next) => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Forbidden, you do not have permission to access this resource' 
+      });
+    }
+    next();
+  };
+};
+
+export const enforceOwnershipOrPermission = (ownerField) => {
+  return (req, res, next) => {
+    // If Super Admin or HR Admin, bypass
+    if (['SUPER_ADMIN', 'HR_ADMIN'].includes(req.user.role)) {
+      return next();
+    }
+    
+    // Assuming the resource's owner ID is in the params or body
+    const resourceOwnerId = req.params[ownerField] || req.body[ownerField];
+
+    if (req.user.employeeProfileId.toString() !== resourceOwnerId?.toString()) {
+       return res.status(403).json({ success: false, message: 'Forbidden, ownership required' });
+    }
+
+    next();
+  };
+};
