@@ -73,65 +73,65 @@ export default function TaxDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Tax Management</h2>
-          <p className="text-gray-500 mt-1">Configure global tax brackets and deductions for payroll.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Tax Management</h2>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Configure global tax brackets and deductions for payroll.</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-primary hover:bg-brand-700 transition-colors"
+          className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-primary hover:bg-brand-700 transition-colors w-full sm:w-auto"
         >
           <Plus className="-ml-1 mr-2 h-5 w-5" />
           Create Tax Rule
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
         {loading ? (
           <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="min-w-full divide-y divide-gray-200 text-left">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Tax Rule Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Rate</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Description</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Tax Rule Name</th>
+                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Rate</th>
+                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell">Description</th>
+                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  <th className="px-4 sm:px-6 py-3.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {taxes.map((tax) => (
-                  <tr key={tax._id} className={`hover:bg-gray-50 transition-colors ${!tax.isActive ? 'opacity-60' : ''}`}>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr key={tax._id} className={`hover:bg-slate-50 transition-colors ${!tax.isActive ? 'opacity-60' : ''}`}>
+                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900 flex items-center">
-                        <Calculator className="w-4 h-4 mr-2 text-gray-400" />
+                        <Calculator className="w-4 h-4 mr-2 text-gray-400 shrink-0" />
                         {tax.taxName}
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">
                         Created {format(new Date(tax.createdAt), 'MMM dd, yyyy')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
                       <div className="text-sm font-bold text-gray-900">
                         {tax.type === 'PERCENTAGE' ? `${tax.taxRate}%` : `$${tax.taxRate}`}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5 capitalize">{tax.type.toLowerCase()}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-600 max-w-xs truncate">{tax.description || 'No description provided'}</div>
+                    <td className="px-4 sm:px-6 py-3.5 hidden md:table-cell">
+                      <div className="text-xs sm:text-sm text-gray-600 max-w-xs truncate">{tax.description || 'No description provided'}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-md border ${tax.isActive ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                      <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-md border ${tax.isActive ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
                         {tax.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-medium">
                       <button 
                         onClick={() => handleToggle(tax._id, tax.isActive)}
-                        className={`inline-flex items-center transition-colors ${tax.isActive ? 'text-rose-600 hover:text-rose-900' : 'text-emerald-600 hover:text-emerald-900'}`}
+                        className={`inline-flex items-center transition-colors cursor-pointer ${tax.isActive ? 'text-rose-600 hover:text-rose-900' : 'text-emerald-600 hover:text-emerald-900'}`}
                         title={tax.isActive ? 'Deactivate' : 'Activate'}
                       >
                         {tax.isActive ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
@@ -141,7 +141,7 @@ export default function TaxDashboard() {
                 ))}
                 {taxes.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500 text-sm">
+                    <td colSpan="5" className="px-4 sm:px-6 py-12 text-center text-gray-500 text-sm">
                       No tax configurations found.
                     </td>
                   </tr>
@@ -154,39 +154,39 @@ export default function TaxDashboard() {
 
       {/* Create Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="text-lg font-bold text-gray-900">Create Tax Rule</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900">Create Tax Rule</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl font-bold cursor-pointer">&times;</button>
             </div>
-            <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="p-4 sm:p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rule Name</label>
-                <input {...register('taxName')} placeholder="e.g. State Income Tax" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary" />
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tax Rule Name</label>
+                <input {...register('taxName')} placeholder="e.g. State Income Tax" className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm" />
                 {errors.taxName && <p className="mt-1 text-xs text-red-500">{errors.taxName.message}</p>}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Calculation Type</label>
-                  <select {...register('type')} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Calculation Type</label>
+                  <select {...register('type')} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white text-sm">
                     <option value="PERCENTAGE">Percentage (%)</option>
                     <option value="FIXED">Fixed Amount ($)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Rate / Amount</label>
-                  <input type="number" step="0.01" {...register('taxRate', { valueAsNumber: true })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary" />
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Rate / Amount</label>
+                  <input type="number" step="0.01" {...register('taxRate', { valueAsNumber: true })} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm" />
                   {errors.taxRate && <p className="mt-1 text-xs text-red-500">{errors.taxRate.message}</p>}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-                <textarea {...register('description')} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary resize-none" />
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <textarea {...register('description')} rows={2} className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary resize-none text-sm" />
               </div>
-              <div className="pt-4 flex justify-end space-x-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-                <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-70 flex items-center">
+              <div className="pt-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-white bg-primary rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-70 flex items-center justify-center">
                   {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Create Rule
                 </button>
