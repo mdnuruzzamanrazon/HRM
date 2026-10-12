@@ -18,7 +18,15 @@ export const connectDB = async () => {
     }
   }
 
-  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/nexushr';
+  const mongoUri = process.env.MONGO_URI ||
+    process.env.MONGODB_URI ||
+    process.env.MONGODB_URL ||
+    process.env.DATABASE_URL ||
+    process.env.MONGO_URL;
+
+  if (!mongoUri) {
+    throw new Error('No MongoDB connection string found. Please configure MONGO_URI in your Vercel Environment Variables.');
+  }
 
   cachedConnection = mongoose.connect(mongoUri, {
     serverSelectionTimeoutMS: 10000,

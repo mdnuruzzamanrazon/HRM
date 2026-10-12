@@ -76,14 +76,18 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Health Check Endpoints
 const healthHandler = (req, res) => {
+  const envKeys = ['MONGO_URI', 'MONGODB_URI', 'MONGODB_URL', 'DATABASE_URL', 'MONGO_URL'];
+  const detectedKey = envKeys.find(k => !!process.env[k]);
+
   res.json({
     status: 'ok',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     service: 'NovaHR API',
     nodeEnv: process.env.NODE_ENV || 'production',
-    version: '2.0.1-prod',
-    hasMongoUri: !!(process.env.MONGO_URI || process.env.MONGODB_URI),
+    version: '2.0.2-prod',
+    hasMongoUri: !!detectedKey,
+    detectedEnvVar: detectedKey || 'NONE (Please add MONGO_URI in Vercel Settings -> Environment Variables)'
   });
 };
 
