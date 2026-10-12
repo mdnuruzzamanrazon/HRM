@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create Axios instance with default configurations
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://6f6c4c3feed49b.lhr.life/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   withCredentials: true, // Important for sending/receiving HTTP-only cookies
   headers: {
     'Content-Type': 'application/json',

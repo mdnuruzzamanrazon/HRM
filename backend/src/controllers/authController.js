@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import argon2 from 'argon2';
 import crypto from 'crypto';
 import { User } from '../models/User.js';
+import { hashPassword, verifyPassword } from '../utils/authUtils.js';
 
 const generateToken = (res, userId) => {
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'fallback_secret', {
@@ -23,7 +23,7 @@ export const loginUser = async (req, res) => {
 
     const user = await User.findOne({ email });
 
-    if (user && (await argon2.verify(user.passwordHash, password))) {
+    if (user && (await verifyPassword(user.passwordHash, password))) {
       // Reset failed attempts
       user.failedLoginAttempts = 0;
       user.lastLoginAt = Date.now();
@@ -97,7 +97,7 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid or expired password reset token' });
     }
 
-    user.passwordHash = await argon2.hash(password);
+    user.passwordHash = await hashPassword(password);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
@@ -116,11 +116,11 @@ export const updatePassword = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-    if (!(await argon2.verify(user.passwordHash, currentPassword))) {
+    if (!(await verifyPassword(user.passwordHash, currentPassword))) {
       return res.status(400).json({ success: false, message: 'Incorrect current password' });
     }
 
-    user.passwordHash = await argon2.hash(newPassword);
+    user.passwordHash = await hashPassword(newPassword);
     await user.save();
 
     res.json({ success: true, message: 'Password updated successfully' });

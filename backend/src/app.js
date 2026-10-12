@@ -1,0 +1,125 @@
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { connectDB } from './config/db.js';
+import authRoutes from './routes/authRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
+import employeeRoutes from './routes/employeeRoutes.js';
+import attendanceRoutes from './routes/attendanceRoutes.js';
+import leaveRoutes from './routes/leaveRoutes.js';
+import payrollRoutes from './routes/payrollRoutes.js';
+import shiftRoutes from './routes/shiftRoutes.js';
+import expenseRoutes from './routes/expenseRoutes.js';
+import taxRoutes from './routes/taxRoutes.js';
+import trackingRoutes from './routes/trackingRoutes.js';
+import noticeRoutes from './routes/noticeRoutes.js';
+import taskRoutes from './routes/taskRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import securityRoutes from './routes/securityRoutes.js';
+
+dotenv.config();
+
+const app = express();
+
+// Database auto-connection middleware for serverless / requests
+app.use(async (req, res, next) => {
+  // Allow health checks to run even if DB is still connecting
+  if (req.path === '/api/health' || req.path === '/api/v1/health') {
+    return next();
+  }
+
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('[DB Middleware Error]:', error.message);
+    res.status(503).json({
+      success: false,
+      message: 'Database connection failed. Please ensure MONGO_URI is properly configured.',
+      error: error.message,
+    });
+  }
+});
+
+// Middlewares
+app.use(helmet());
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Private-Network', 'true');
+  next();
+});
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or Postman)
+    if (!origin) return callback(null, true);
+    if (
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.endsWith('.vercel.app')
+    ) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Allow all
+  },
+  credentials: true,
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('dev'));
+}
+
+// Health Check Endpoints
+const healthHandler = (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    service: 'NovaHR API',
+    nodeEnv: process.env.NODE_ENV || 'production',
+  });
+};
+
+app.get('/api/health', healthHandler);
+app.get('/api/v1/health', healthHandler);
+app.get('/api', (req, res) => {
+  res.json({
+    name: 'NovaHR Management API',
+    version: '1.0.0',
+    status: 'online',
+    endpoints: '/api/v1/*'
+  });
+});
+
+// Routes
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/employees', employeeRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
+app.use('/api/v1/leave', leaveRoutes);
+app.use('/api/v1/payroll', payrollRoutes);
+app.use('/api/v1/shifts', shiftRoutes);
+app.use('/api/v1/expenses', expenseRoutes);
+app.use('/api/v1/taxes', taxRoutes);
+app.use('/api/v1/tracking', trackingRoutes);
+app.use('/api/v1/notices', noticeRoutes);
+app.use('/api/v1/tasks', taskRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/security', securityRoutes);
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message,
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+  });
+});
+
+export default app;

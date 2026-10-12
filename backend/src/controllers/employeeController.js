@@ -1,6 +1,6 @@
 import { Employee } from '../models/Employee.js';
 import { User } from '../models/User.js';
-import argon2 from 'argon2';
+import { hashPassword } from '../utils/authUtils.js';
 
 export const getEmployees = async (req, res) => {
   try {
@@ -35,7 +35,7 @@ export const createEmployee = async (req, res) => {
 
     // Auto-create User account
     if (email) {
-      const passwordHash = await argon2.hash('NexusHR@123'); // Default password
+      const passwordHash = await hashPassword('NexusHR@123'); // Default password
       const user = new User({
         email,
         passwordHash,

@@ -1,15 +1,17 @@
 import mongoose from 'mongoose';
-import argon2 from 'argon2';
 import dotenv from 'dotenv';
 import { User } from './src/models/User.js';
 import { Employee } from './src/models/Employee.js';
+import { hashPassword } from './src/utils/authUtils.js';
 
 dotenv.config();
 
 const seedAdmin = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/nexushr');
-    console.log('MongoDB Connected');
+    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/nexushr';
+    console.log(`Connecting to MongoDB...`);
+    await mongoose.connect(mongoUri);
+    console.log('MongoDB Connected successfully');
 
     const email = 'mdnuruzzamanrazon@gmail.com';
     const password = 'ABCabc@123';
@@ -18,9 +20,9 @@ const seedAdmin = async () => {
     let adminUser = await User.findOne({ email });
     if (adminUser) {
       console.log('Admin user already exists. Updating password...');
-      adminUser.passwordHash = await argon2.hash(password);
+      adminUser.passwordHash = await hashPassword(password);
       await adminUser.save();
-      console.log('Password updated successfully.');
+      console.log('Password updated successfully for:', email);
       process.exit(0);
     }
 
@@ -41,7 +43,7 @@ const seedAdmin = async () => {
     await adminEmployee.save();
 
     // Create User Profile
-    const hashedPassword = await argon2.hash(password);
+    const hashedPassword = await hashPassword(password);
     adminUser = new User({
       email,
       passwordHash: hashedPassword,
@@ -52,7 +54,7 @@ const seedAdmin = async () => {
 
     await adminUser.save();
 
-    console.log('Super Admin user created successfully!');
+    console.log('Super Admin user created successfully! Email:', email);
     process.exit(0);
   } catch (error) {
     console.error('Error seeding admin user:', error);
