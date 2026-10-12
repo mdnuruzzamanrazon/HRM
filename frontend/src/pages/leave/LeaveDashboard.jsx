@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { format } from 'date-fns';
+import { formatSafeDate } from '../../utils/date';
 import { Plus, Check, X, Loader2 } from 'lucide-react';
 
 export default function LeaveDashboard() {
@@ -89,15 +89,15 @@ export default function LeaveDashboard() {
                       </td>
                     )}
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-medium capitalize">{leave.leaveType?.toLowerCase().replace('_', ' ')}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Applied: {format(new Date(leave.createdAt), 'MMM dd')}</div>
+                      <div className="text-sm text-gray-900 font-medium capitalize">{leave.leaveType ? leave.leaveType.toLowerCase().replace('_', ' ') : 'Leave'}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">Applied: {formatSafeDate(leave.createdAt || leave.appliedAt, 'MMM dd')}</div>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
                       <div className="text-sm text-gray-900 font-medium">
-                        {format(new Date(leave.startDate), 'MMM dd, yyyy')}
+                        {formatSafeDate(leave.startDate, 'MMM dd, yyyy')}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
-                        to {format(new Date(leave.endDate), 'MMM dd, yyyy')}
+                        to {formatSafeDate(leave.endDate, 'MMM dd, yyyy')}
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 hidden sm:table-cell">

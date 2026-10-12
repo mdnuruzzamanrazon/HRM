@@ -5,7 +5,7 @@ import { Loader2, Shield, Key, Lock, Smartphone, ShieldAlert, MonitorSmartphone,
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { formatDistanceToNow } from 'date-fns';
+import { formatSafeDistanceToNow } from '../../utils/date';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -200,7 +200,7 @@ export default function SecurityDashboard() {
                     <MonitorSmartphone className={`w-7 h-7 sm:w-8 sm:h-8 ${idx === 0 ? 'text-brand-600' : 'text-gray-400'} mr-3 sm:mr-4 shrink-0`} />
                     <div className="min-w-0">
                       <h4 className="text-xs sm:text-sm font-bold text-gray-900 truncate" title={session.deviceInfo}>{session.deviceInfo || 'Unknown Device'}</h4>
-                      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">IP: {session.ipAddress} • Last Active: {formatDistanceToNow(new Date(session.lastActive))} ago</p>
+                      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 truncate">IP: {session.ipAddress || '127.0.0.1'} • Last Active: {formatSafeDistanceToNow(session.lastActive)} ago</p>
                     </div>
                   </div>
                   <div className="flex justify-end items-center shrink-0">

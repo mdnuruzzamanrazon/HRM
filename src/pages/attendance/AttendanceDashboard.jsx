@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatSafeDate } from '../../utils/date';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AttendanceDashboard() {
@@ -53,12 +53,19 @@ export default function AttendanceDashboard() {
   // Find my own record
   const myRecord = records.find(r => r.employeeId?._id === user?.employeeProfileId);
 
+  const formatTime = (recordValue) => {
+    if (!recordValue) return '-';
+    if (typeof recordValue === 'string') return recordValue;
+    if (recordValue.timestamp) return formatSafeDate(recordValue.timestamp, 'hh:mm a', '-');
+    return '-';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Daily Attendance</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Track workforce presence for {format(new Date(date), 'MMMM dd, yyyy')}</p>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Track workforce presence for {formatSafeDate(date, 'MMMM dd, yyyy')}</p>
         </div>
         
         {/* ESS Clock In/Out Actions */}
@@ -127,13 +134,13 @@ export default function AttendanceDashboard() {
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-sm text-gray-600">
                       <div className="flex items-center">
                         <Clock className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                        {record.checkIn?.timestamp ? format(new Date(record.checkIn.timestamp), 'hh:mm a') : '-'}
+                        {formatTime(record.checkIn)}
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-sm text-gray-600">
                       <div className="flex items-center">
                         <Clock className="h-3.5 w-3.5 mr-1.5 text-gray-400" />
-                        {record.checkOut?.timestamp ? format(new Date(record.checkOut.timestamp), 'hh:mm a') : '-'}
+                        {formatTime(record.checkOut)}
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-sm text-gray-800 font-semibold">

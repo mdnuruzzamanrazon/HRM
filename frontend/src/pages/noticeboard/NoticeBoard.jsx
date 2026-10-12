@@ -5,7 +5,7 @@ import { Loader2, Megaphone, Plus, Trash2, AlertCircle, Info, AlertTriangle } fr
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
+import { formatSafeDate } from '../../utils/date';
 
 const noticeSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
@@ -115,8 +115,10 @@ export default function NoticeBoard() {
                   <p className="text-gray-700 whitespace-pre-wrap text-xs sm:text-sm leading-relaxed">{notice.content}</p>
                 </div>
                 <div className="px-4 sm:px-5 py-3 bg-gray-50/80 border-t border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center text-xs text-gray-500 gap-1 sm:gap-0">
-                  <span className="font-medium text-gray-700 truncate">By {notice.authorId?.personalDetails?.firstName} {notice.authorId?.personalDetails?.lastName}</span>
-                  <span className="text-[11px] text-gray-400">{format(new Date(notice.createdAt), 'MMM dd, yyyy • hh:mm a')}</span>
+                  <span className="font-medium text-gray-700 truncate">
+                    By {notice.authorId?.personalDetails?.firstName ? `${notice.authorId.personalDetails.firstName} ${notice.authorId.personalDetails.lastName || ''}` : (typeof notice.author === 'string' ? notice.author : 'HR Office')}
+                  </span>
+                  <span className="text-[11px] text-gray-400">{formatSafeDate(notice.createdAt, 'MMM dd, yyyy • hh:mm a')}</span>
                 </div>
               </div>
             );

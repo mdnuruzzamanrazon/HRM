@@ -20,6 +20,7 @@ export const applyLeave = async (req, res) => {
         reason: reason || 'Demo Leave Request',
         status: 'PENDING',
         appliedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
       };
       mockData.leaves.unshift(newLeave);
       return res.status(201).json({ success: true, data: newLeave, message: 'Leave application submitted successfully' });

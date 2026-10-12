@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Loader2, MapPin, MonitorSmartphone, Clock, Crosshair } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatSafeDate } from '../../utils/date';
 
 export default function TrackingDashboard() {
   const { user } = useAuth();
@@ -87,10 +87,10 @@ export default function TrackingDashboard() {
                   <tr key={log._id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
                       <div className="text-sm font-semibold text-gray-900">
-                        {format(new Date(log.createdAt), 'MMM dd, yyyy')}
+                        {formatSafeDate(log.createdAt, 'MMM dd, yyyy')}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">
-                        {format(new Date(log.createdAt), 'hh:mm:ss a')}
+                        {formatSafeDate(log.createdAt, 'hh:mm:ss a')}
                       </div>
                     </td>
                     {isAdmin && (
@@ -107,7 +107,7 @@ export default function TrackingDashboard() {
                           {getActivityIcon(log.activityType)}
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{log.activityType.replace('_', ' ')}</div>
+                          <div className="text-sm font-medium text-gray-900">{log.activityType ? log.activityType.replace('_', ' ') : 'General Activity'}</div>
                           <div className="text-xs text-gray-500 max-w-xs truncate">{log.description}</div>
                         </div>
                       </div>

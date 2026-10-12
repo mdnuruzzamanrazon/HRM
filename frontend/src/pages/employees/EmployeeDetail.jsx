@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { Loader2, ArrowLeft, User, Briefcase, Phone, MapPin, Calendar, Building, Building2, CalendarDays } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatSafeDate } from '../../utils/date';
 
 export default function EmployeeDetail() {
   const { id } = useParams();
@@ -104,7 +104,7 @@ export default function EmployeeDetail() {
                 <div>
                   <dt className="text-xs sm:text-sm font-medium text-gray-500 mb-1 flex items-center"><Calendar className="w-4 h-4 mr-2" /> Date of Joining</dt>
                   <dd className="text-sm font-bold text-gray-900">
-                    {jobDetails.joinDate ? format(new Date(jobDetails.joinDate), 'MMM dd, yyyy') : 'N/A'}
+                    {formatSafeDate(jobDetails.joinDate, 'MMM dd, yyyy')}
                   </dd>
                 </div>
               </dl>
@@ -121,7 +121,7 @@ export default function EmployeeDetail() {
                 <div>
                   <dt className="text-xs sm:text-sm font-medium text-gray-500 mb-1 flex items-center"><CalendarDays className="w-4 h-4 mr-2" /> Date of Birth</dt>
                   <dd className="text-sm font-bold text-gray-900">
-                    {personalDetails.dob ? format(new Date(personalDetails.dob), 'MMM dd, yyyy') : 'Not Provided'}
+                    {formatSafeDate(personalDetails.dob, 'MMM dd, yyyy', 'Not Provided')}
                   </dd>
                 </div>
               </dl>

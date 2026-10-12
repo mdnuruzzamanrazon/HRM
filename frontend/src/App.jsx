@@ -22,11 +22,13 @@ import TaskDashboard from './pages/task/TaskDashboard';
 import NotificationsDashboard from './pages/notifications/NotificationsDashboard';
 import SecurityDashboard from './pages/security/SecurityDashboard';
 import { AuthProvider } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
+    <ErrorBoundary fallbackTitle="Application Error">
+      <AuthProvider>
+        <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -54,6 +56,7 @@ function App() {
         </Route>
       </Routes>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -14,10 +14,12 @@ export const submitExpense = async (req, res) => {
         _id: 'exp-' + Date.now(),
         employeeId: mockData.adminEmployee,
         category: expenseType || 'OTHER',
+        expenseType: expenseType || 'OTHER',
         amount: Number(amount) || 120,
         currency: 'USD',
         description: description || 'Demo Expense Claim',
         status: 'PENDING',
+        dateIncurred: dateIncurred || new Date().toISOString().split('T')[0],
         createdAt: new Date().toISOString(),
       };
       mockData.expenses.unshift(newExp);

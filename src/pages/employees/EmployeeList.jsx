@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, Loader2 } from 'lucide-react';
 import api from '../../services/api';
-import { format } from 'date-fns';
+import { formatSafeDate } from '../../utils/date';
 
 export default function EmployeeList() {
   const [employees, setEmployees] = useState([]);
@@ -82,30 +82,30 @@ export default function EmployeeList() {
                       <div className="flex items-center">
                         <div className="shrink-0 h-9 w-9 sm:h-10 sm:w-10">
                           <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-brand-100 border border-brand-200 flex items-center justify-center text-primary font-bold text-xs sm:text-sm shadow-xs">
-                            {emp.personalDetails.firstName?.[0]}{emp.personalDetails.lastName?.[0]}
+                            {emp.personalDetails?.firstName?.[0] || '?'}{emp.personalDetails?.lastName?.[0] || '?'}
                           </div>
                         </div>
                         <div className="ml-3 sm:ml-4 min-w-0">
                           <div className="text-sm font-semibold text-gray-900 truncate">
-                            {emp.personalDetails.firstName} {emp.personalDetails.lastName}
+                            {emp.personalDetails?.firstName || 'Unknown'} {emp.personalDetails?.lastName || ''}
                           </div>
                           <div className="text-xs text-gray-500 mt-0.5">{emp.employeeCode}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-medium">{emp.jobDetails.title}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{emp.jobDetails.employmentType}</div>
+                      <div className="text-sm text-gray-900 font-medium">{emp.jobDetails?.title || 'Staff'}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{emp.jobDetails?.employmentType || 'Full-time'}</div>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
                       <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-md ${
-                        emp.jobDetails.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'
+                        (emp.jobDetails?.status || 'ACTIVE') === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'
                       }`}>
-                        {emp.jobDetails.status}
+                        {emp.jobDetails?.status || 'ACTIVE'}
                       </span>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                      {format(new Date(emp.jobDetails.joinDate), 'MMM dd, yyyy')}
+                      {formatSafeDate(emp.jobDetails?.joinDate, 'MMM dd, yyyy')}
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-medium">
                       <Link to={`/employees/${emp._id}`} className="text-primary hover:text-brand-900 font-semibold p-1 hover:underline">

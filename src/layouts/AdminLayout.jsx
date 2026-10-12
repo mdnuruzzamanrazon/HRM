@@ -7,6 +7,7 @@ import {
   Bell, Shield, Menu, X 
 } from 'lucide-react';
 import { cn } from '../utils/cn';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -202,7 +203,9 @@ export default function AdminLayout() {
         {/* Scrollable Page Body */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto w-full">
-            <Outlet />
+            <ErrorBoundary resetKey={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </div>
         </main>
       </div>

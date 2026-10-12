@@ -147,6 +147,7 @@ export const mockData = {
       reason: 'Family vacation and personal rejuvenation',
       status: 'APPROVED',
       appliedAt: '2026-10-10',
+      createdAt: '2026-10-10',
     },
     {
       _id: 'leave-002',
@@ -162,6 +163,7 @@ export const mockData = {
       reason: 'Seasonal flu recovery',
       status: 'PENDING',
       appliedAt: '2026-10-12',
+      createdAt: '2026-10-12',
     },
   ],
 
@@ -217,10 +219,12 @@ export const mockData = {
         personalDetails: { firstName: 'Sarah', lastName: 'Connor' }
       },
       category: 'TRAVEL',
+      expenseType: 'TRAVEL',
       amount: 450.00,
       currency: 'USD',
       description: 'Flight ticket for Tech Summit 2026',
       status: 'APPROVED',
+      dateIncurred: '2026-10-05',
       createdAt: '2026-10-05',
     },
     {
@@ -231,10 +235,12 @@ export const mockData = {
         personalDetails: { firstName: 'David', lastName: 'Kim' }
       },
       category: 'EQUIPMENT',
+      expenseType: 'EQUIPMENT',
       amount: 180.00,
       currency: 'USD',
       description: 'Ergonomic mechanical keyboard & trackpad',
       status: 'PENDING',
+      dateIncurred: '2026-10-11',
       createdAt: '2026-10-11',
     },
   ],
@@ -328,10 +334,10 @@ export const mockData = {
   ],
 
   taxes: [
-    { _id: 'tax-1', name: 'Federal Income Tax Tier 1', rate: 12.0, type: 'PERCENTAGE', active: true },
-    { _id: 'tax-2', name: 'State Disability Insurance (SDI)', rate: 1.2, type: 'PERCENTAGE', active: true },
-    { _id: 'tax-3', name: 'Medicare Healthcare Withholding', rate: 1.45, type: 'PERCENTAGE', active: true },
-    { _id: 'tax-4', name: 'Social Security Administration (OASDI)', rate: 6.2, type: 'PERCENTAGE', active: true },
+    { _id: 'tax-1', name: 'Federal Income Tax Tier 1', taxName: 'Federal Income Tax Tier 1', rate: 12.0, taxRate: 12.0, type: 'PERCENTAGE', active: true, isActive: true, createdAt: '2026-10-01' },
+    { _id: 'tax-2', name: 'State Disability Insurance (SDI)', taxName: 'State Disability Insurance (SDI)', rate: 1.2, taxRate: 1.2, type: 'PERCENTAGE', active: true, isActive: true, createdAt: '2026-10-01' },
+    { _id: 'tax-3', name: 'Medicare Healthcare Withholding', taxName: 'Medicare Healthcare Withholding', rate: 1.45, taxRate: 1.45, type: 'PERCENTAGE', active: true, isActive: true, createdAt: '2026-10-01' },
+    { _id: 'tax-4', name: 'Social Security Administration (OASDI)', taxName: 'Social Security Administration (OASDI)', rate: 6.2, taxRate: 6.2, type: 'PERCENTAGE', active: true, isActive: true, createdAt: '2026-10-01' },
   ],
 
   security: {

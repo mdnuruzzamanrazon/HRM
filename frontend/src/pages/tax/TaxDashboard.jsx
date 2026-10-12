@@ -5,7 +5,7 @@ import { Loader2, Plus, Calculator, ToggleLeft, ToggleRight } from 'lucide-react
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
+import { formatSafeDate } from '../../utils/date';
 
 const taxSchema = z.object({
   taxName: z.string().min(2, 'Name is required'),
@@ -103,42 +103,47 @@ export default function TaxDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {taxes.map((tax) => (
-                  <tr key={tax._id} className={`hover:bg-slate-50 transition-colors ${!tax.isActive ? 'opacity-60' : ''}`}>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900 flex items-center">
-                        <Calculator className="w-4 h-4 mr-2 text-gray-400 shrink-0" />
-                        {tax.taxName}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        Created {format(new Date(tax.createdAt), 'MMM dd, yyyy')}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <div className="text-sm font-bold text-gray-900">
-                        {tax.type === 'PERCENTAGE' ? `${tax.taxRate}%` : `$${tax.taxRate}`}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5 capitalize">{tax.type.toLowerCase()}</div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 hidden md:table-cell">
-                      <div className="text-xs sm:text-sm text-gray-600 max-w-xs truncate">{tax.description || 'No description provided'}</div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-md border ${tax.isActive ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
-                        {tax.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-medium">
-                      <button 
-                        onClick={() => handleToggle(tax._id, tax.isActive)}
-                        className={`inline-flex items-center transition-colors cursor-pointer ${tax.isActive ? 'text-rose-600 hover:text-rose-900' : 'text-emerald-600 hover:text-emerald-900'}`}
-                        title={tax.isActive ? 'Deactivate' : 'Activate'}
-                      >
-                        {tax.isActive ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {taxes.map((tax) => {
+                  const isTaxActive = tax.isActive ?? tax.active ?? true;
+                  const rateVal = tax.taxRate ?? tax.rate ?? 0;
+                  const typeVal = tax.type || 'PERCENTAGE';
+                  return (
+                    <tr key={tax._id} className={`hover:bg-slate-50 transition-colors ${!isTaxActive ? 'opacity-60' : ''}`}>
+                      <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900 flex items-center">
+                          <Calculator className="w-4 h-4 mr-2 text-gray-400 shrink-0" />
+                          {tax.taxName || tax.name || 'Unnamed Tax'}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          Created {formatSafeDate(tax.createdAt, 'MMM dd, yyyy')}
+                        </div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                        <div className="text-sm font-bold text-gray-900">
+                          {typeVal === 'PERCENTAGE' ? `${rateVal}%` : `$${rateVal}`}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5 capitalize">{typeVal.toLowerCase()}</div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-3.5 hidden md:table-cell">
+                        <div className="text-xs sm:text-sm text-gray-600 max-w-xs truncate">{tax.description || 'Standard withholding tax rule'}</div>
+                      </td>
+                      <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-md border ${isTaxActive ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                          {isTaxActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-medium">
+                        <button 
+                          onClick={() => handleToggle(tax._id, isTaxActive)}
+                          className={`inline-flex items-center transition-colors cursor-pointer ${isTaxActive ? 'text-rose-600 hover:text-rose-900' : 'text-emerald-600 hover:text-emerald-900'}`}
+                          title={isTaxActive ? 'Deactivate' : 'Activate'}
+                        >
+                          {isTaxActive ? <ToggleRight className="w-6 h-6" /> : <ToggleLeft className="w-6 h-6" />}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {taxes.length === 0 && (
                   <tr>
                     <td colSpan="5" className="px-4 sm:px-6 py-12 text-center text-gray-500 text-sm">

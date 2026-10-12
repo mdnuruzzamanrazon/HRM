@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Loader2, Bell, CheckCircle2, Circle, Send, BellRing, Briefcase, FileText, Settings, DollarSign } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { formatSafeDistanceToNow } from '../../utils/date';
 
 export default function Notifications() {
   const { user } = useAuth();
@@ -148,7 +148,7 @@ export default function Notifications() {
                       </h4>
                     </div>
                     <span className="text-[11px] text-gray-400 whitespace-nowrap pl-7 sm:pl-0">
-                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                      {formatSafeDistanceToNow(notification.createdAt, { addSuffix: true })}
                     </span>
                   </div>
                   <p className={`text-xs sm:text-sm pl-7 ${!notification.isRead ? 'text-gray-800' : 'text-gray-500'} leading-relaxed`}>

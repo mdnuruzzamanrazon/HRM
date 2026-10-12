@@ -5,7 +5,7 @@ import { Loader2, Plus, Receipt, Check, X, CreditCard } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
+import { formatSafeDate } from '../../utils/date';
 
 const expenseSchema = z.object({
   expenseType: z.enum(['TRAVEL', 'MEALS', 'SUPPLIES', 'TRAINING', 'OTHER']),
@@ -123,13 +123,13 @@ export default function ExpenseDashboard() {
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
                       <div className="text-sm text-gray-900 font-medium flex items-center">
                         <Receipt className="w-4 h-4 mr-2 text-gray-400 shrink-0" />
-                        {expense.expenseType}
+                        {expense.expenseType || expense.category || 'Expense'}
                       </div>
                       <div className="text-xs text-gray-500 mt-1 max-w-xs truncate" title={expense.description}>
                         {expense.description}
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">
-                        {format(new Date(expense.dateIncurred), 'MMM dd, yyyy')}
+                        {formatSafeDate(expense.dateIncurred || expense.createdAt, 'MMM dd, yyyy')}
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">

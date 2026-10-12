@@ -123,7 +123,7 @@ export default function PayrollDashboard() {
                     )}
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
                       <div className="text-sm text-gray-900 font-medium">
-                        {new Date(slip.year, slip.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        {slip.payPeriod || (slip.year && slip.month ? new Date(slip.year, slip.month - 1).toLocaleString('default', { month: 'long', year: 'numeric' }) : 'Pay Period')}
                       </div>
                     </td>
                     <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">

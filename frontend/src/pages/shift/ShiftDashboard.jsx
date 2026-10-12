@@ -56,12 +56,18 @@ export default function ShiftDashboard() {
 
   // Helper to calculate duration
   const getDuration = (start, end) => {
-    const [h1, m1] = start.split(':').map(Number);
-    const [h2, m2] = end.split(':').map(Number);
-    let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
-    if (diff < 0) diff += 24 * 60; // overnight shift
-    const hrs = Math.floor(diff / 60);
-    return `${hrs}h`;
+    if (!start || !end || typeof start !== 'string' || typeof end !== 'string') return '-';
+    try {
+      const [h1, m1] = start.split(':').map(Number);
+      const [h2, m2] = end.split(':').map(Number);
+      let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+      if (isNaN(diff)) return '-';
+      if (diff < 0) diff += 24 * 60; // overnight shift
+      const hrs = Math.floor(diff / 60);
+      return `${hrs}h`;
+    } catch {
+      return '-';
+    }
   };
 
   return (

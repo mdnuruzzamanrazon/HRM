@@ -7,7 +7,18 @@ export const createTaxRule = async (req, res) => {
   try {
     const { taxName, taxRate, type, description } = req.body;
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      const newTax = { _id: 'tax-' + Date.now(), taxName, taxRate, type, description, isActive: true };
+      const newTax = { 
+        _id: 'tax-' + Date.now(), 
+        taxName, 
+        name: taxName, 
+        taxRate: Number(taxRate) || 0, 
+        rate: Number(taxRate) || 0, 
+        type, 
+        description, 
+        isActive: true,
+        active: true,
+        createdAt: new Date().toISOString() 
+      };
       mockData.taxes.push(newTax);
       return res.status(201).json({ success: true, data: newTax, message: 'Tax rule created successfully' });
     }
@@ -38,6 +49,19 @@ export const toggleTaxRule = async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive } = req.body;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const rule = mockData.taxes.find(t => t._id === id);
+      if (rule) {
+        rule.isActive = isActive;
+        rule.active = isActive;
+      }
+      return res.json({ 
+        success: true, 
+        data: rule || { _id: id, isActive }, 
+        message: `Tax rule ${isActive ? 'activated' : 'deactivated'}` 
+      });
+    }
 
     const taxRule = await TaxConfig.findByIdAndUpdate(id, { isActive }, { new: true });
     if (!taxRule) return res.status(404).json({ success: false, message: 'Tax rule not found' });
