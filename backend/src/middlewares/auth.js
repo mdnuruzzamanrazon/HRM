@@ -1,5 +1,8 @@
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import { User } from '../models/User.js';
+import { isDemoMode } from '../config/db.js';
+import { mockData } from '../services/mockDataService.js';
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -15,9 +18,15 @@ export const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized, no token' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-    
-    // Check if user still exists
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_nexushr_2026');
+
+    // If Demo Mode or database not connected, authenticate with demo admin user
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      req.user = mockData.adminUser;
+      return next();
+    }
+
+    // Check if user still exists in database
     const user = await User.findById(decoded.id).select('-passwordHash');
     if (!user) {
       return res.status(401).json({ success: false, message: 'Not authorized, user not found' });

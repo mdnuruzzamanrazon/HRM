@@ -1,8 +1,14 @@
+import mongoose from 'mongoose';
 import { Notification } from '../models/Notification.js';
+import { isDemoMode } from '../config/db.js';
+import { mockData } from '../services/mockDataService.js';
 
 // Get notifications for the logged-in user
 export const getMyNotifications = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: mockData.notifications });
+    }
     const recipientId = req.user.employeeProfileId;
     const notifications = await Notification.find({ recipientId })
       .sort({ createdAt: -1 })

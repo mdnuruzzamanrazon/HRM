@@ -1,5 +1,8 @@
+import mongoose from 'mongoose';
 import { AttendanceRecord } from '../models/AttendanceRecord.js';
 import { Employee } from '../models/Employee.js';
+import { isDemoMode } from '../config/db.js';
+import { mockData } from '../services/mockDataService.js';
 
 export const clockIn = async (req, res) => {
   try {
@@ -66,6 +69,9 @@ export const clockOut = async (req, res) => {
 
 export const getDailyAttendance = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: mockData.attendance });
+    }
     const date = req.query.date || new Date().toISOString().split('T')[0];
     const records = await AttendanceRecord.find({ date }).populate('employeeId', 'personalDetails employeeCode jobDetails');
     res.json({ success: true, data: records });

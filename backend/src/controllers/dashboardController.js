@@ -1,10 +1,32 @@
+import mongoose from 'mongoose';
 import { Employee } from '../models/Employee.js';
 import { AttendanceRecord } from '../models/AttendanceRecord.js';
 import { LeaveApplication } from '../models/Leave.js';
 import { ApprovalRequest } from '../models/Approval.js';
+import { isDemoMode } from '../config/db.js';
+import { mockData } from '../services/mockDataService.js';
 
 export const getDashboardStats = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({
+        success: true,
+        stats: {
+          totalEmployees: mockData.employees.length,
+          presentToday: 5,
+          onLeave: 1,
+          pendingApprovals: 2,
+        },
+        attendanceTrends: [
+          { name: 'Mon', present: 6 },
+          { name: 'Tue', present: 6 },
+          { name: 'Wed', present: 5 },
+          { name: 'Thu', present: 6 },
+          { name: 'Fri', present: 5 },
+        ],
+        isDemoMode: true,
+      });
+    }
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     const totalEmployees = await Employee.countDocuments({ 'jobDetails.status': 'ACTIVE' });

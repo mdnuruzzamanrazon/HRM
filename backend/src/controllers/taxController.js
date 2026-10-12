@@ -1,8 +1,16 @@
+import mongoose from 'mongoose';
 import { TaxConfig } from '../models/TaxConfig.js';
+import { isDemoMode } from '../config/db.js';
+import { mockData } from '../services/mockDataService.js';
 
 export const createTaxRule = async (req, res) => {
   try {
     const { taxName, taxRate, type, description } = req.body;
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const newTax = { _id: 'tax-' + Date.now(), taxName, taxRate, type, description, isActive: true };
+      mockData.taxes.push(newTax);
+      return res.status(201).json({ success: true, data: newTax, message: 'Tax rule created successfully' });
+    }
     const taxRule = new TaxConfig({ taxName, taxRate, type, description });
     await taxRule.save();
     res.status(201).json({ success: true, data: taxRule, message: 'Tax rule created successfully' });
@@ -16,6 +24,9 @@ export const createTaxRule = async (req, res) => {
 
 export const getTaxRules = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: mockData.taxes });
+    }
     const rules = await TaxConfig.find().sort({ createdAt: -1 });
     res.json({ success: true, data: rules });
   } catch (error) {

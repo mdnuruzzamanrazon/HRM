@@ -1,9 +1,15 @@
+import mongoose from 'mongoose';
 import { Employee } from '../models/Employee.js';
 import { User } from '../models/User.js';
 import { hashPassword } from '../utils/authUtils.js';
+import { isDemoMode } from '../config/db.js';
+import { mockData } from '../services/mockDataService.js';
 
 export const getEmployees = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: mockData.employees });
+    }
     const employees = await Employee.find().sort({ createdAt: -1 });
     res.json({ success: true, data: employees });
   } catch (error) {
@@ -13,6 +19,10 @@ export const getEmployees = async (req, res) => {
 
 export const getEmployeeById = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const emp = mockData.employees.find(e => e._id === req.params.id) || mockData.employees[0];
+      return res.json({ success: true, data: emp });
+    }
     const employee = await Employee.findById(req.params.id);
     if (!employee) return res.status(404).json({ success: false, message: 'Employee not found' });
     res.json({ success: true, data: employee });

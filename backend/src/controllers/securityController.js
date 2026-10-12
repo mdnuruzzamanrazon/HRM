@@ -1,13 +1,19 @@
+import mongoose from 'mongoose';
 import { Session } from '../models/Session.js';
 import { SecurityPolicy } from '../models/SecurityPolicy.js';
 import { User } from '../models/User.js';
 import * as otplib from 'otplib';
 import qrcode from 'qrcode';
+import { isDemoMode } from '../config/db.js';
+import { mockData } from '../services/mockDataService.js';
 
 // --- Session Management ---
 
 export const getActiveSessions = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: mockData.security.sessions });
+    }
     const sessions = await Session.find({ userId: req.user._id, isActive: true })
       .sort({ lastActive: -1 });
     res.json({ success: true, data: sessions });
@@ -19,6 +25,9 @@ export const getActiveSessions = async (req, res) => {
 export const revokeSession = async (req, res) => {
   try {
     const { id } = req.params;
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, message: 'Session revoked successfully' });
+    }
     const session = await Session.findOneAndUpdate(
       { _id: id, userId: req.user._id },
       { isActive: false },
@@ -35,6 +44,9 @@ export const revokeSession = async (req, res) => {
 
 export const getSecurityPolicy = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: mockData.security.policies });
+    }
     let policy = await SecurityPolicy.findOne();
     if (!policy) {
       policy = new SecurityPolicy();

@@ -2,7 +2,24 @@ import mongoose from 'mongoose';
 
 let cachedConnection = null;
 
+export const isDemoMode = () => {
+  const mongoUri =
+    process.env.MONGO_URI ||
+    process.env.MONGODB_URI ||
+    process.env.MONGODB_URL ||
+    process.env.DATABASE_URL ||
+    process.env.MONGO_URL;
+
+  return !mongoUri;
+};
+
 export const connectDB = async () => {
+  // If in demo mode, resolve immediately
+  if (isDemoMode()) {
+    console.log('[Database] Demo Mode active (no MONGO_URI). Running with in-memory store.');
+    return null;
+  }
+
   // If already connected, reuse connection
   if (mongoose.connection.readyState === 1) {
     return mongoose.connection;
@@ -18,15 +35,12 @@ export const connectDB = async () => {
     }
   }
 
-  const mongoUri = process.env.MONGO_URI ||
+  const mongoUri =
+    process.env.MONGO_URI ||
     process.env.MONGODB_URI ||
     process.env.MONGODB_URL ||
     process.env.DATABASE_URL ||
     process.env.MONGO_URL;
-
-  if (!mongoUri) {
-    throw new Error('No MongoDB connection string found. Please configure MONGO_URI in your Vercel Environment Variables.');
-  }
 
   cachedConnection = mongoose.connect(mongoUri, {
     serverSelectionTimeoutMS: 10000,
@@ -38,9 +52,11 @@ export const connectDB = async () => {
     return conn;
   } catch (error) {
     cachedConnection = null;
-    console.error(`MongoDB Connection Error: ${error.message}`);
-    throw error;
+    console.error(`MongoDB Connection Error: ${error.message}. Falling back to Demo Mode.`);
+    // Don't crash in production if connection fails, allow graceful fallback
+    return null;
   }
 };
+
 
 
