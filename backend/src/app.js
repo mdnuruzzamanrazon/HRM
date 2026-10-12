@@ -82,6 +82,8 @@ const healthHandler = (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'NovaHR API',
     nodeEnv: process.env.NODE_ENV || 'production',
+    version: '2.0.1-prod',
+    hasMongoUri: !!(process.env.MONGO_URI || process.env.MONGODB_URI),
   });
 };
 
