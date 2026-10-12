@@ -31,13 +31,20 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const { data } = await api.post('/auth/login', credentials);
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token);
+    }
     setUser(data.user);
     return data.user;
   };
 
   const logout = async () => {
-    await api.post('/auth/logout');
-    setUser(null);
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      localStorage.removeItem('auth_token');
+      setUser(null);
+    }
   };
 
   return (

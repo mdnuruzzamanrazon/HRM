@@ -4,9 +4,11 @@ import { User } from '../models/User.js';
 export const authenticate = async (req, res, next) => {
   try {
     let token;
-    // Check if token exists in cookies
+    // Check if token exists in cookies or Authorization header
     if (req.cookies && req.cookies.jwt) {
       token = req.cookies.jwt;
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {

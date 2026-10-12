@@ -11,9 +11,10 @@ const generateToken = (res, userId) => {
   res.cookie('jwt', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 15 * 60 * 1000, // 15 mins
   });
+  return token;
 };
 
 export const loginUser = async (req, res) => {
@@ -28,10 +29,11 @@ export const loginUser = async (req, res) => {
       user.lastLoginAt = Date.now();
       await user.save();
 
-      generateToken(res, user._id);
+      const token = generateToken(res, user._id);
 
       res.json({
         success: true,
+        token,
         user: {
           _id: user._id,
           email: user.email,
