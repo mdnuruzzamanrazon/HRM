@@ -52,6 +52,12 @@ export const getActiveNotices = async (req, res) => {
 export const deleteNotice = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      mockData.notices = mockData.notices.filter(n => n._id !== id);
+      return res.json({ success: true, message: 'Notice deleted successfully' });
+    }
+
     const notice = await Notice.findByIdAndUpdate(id, { isActive: false }, { new: true });
     if (!notice) return res.status(404).json({ success: false, message: 'Notice not found' });
 

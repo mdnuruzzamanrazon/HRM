@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 
+// Disable Mongoose command buffering globally to prevent 10s hangs when DB is not connected
+mongoose.set('bufferCommands', false);
+
 let cachedConnection = null;
 
 export const isDemoMode = () => {

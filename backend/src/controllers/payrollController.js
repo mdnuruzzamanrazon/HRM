@@ -88,6 +88,14 @@ export const updatePayslipStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const payslip = mockData.payrolls.find(p => p._id === id);
+      if (payslip) {
+        payslip.status = status;
+      }
+      return res.json({ success: true, data: payslip || { _id: id, status }, message: 'Payslip status updated' });
+    }
+
     const payslip = await Payroll.findByIdAndUpdate(id, { status }, { new: true });
     if (!payslip) return res.status(404).json({ success: false, message: 'Payslip not found' });
 

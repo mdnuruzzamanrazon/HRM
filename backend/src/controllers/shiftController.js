@@ -35,7 +35,17 @@ export const getShifts = async (req, res) => {
 export const assignShift = async (req, res) => {
   try {
     const { employeeId, shiftId } = req.body;
-    
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const assignment = {
+        _id: 'sa-' + Date.now(),
+        employeeId: mockData.employees.find(e => e._id === employeeId) || mockData.adminEmployee,
+        shiftId: mockData.shifts.find(s => s._id === shiftId) || mockData.shifts[0],
+        isActive: true
+      };
+      return res.status(201).json({ success: true, data: assignment, message: 'Shift assigned successfully' });
+    }
+
     // Inactivate previous assignments for this employee
     await ShiftAssignment.updateMany(
       { employeeId, isActive: true },

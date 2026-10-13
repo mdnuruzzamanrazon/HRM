@@ -76,7 +76,23 @@ export const updateExpenseStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, remarks } = req.body;
-    const approverId = req.user.employeeProfileId;
+    const approverId = req.user?.employeeProfileId || mockData.adminEmployee._id;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const exp = mockData.expenses.find(e => e._id === id);
+      if (exp) {
+        exp.status = status;
+        exp.remarks = remarks;
+        if (status !== 'PENDING') {
+          exp.approvedBy = mockData.adminEmployee;
+        }
+      }
+      return res.json({ 
+        success: true, 
+        data: exp || { _id: id, status, remarks }, 
+        message: `Expense marked as ${status.toLowerCase()}` 
+      });
+    }
 
     const expense = await Expense.findById(id);
     if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });

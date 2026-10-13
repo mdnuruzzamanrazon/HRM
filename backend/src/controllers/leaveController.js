@@ -77,7 +77,23 @@ export const updateLeaveStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status, remarks } = req.body;
-    const approverId = req.user.employeeProfileId;
+    const approverId = req.user?.employeeProfileId || mockData.adminEmployee._id;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const leave = mockData.leaves.find(l => l._id === id);
+      if (leave) {
+        leave.status = status;
+        leave.remarks = remarks;
+        if (status === 'APPROVED' || status === 'REJECTED') {
+          leave.approvedBy = mockData.adminEmployee;
+        }
+      }
+      return res.json({ 
+        success: true, 
+        data: leave || { _id: id, status, remarks }, 
+        message: `Leave application ${status.toLowerCase()}` 
+      });
+    }
 
     const leave = await LeaveApplication.findById(id);
     if (!leave) return res.status(404).json({ success: false, message: 'Leave application not found' });

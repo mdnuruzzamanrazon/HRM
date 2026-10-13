@@ -6,13 +6,26 @@ import { mockData } from '../services/mockDataService.js';
 
 export const clockIn = async (req, res) => {
   try {
-    const employeeId = req.body.employeeId || req.user.employeeProfileId;
-    
-    if (!employeeId) {
-       return res.status(400).json({ success: false, message: 'Employee Profile ID is required to clock in.' });
-    }
-
+    const employeeId = req.body.employeeId || req.user?.employeeProfileId || mockData.adminEmployee._id;
     const date = new Date().toISOString().split('T')[0];
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const existing = mockData.attendance.find(a => a.date === date);
+      if (existing && existing.checkIn) {
+        return res.status(400).json({ success: false, message: 'Already clocked in for today' });
+      }
+      const newRecord = {
+        _id: 'att-' + Date.now(),
+        employeeId: mockData.adminEmployee,
+        date,
+        checkIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        checkOut: null,
+        status: 'PRESENT',
+        workHours: 0
+      };
+      mockData.attendance.unshift(newRecord);
+      return res.status(201).json({ success: true, data: newRecord, message: 'Clocked in successfully' });
+    }
 
     const existingRecord = await AttendanceRecord.findOne({ employeeId, date });
     if (existingRecord) {
@@ -38,8 +51,21 @@ export const clockIn = async (req, res) => {
 
 export const clockOut = async (req, res) => {
   try {
-    const employeeId = req.body.employeeId || req.user.employeeProfileId;
+    const employeeId = req.body.employeeId || req.user?.employeeProfileId || mockData.adminEmployee._id;
     const date = new Date().toISOString().split('T')[0];
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const record = mockData.attendance.find(a => a.date === date) || mockData.attendance[0];
+      if (!record) {
+        return res.status(404).json({ success: false, message: 'No check-in record found for today' });
+      }
+      if (record.checkOut) {
+        return res.status(400).json({ success: false, message: 'Already clocked out' });
+      }
+      record.checkOut = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      record.workHours = 8.5;
+      return res.json({ success: true, data: record, message: 'Clocked out successfully' });
+    }
 
     const record = await AttendanceRecord.findOne({ employeeId, date });
     if (!record) {

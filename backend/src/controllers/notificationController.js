@@ -24,6 +24,13 @@ export const getMyNotifications = async (req, res) => {
 export const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const notification = mockData.notifications.find(n => n._id === id);
+      if (notification) notification.isRead = true;
+      return res.json({ success: true, data: notification || { _id: id, isRead: true } });
+    }
+
     const notification = await Notification.findOneAndUpdate(
       { _id: id, recipientId: req.user.employeeProfileId },
       { isRead: true },
@@ -40,6 +47,11 @@ export const markAsRead = async (req, res) => {
 // Mark all notifications as read
 export const markAllAsRead = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      mockData.notifications.forEach(n => { n.isRead = true; });
+      return res.json({ success: true, message: 'All notifications marked as read' });
+    }
+
     const recipientId = req.user.employeeProfileId;
     await Notification.updateMany({ recipientId, isRead: false }, { isRead: true });
     res.json({ success: true, message: 'All notifications marked as read' });
@@ -52,9 +64,22 @@ export const markAllAsRead = async (req, res) => {
 export const pushNotification = async (req, res) => {
   try {
     const { recipientId, title, message, type, link } = req.body;
-    
-    // Default to self if recipientId is not provided (for testing purposes)
-    const targetId = recipientId || req.user.employeeProfileId;
+    const targetId = recipientId || req.user?.employeeProfileId || mockData.adminEmployee._id;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const newNotif = {
+        _id: 'notif-' + Date.now(),
+        recipientId: targetId,
+        title,
+        message,
+        type: type || 'SYSTEM',
+        link,
+        isRead: false,
+        createdAt: new Date().toISOString()
+      };
+      mockData.notifications.unshift(newNotif);
+      return res.status(201).json({ success: true, data: newNotif });
+    }
 
     const notification = new Notification({
       recipientId: targetId,

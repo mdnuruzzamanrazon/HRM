@@ -68,6 +68,14 @@ export const updateTaskStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const task = mockData.tasks.find(t => t._id === id);
+      if (task) {
+        task.status = status;
+      }
+      return res.json({ success: true, data: task || { _id: id, status }, message: `Task moved to ${status.replace('_', ' ')}` });
+    }
+
     const task = await Task.findByIdAndUpdate(id, { status }, { new: true });
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
 
@@ -80,6 +88,12 @@ export const updateTaskStatus = async (req, res) => {
 export const deleteTask = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      mockData.tasks = mockData.tasks.filter(t => t._id !== id);
+      return res.json({ success: true, message: 'Task deleted successfully' });
+    }
+
     const task = await Task.findByIdAndDelete(id);
     if (!task) return res.status(404).json({ success: false, message: 'Task not found' });
 
