@@ -8,12 +8,15 @@ import {
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import ErrorBoundary from '../components/ErrorBoundary';
+import LogoutModal from '../components/LogoutModal';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Close sidebar on route change on mobile
   useEffect(() => {
@@ -41,9 +44,17 @@ export default function AdminLayout() {
     };
   }, [sidebarOpen]);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+  const handleConfirmLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoggingOut(false);
+      setIsLogoutModalOpen(false);
+    }
   };
 
   const navItems = [
@@ -149,9 +160,10 @@ export default function AdminLayout() {
               <p className="text-xs text-slate-400 truncate capitalize">{user?.role?.toLowerCase().replace('_', ' ') || 'User'}</p>
             </div>
             <button 
-              onClick={handleLogout} 
+              type="button"
+              onClick={() => setIsLogoutModalOpen(true)} 
               title="Sign out"
-              className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors ml-1 flex-shrink-0"
+              className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors ml-1 flex-shrink-0 cursor-pointer"
               aria-label="Logout"
             >
               <LogOut className="h-5 w-5" />
@@ -216,12 +228,22 @@ export default function AdminLayout() {
               <span className="text-xs font-semibold text-gray-700 max-w-[130px] truncate">
                 {user?.email}
               </span>
+              <button 
+                type="button"
+                onClick={() => setIsLogoutModalOpen(true)}
+                title="Sign out"
+                className="ml-2 p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                aria-label="Logout"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
 
             {/* Mobile Logout */}
             <button 
-              onClick={handleLogout} 
-              className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors sm:hidden"
+              type="button"
+              onClick={() => setIsLogoutModalOpen(true)} 
+              className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors sm:hidden cursor-pointer"
               title="Logout"
               aria-label="Logout"
             >
@@ -251,6 +273,15 @@ export default function AdminLayout() {
           </div>
         </main>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={() => !isLoggingOut && setIsLogoutModalOpen(false)}
+        onConfirm={handleConfirmLogout}
+        user={user}
+        isLoading={isLoggingOut}
+      />
     </div>
   );
 }
