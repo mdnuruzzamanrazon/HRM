@@ -64,7 +64,7 @@ export default function EmployeeForm() {
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Email Address (Optional: auto-creates login)</label>
-                <input {...register('email')} type="email" placeholder="e.g. employee@nexushr.com" className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm transition-shadow" />
+                <input {...register('email')} type="email" placeholder="e.g. employee@cbdp.org" className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm transition-shadow" />
                 {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
               </div>
             </div>
@@ -75,7 +75,7 @@ export default function EmployeeForm() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Employee Code</label>
-                <input {...register('employeeCode')} placeholder="e.g. NX-1001" className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm transition-shadow" />
+                <input {...register('employeeCode')} placeholder="e.g. CBDP-1001" className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary text-sm transition-shadow" />
                 {errors.employeeCode && <p className="mt-1 text-xs text-red-500">{errors.employeeCode.message}</p>}
               </div>
               <div>

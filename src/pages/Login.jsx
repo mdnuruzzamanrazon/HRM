@@ -34,14 +34,18 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-6 sm:space-y-8 bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 text-primary font-bold text-xl mb-3">
-            N
+          <div className="mx-auto w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-white p-2.5 shadow-lg shadow-slate-200/60 border border-slate-100 flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-105">
+            <img 
+              src="/cbdp-logo.png" 
+              alt="CBDP Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-            Sign in to Nexus<span className="text-primary">HR</span>
+            Sign in to <span className="text-primary font-black">CBDP</span> HR
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-gray-500">
-            Enterprise workforce & human resource portal
+            Center for Development & Peace — Human Resource Portal
           </p>
         </div>
         <form className="mt-6 sm:mt-8 space-y-5 sm:space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -56,7 +60,7 @@ export default function Login() {
               <input
                 {...register('email')}
                 type="email"
-                placeholder="admin@nexushr.com"
+                placeholder="admin@cbdp.org"
                 className="appearance-none block w-full px-3.5 py-2.5 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm transition-shadow"
               />
               {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
@@ -86,6 +90,12 @@ export default function Login() {
             >
               {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign in to account'}
             </button>
+          </div>
+
+          <div className="text-center pt-3 border-t border-slate-100">
+            <p className="text-xs text-slate-400 font-medium">
+              &copy; {new Date().getFullYear()} CBDP &bull; Hope &bull; Dignity &bull; Resilience
+            </p>
           </div>
         </form>
       </div>

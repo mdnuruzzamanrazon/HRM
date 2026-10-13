@@ -8,7 +8,7 @@ dotenv.config();
 
 const seedAdmin = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/nexushr';
+    const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cbdp';
     console.log(`Connecting to MongoDB...`);
     await mongoose.connect(mongoUri);
     console.log('MongoDB Connected successfully');
@@ -28,7 +28,7 @@ const seedAdmin = async () => {
 
     // Create Employee Profile
     const adminEmployee = new Employee({
-      employeeCode: 'NX-ADMIN-001',
+      employeeCode: 'CBDP-ADMIN-001',
       personalDetails: {
         firstName: 'System',
         lastName: 'Admin',

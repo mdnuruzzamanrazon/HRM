@@ -1,4 +1,4 @@
-// In-memory demo data store for NovaHR platform
+// In-memory demo data store for CBDP HR platform
 export const mockData = {
   adminUser: {
     _id: '6618d0987f83b1001a123456',
@@ -11,7 +11,7 @@ export const mockData = {
 
   adminEmployee: {
     _id: '6618d0987f83b1001a123457',
-    employeeCode: 'NX-ADMIN-001',
+    employeeCode: 'CBDP-ADMIN-001',
     personalDetails: {
       firstName: 'System',
       lastName: 'Admin',
@@ -35,42 +35,42 @@ export const mockData = {
   employees: [
     {
       _id: '6618d0987f83b1001a123457',
-      employeeCode: 'NX-ADMIN-001',
+      employeeCode: 'CBDP-ADMIN-001',
       personalDetails: { firstName: 'System', lastName: 'Admin' },
       jobDetails: { title: 'Super Administrator', department: 'Executive', status: 'ACTIVE', joinDate: '2023-01-01' },
       compensation: { baseSalary: 120000, currency: 'USD' },
     },
     {
       _id: '6618d0987f83b1001a123458',
-      employeeCode: 'NX-ENG-002',
+      employeeCode: 'CBDP-ENG-002',
       personalDetails: { firstName: 'Sarah', lastName: 'Connor' },
       jobDetails: { title: 'Lead Software Architect', department: 'Engineering', status: 'ACTIVE', joinDate: '2023-03-15' },
       compensation: { baseSalary: 105000, currency: 'USD' },
     },
     {
       _id: '6618d0987f83b1001a123459',
-      employeeCode: 'NX-HR-003',
+      employeeCode: 'CBDP-HR-003',
       personalDetails: { firstName: 'Elena', lastName: 'Rostova' },
       jobDetails: { title: 'Senior HR Specialist', department: 'Human Resources', status: 'ACTIVE', joinDate: '2023-06-01' },
       compensation: { baseSalary: 78000, currency: 'USD' },
     },
     {
       _id: '6618d0987f83b1001a123460',
-      employeeCode: 'NX-FIN-004',
+      employeeCode: 'CBDP-FIN-004',
       personalDetails: { firstName: 'Marcus', lastName: 'Vance' },
       jobDetails: { title: 'Finance & Payroll Director', department: 'Finance', status: 'ACTIVE', joinDate: '2022-11-10' },
       compensation: { baseSalary: 95000, currency: 'USD' },
     },
     {
       _id: '6618d0987f83b1001a123461',
-      employeeCode: 'NX-MKT-005',
+      employeeCode: 'CBDP-MKT-005',
       personalDetails: { firstName: 'Aisha', lastName: 'Patel' },
       jobDetails: { title: 'Brand Marketing Lead', department: 'Marketing', status: 'ACTIVE', joinDate: '2024-01-15' },
       compensation: { baseSalary: 82000, currency: 'USD' },
     },
     {
       _id: '6618d0987f83b1001a123462',
-      employeeCode: 'NX-ENG-006',
+      employeeCode: 'CBDP-ENG-006',
       personalDetails: { firstName: 'David', lastName: 'Kim' },
       jobDetails: { title: 'Frontend Systems Engineer', department: 'Engineering', status: 'ACTIVE', joinDate: '2024-02-01' },
       compensation: { baseSalary: 88000, currency: 'USD' },
@@ -82,7 +82,7 @@ export const mockData = {
       _id: 'att-001',
       employeeId: {
         _id: '6618d0987f83b1001a123457',
-        employeeCode: 'NX-ADMIN-001',
+        employeeCode: 'CBDP-ADMIN-001',
         personalDetails: { firstName: 'System', lastName: 'Admin' }
       },
       date: new Date().toISOString().split('T')[0],
@@ -95,7 +95,7 @@ export const mockData = {
       _id: 'att-002',
       employeeId: {
         _id: '6618d0987f83b1001a123458',
-        employeeCode: 'NX-ENG-002',
+        employeeCode: 'CBDP-ENG-002',
         personalDetails: { firstName: 'Sarah', lastName: 'Connor' }
       },
       date: new Date().toISOString().split('T')[0],
@@ -108,7 +108,7 @@ export const mockData = {
       _id: 'att-003',
       employeeId: {
         _id: '6618d0987f83b1001a123459',
-        employeeCode: 'NX-HR-003',
+        employeeCode: 'CBDP-HR-003',
         personalDetails: { firstName: 'Elena', lastName: 'Rostova' }
       },
       date: new Date().toISOString().split('T')[0],
@@ -121,7 +121,7 @@ export const mockData = {
       _id: 'att-004',
       employeeId: {
         _id: '6618d0987f83b1001a123460',
-        employeeCode: 'NX-FIN-004',
+        employeeCode: 'CBDP-FIN-004',
         personalDetails: { firstName: 'Marcus', lastName: 'Vance' }
       },
       date: new Date().toISOString().split('T')[0],
@@ -137,7 +137,7 @@ export const mockData = {
       _id: 'leave-001',
       employeeId: {
         _id: '6618d0987f83b1001a123458',
-        employeeCode: 'NX-ENG-002',
+        employeeCode: 'CBDP-ENG-002',
         personalDetails: { firstName: 'Sarah', lastName: 'Connor' }
       },
       leaveType: 'ANNUAL',
@@ -153,7 +153,7 @@ export const mockData = {
       _id: 'leave-002',
       employeeId: {
         _id: '6618d0987f83b1001a123461',
-        employeeCode: 'NX-MKT-005',
+        employeeCode: 'CBDP-MKT-005',
         personalDetails: { firstName: 'Aisha', lastName: 'Patel' }
       },
       leaveType: 'SICK',
@@ -172,7 +172,7 @@ export const mockData = {
       _id: 'pay-001',
       employeeId: {
         _id: '6618d0987f83b1001a123458',
-        employeeCode: 'NX-ENG-002',
+        employeeCode: 'CBDP-ENG-002',
         personalDetails: { firstName: 'Sarah', lastName: 'Connor' }
       },
       payPeriod: 'October 2026',
@@ -189,7 +189,7 @@ export const mockData = {
       _id: 'pay-002',
       employeeId: {
         _id: '6618d0987f83b1001a123460',
-        employeeCode: 'NX-FIN-004',
+        employeeCode: 'CBDP-FIN-004',
         personalDetails: { firstName: 'Marcus', lastName: 'Vance' }
       },
       payPeriod: 'October 2026',
@@ -215,7 +215,7 @@ export const mockData = {
       _id: 'exp-001',
       employeeId: {
         _id: '6618d0987f83b1001a123458',
-        employeeCode: 'NX-ENG-002',
+        employeeCode: 'CBDP-ENG-002',
         personalDetails: { firstName: 'Sarah', lastName: 'Connor' }
       },
       category: 'TRAVEL',
@@ -231,7 +231,7 @@ export const mockData = {
       _id: 'exp-002',
       employeeId: {
         _id: '6618d0987f83b1001a123462',
-        employeeCode: 'NX-ENG-006',
+        employeeCode: 'CBDP-ENG-006',
         personalDetails: { firstName: 'David', lastName: 'Kim' }
       },
       category: 'EQUIPMENT',
@@ -309,7 +309,7 @@ export const mockData = {
       _id: 'trk-001',
       employeeId: {
         _id: '6618d0987f83b1001a123457',
-        employeeCode: 'NX-ADMIN-001',
+        employeeCode: 'CBDP-ADMIN-001',
         personalDetails: { firstName: 'System', lastName: 'Admin' }
       },
       activityType: 'LOCATION_CHECKIN',
@@ -322,7 +322,7 @@ export const mockData = {
       _id: 'trk-002',
       employeeId: {
         _id: '6618d0987f83b1001a123458',
-        employeeCode: 'NX-ENG-002',
+        employeeCode: 'CBDP-ENG-002',
         personalDetails: { firstName: 'Sarah', lastName: 'Connor' }
       },
       activityType: 'SYSTEM_LOGIN',

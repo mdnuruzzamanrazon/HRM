@@ -83,7 +83,7 @@ const healthHandler = (req, res) => {
     status: 'ok',
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
-    service: 'NovaHR API',
+    service: 'CBDP HR API',
     nodeEnv: process.env.NODE_ENV || 'production',
     version: '2.0.2-prod',
     hasMongoUri: !!detectedKey,
@@ -95,7 +95,7 @@ app.get('/api/health', healthHandler);
 app.get('/api/v1/health', healthHandler);
 app.get('/api', (req, res) => {
   res.json({
-    name: 'NovaHR Management API',
+    name: 'CBDP Management API',
     version: '1.0.0',
     status: 'online',
     endpoints: '/api/v1/*'

@@ -45,7 +45,7 @@ export const createEmployee = async (req, res) => {
 
     // Auto-create User account
     if (email) {
-      const passwordHash = await hashPassword('NexusHR@123'); // Default password
+      const passwordHash = await hashPassword('CBDP@123'); // Default password
       const user = new User({
         email,
         passwordHash,

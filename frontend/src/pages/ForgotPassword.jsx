@@ -38,11 +38,18 @@ export default function ForgotPassword() {
         {!isSuccess ? (
           <>
             <div className="text-center">
+              <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-2 shadow-md shadow-slate-200/60 border border-slate-100 flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-105">
+                <img 
+                  src="/cbdp-logo.png" 
+                  alt="CBDP Logo" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
                 Reset your password
               </h2>
               <p className="mt-2 text-center text-xs sm:text-sm text-gray-600">
-                Enter your registered email and we'll send you a secure link to reset your credentials.
+                Enter your registered CBDP email and we'll send you a secure link to reset your credentials.
               </p>
             </div>
             
@@ -59,7 +66,7 @@ export default function ForgotPassword() {
                   {...register('email')}
                   type="email"
                   className="appearance-none block w-full px-3.5 py-2.5 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm transition-shadow"
-                  placeholder="you@company.com"
+                  placeholder="you@cbdp.org"
                 />
                 {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
               </div>

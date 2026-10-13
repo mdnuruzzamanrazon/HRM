@@ -84,9 +84,23 @@ export default function AdminLayout() {
         )}
       >
         {/* Sidebar Brand Header */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800 flex-shrink-0">
-          <Link to="/dashboard" className="font-bold text-xl tracking-tight flex items-center">
-            Nexus<span className="text-primary font-light">HR</span>
+        <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800/80 bg-slate-950/40 flex-shrink-0">
+          <Link to="/dashboard" className="flex items-center gap-3 group min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-black/20 ring-1 ring-white/10 transition-transform group-hover:scale-105 flex-shrink-0 overflow-hidden">
+              <img 
+                src="/cbdp-logo.png" 
+                alt="CBDP Logo" 
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-black text-lg tracking-wider text-white leading-tight">
+                CBDP
+              </span>
+              <span className="text-[10px] uppercase font-semibold tracking-widest text-slate-400">
+                HR Portal
+              </span>
+            </div>
           </Link>
           <button 
             type="button"
@@ -150,17 +164,27 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Responsive Header / Topbar */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 shadow-xs flex-shrink-0 z-10">
-          <div className="flex items-center min-w-0">
+          <div className="flex items-center min-w-0 space-x-3">
             {/* Mobile Hamburger Button */}
             <button 
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 mr-2 sm:mr-3 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
+              className="lg:hidden p-2 -ml-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-primary transition-colors"
               aria-label="Open sidebar"
             >
               <Menu className="h-6 w-6" />
             </button>
             
+            {/* Mobile Logo Brand */}
+            <Link to="/dashboard" className="flex items-center gap-2 lg:hidden">
+              <div className="w-8 h-8 rounded-lg bg-white p-0.5 border border-slate-200 flex items-center justify-center shadow-xs overflow-hidden">
+                <img src="/cbdp-logo.png" alt="CBDP" className="w-full h-full object-contain" />
+              </div>
+              <span className="font-extrabold text-base tracking-tight text-slate-900">CBDP</span>
+            </Link>
+
+            <div className="hidden lg:block h-5 w-px bg-slate-200" />
+
             {/* Title / Breadcrumb */}
             <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate tracking-tight">
               {currentTitle}
@@ -169,6 +193,12 @@ export default function AdminLayout() {
 
           {/* Top Right Utilities */}
           <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
+            {/* Organization pill badge */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
+              <img src="/cbdp-logo.png" alt="CBDP" className="w-4 h-4 object-contain" />
+              <span>CBDP Workforce</span>
+            </div>
+
             <Link 
               to="/notifications" 
               className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative"
@@ -190,7 +220,7 @@ export default function AdminLayout() {
 
             {/* Mobile Logout */}
             <button 
-              onClick={handleLogout}
+              onClick={handleLogout} 
               className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors sm:hidden"
               title="Logout"
               aria-label="Logout"
@@ -206,6 +236,18 @@ export default function AdminLayout() {
             <ErrorBoundary resetKey={location.pathname}>
               <Outlet />
             </ErrorBoundary>
+
+            {/* Consistent System Footer */}
+            <footer className="mt-10 pt-4 pb-2 border-t border-slate-200/80 text-center text-xs text-slate-500">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <img src="/cbdp-logo.png" alt="CBDP" className="w-4 h-4 object-contain inline" />
+                <span className="font-semibold text-slate-700">CBDP</span>
+                <span>&bull;</span>
+                <span>Human Resource Management System</span>
+                <span>&bull;</span>
+                <span className="text-slate-400">Hope • Dignity • Resilience</span>
+              </div>
+            </footer>
           </div>
         </main>
       </div>

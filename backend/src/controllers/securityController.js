@@ -87,7 +87,7 @@ export const setup2FA = async (req, res) => {
     user.twoFactorSecret = secret;
     await user.save();
 
-    const otpauth = otplib.authenticator.keyuri(user.email, 'NexusHR', secret);
+    const otpauth = otplib.authenticator.keyuri(user.email, 'CBDP HR', secret);
     const qrCodeUrl = await qrcode.toDataURL(otpauth);
 
     res.json({ success: true, data: { qrCodeUrl, secret } });

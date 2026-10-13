@@ -49,6 +49,13 @@ export default function ResetPassword() {
         {!isSuccess ? (
           <>
             <div className="text-center">
+              <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-2 shadow-md shadow-slate-200/60 border border-slate-100 flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-105">
+                <img 
+                  src="/cbdp-logo.png" 
+                  alt="CBDP Logo" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
               <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
                 Create new password
               </h2>

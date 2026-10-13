@@ -1,7 +1,7 @@
-# Product Requirements Document (PRD): NovaHR Management System
+# Product Requirements Document (PRD): CBDP HR Management System
 
 ## 1. Executive Summary
-**NovaHR** is a modern, scalable, and original Human Resource Management System (HRMS) designed to streamline employee lifecycle management, attendance, leave, payroll, and organizational workflows. Built on a robust JavaScript stack (MERN + Tailwind CSS), NovaHR offers a unified, secure, and user-centric platform for HR administrators, managers, and employees to collaborate efficiently. This PRD serves as the authoritative specification for designing, developing, testing, and deploying NovaHR.
+**CBDP HR** is a modern, scalable, and original Human Resource Management System (HRMS) designed to streamline employee lifecycle management, attendance, leave, payroll, and organizational workflows. Built on a robust JavaScript stack (MERN + Tailwind CSS), CBDP HR offers a unified, secure, and user-centric platform for HR administrators, managers, and employees to collaborate efficiently. This PRD serves as the authoritative specification for designing, developing, testing, and deploying CBDP HR.
 
 ---
 
@@ -134,7 +134,7 @@
 
 ## 8. UI/UX Specifications
 **Design System:**
-- **Branding:** NovaHR (Minimalist, Corporate, Trustworthy).
+- **Branding:** CBDP HR (Minimalist, Corporate, Trustworthy).
 - **Colors:** 
   - Primary: Indigo (`#4f46e5`)
   - Secondary: Slate (`#64748b`)
@@ -325,7 +325,7 @@ erDiagram
   - Creates 1 Super Admin, 2 HR Admins, 5 Managers, 40 Employees.
   - Generates 6 months of historical attendance data.
   - Generates mock pending approval requests for testing the Approval Center.
-- **Safety:** Clear warning tags. No real emails (use `@demo.novahr.local`). Passwords default to `Demo@123`.
+- **Safety:** Clear warning tags. No real emails (use `@demo.CBDP HR.local`). Passwords default to `Demo@123`.
 
 ---
 
@@ -375,4 +375,4 @@ A feature is considered done when:
 ---
 
 ## 23. Final Instructions
-This document represents the complete blueprint for NovaHR. Development teams should treat this PRD as the primary source of truth. Any deviations concerning tech stack (MERN + Tailwind), architecture, or feature scope must undergo formal review. Implementation begins with Phase 1 upon final stakeholder approval.
+This document represents the complete blueprint for CBDP HR. Development teams should treat this PRD as the primary source of truth. Any deviations concerning tech stack (MERN + Tailwind), architecture, or feature scope must undergo formal review. Implementation begins with Phase 1 upon final stakeholder approval.

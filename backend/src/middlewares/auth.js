@@ -18,7 +18,7 @@ export const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized, no token' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_nexushr_2026');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_cbdp_2026');
 
     // If Demo Mode or database not connected, authenticate with demo admin user
     if (isDemoMode() || mongoose.connection.readyState !== 1) {

@@ -7,7 +7,7 @@ import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 
 const generateToken = (res, userId) => {
-  const token = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'super_secret_jwt_key_nexushr_2026', {
+  const token = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'super_secret_jwt_key_cbdp_2026', {
     expiresIn: '1d',
   });
 
