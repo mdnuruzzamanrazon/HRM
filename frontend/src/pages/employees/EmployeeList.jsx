@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Loader2 } from 'lucide-react';
+import { 
+  Plus, Search, Loader2, Users, Building, Mail, 
+  Calendar, ChevronRight, Filter, ArrowUpDown, Eye 
+} from 'lucide-react';
 import api from '../../services/api';
 import { formatSafeDate } from '../../utils/date';
 
@@ -8,12 +11,14 @@ export default function EmployeeList() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
+        setLoading(true);
         const { data } = await api.get('/employees');
-        setEmployees(data.data);
+        setEmployees(data.data || []);
       } catch (error) {
         console.error(error);
       } finally {
@@ -23,101 +28,170 @@ export default function EmployeeList() {
     fetchEmployees();
   }, []);
 
-  const filtered = employees.filter(e => 
-    e.personalDetails.firstName.toLowerCase().includes(search.toLowerCase()) || 
-    e.personalDetails.lastName.toLowerCase().includes(search.toLowerCase()) ||
-    e.employeeCode.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = employees.filter(e => {
+    const firstName = e.personalDetails?.firstName || '';
+    const lastName = e.personalDetails?.lastName || '';
+    const code = e.employeeCode || '';
+    const matchesSearch = firstName.toLowerCase().includes(search.toLowerCase()) || 
+      lastName.toLowerCase().includes(search.toLowerCase()) ||
+      code.toLowerCase().includes(search.toLowerCase());
+
+    const status = e.jobDetails?.status || 'ACTIVE';
+    const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const activeCount = employees.filter(e => (e.jobDetails?.status || 'ACTIVE') === 'ACTIVE').length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 animate-fadeIn">
+      
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Employees</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage your workforce directory and profiles.</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Employee Directory</h1>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              {employees.length} Total
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Complete workforce roster, departmental affiliations, and employment profile records
+          </p>
         </div>
+
         <Link 
           to="/employees/new" 
-          className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-primary hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors w-full sm:w-auto"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.02] cursor-pointer self-start sm:self-auto"
         >
-          <Plus className="-ml-1 mr-2 h-5 w-5" />
-          Add Employee
+          <Plus className="w-4 h-4" />
+          <span>Add New Employee</span>
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
-        <div className="p-3.5 sm:p-4 border-b border-gray-200 bg-gray-50/80">
-          <div className="relative w-full sm:max-w-sm">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              className="block w-full pl-9 sm:pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm transition-shadow"
-              placeholder="Search by name or code..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+      {/* Filter and Control Toolbar */}
+      <div className="card-modern p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+        
+        {/* Search Input */}
+        <div className="relative w-full md:w-96">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <Search className="w-4 h-4" />
           </div>
+          <input
+            type="text"
+            className="block w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl bg-slate-50/50 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+            placeholder="Search employees by name or employee code..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto custom-scrollbar">
+          {['ALL', 'ACTIVE', 'ON_LEAVE', 'INACTIVE'].map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                statusFilter === status
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {status === 'ALL' ? `All (${employees.length})` : status.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Employee Table Container */}
+      <div className="card-modern overflow-hidden">
         {loading ? (
-          <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          <div className="flex flex-col justify-center items-center p-16 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <span className="text-xs font-semibold text-slate-400">Loading directory...</span>
+          </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="min-w-full divide-y divide-gray-200 text-left">
-              <thead className="bg-gray-50">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/90 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
                 <tr>
-                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Employee</th>
-                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Title</th>
-                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell">Join Date</th>
-                  <th className="px-4 sm:px-6 py-3.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                  <th className="py-3.5 px-6">Employee Profile</th>
+                  <th className="py-3.5 px-6">Employee Code</th>
+                  <th className="py-3.5 px-6">Role & Department</th>
+                  <th className="py-3.5 px-6">Employment Status</th>
+                  <th className="py-3.5 px-6 hidden lg:table-cell">Joined Date</th>
+                  <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filtered.map((emp) => (
-                  <tr key={emp._id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="shrink-0 h-9 w-9 sm:h-10 sm:w-10">
-                          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-brand-100 border border-brand-200 flex items-center justify-center text-primary font-bold text-xs sm:text-sm shadow-xs">
-                            {emp.personalDetails?.firstName?.[0] || '?'}{emp.personalDetails?.lastName?.[0] || '?'}
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((emp) => {
+                  const first = emp.personalDetails?.firstName || '';
+                  const last = emp.personalDetails?.lastName || '';
+                  const email = emp.personalDetails?.email || '';
+                  const initials = `${first[0] || 'E'}${last[0] || 'M'}`;
+                  const status = emp.jobDetails?.status || 'ACTIVE';
+
+                  const statusStyles = {
+                    ACTIVE: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                    ON_LEAVE: 'bg-amber-50 text-amber-700 border-amber-200',
+                    INACTIVE: 'bg-rose-50 text-rose-700 border-rose-200'
+                  };
+
+                  return (
+                    <tr key={emp._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-xs">
+                            {initials}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 text-sm">{first} {last}</div>
+                            <div className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                              <Mail className="w-3 h-3 text-slate-400" />
+                              <span>{email || 'employee@cbdp.org'}</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="ml-3 sm:ml-4 min-w-0">
-                          <div className="text-sm font-semibold text-gray-900 truncate">
-                            {emp.personalDetails?.firstName || 'Unknown'} {emp.personalDetails?.lastName || ''}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-0.5">{emp.employeeCode}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap font-mono font-bold text-slate-700 text-xs">
+                        {emp.employeeCode || 'CBDP-EMP'}
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="font-bold text-slate-800 text-xs">
+                          {emp.jobDetails?.designation || emp.jobDetails?.title || 'Team Member'}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-medium">{emp.jobDetails?.title || 'Staff'}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{emp.jobDetails?.employmentType || 'Full-time'}</div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-md ${
-                        (emp.jobDetails?.status || 'ACTIVE') === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'
-                      }`}>
-                        {emp.jobDetails?.status || 'ACTIVE'}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                      {formatSafeDate(emp.jobDetails?.joinDate, 'MMM dd, yyyy')}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-medium">
-                      <Link to={`/employees/${emp._id}`} className="text-primary hover:text-brand-900 font-semibold p-1 hover:underline">
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {emp.jobDetails?.departmentId?.name || emp.jobDetails?.department || 'Operations'} &bull; {emp.jobDetails?.employmentType || 'Full-time'}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusStyles[status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                          {status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap text-slate-500 font-mono text-[11px] hidden lg:table-cell">
+                        {formatSafeDate(emp.jobDetails?.joiningDate || emp.jobDetails?.joinDate, 'MMM dd, yyyy')}
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap text-right">
+                        <Link 
+                          to={`/employees/${emp._id}`} 
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Record</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500 text-sm">
-                      No employees found matching your search.
+                    <td colSpan="6" className="py-16 text-center text-slate-400">
+                      <Users className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                      <h4 className="text-sm font-bold text-slate-700">No employees match this filter</h4>
+                      <p className="text-xs text-slate-400 mt-1">Try resetting your search query or status filter.</p>
                     </td>
                   </tr>
                 )}
@@ -126,6 +200,7 @@ export default function EmployeeList() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

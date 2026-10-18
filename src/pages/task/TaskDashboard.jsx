@@ -120,7 +120,7 @@ export default function TaskDashboard() {
       ) : (
         <div className="flex-1 flex space-x-4 sm:space-x-6 overflow-x-auto pb-4 custom-scrollbar snap-x">
           {columns.map(col => (
-            <div key={col.id} className={`flex flex-col shrink-0 w-[84vw] sm:w-80 rounded-xl border ${col.color} overflow-hidden shadow-xs snap-start`}>
+            <div key={col.id} className={`flex flex-col shrink-0 w-[84vw] sm:w-80 lg:w-auto lg:flex-1 rounded-2xl border ${col.color} overflow-hidden shadow-xs snap-start`}>
               <div className="px-4 py-3 border-b border-black/5 bg-black/5 font-semibold text-gray-800 flex justify-between items-center text-sm">
                 <span>{col.title}</span>
                 <span className="bg-white px-2 py-0.5 rounded-full text-xs text-gray-600 shadow-xs font-mono font-bold">

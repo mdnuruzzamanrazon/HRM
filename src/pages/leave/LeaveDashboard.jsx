@@ -3,19 +3,24 @@ import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { formatSafeDate } from '../../utils/date';
-import { Plus, Check, X, Loader2 } from 'lucide-react';
+import { 
+  Plus, Check, X, Loader2, Calendar, Clock, 
+  CheckCircle2, XCircle, AlertCircle, Filter, Search 
+} from 'lucide-react';
 
 export default function LeaveDashboard() {
   const { user } = useAuth();
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [processingId, setProcessingId] = useState(null);
 
   const fetchLeaves = async () => {
     try {
       setLoading(true);
       const endpoint = user.role === 'EMPLOYEE' ? '/leave/my' : '/leave/all';
       const { data } = await api.get(endpoint);
-      setLeaves(data.data);
+      setLeaves(data.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -30,106 +35,214 @@ export default function LeaveDashboard() {
   const handleUpdateStatus = async (id, status) => {
     if (!window.confirm(`Are you sure you want to ${status.toLowerCase()} this leave request?`)) return;
     try {
-      await api.put(`/leave/${id}/status`, { status });
-      fetchLeaves();
+      setProcessingId(id);
+      await api.put(`/leave/${id}/status`, { status, comments: `Reviewed as ${status} by HR` });
+      await fetchLeaves();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update leave status');
+    } finally {
+      setProcessingId(null);
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'APPROVED': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'REJECTED': return 'bg-rose-100 text-rose-800 border-rose-200';
-      default: return 'bg-amber-100 text-amber-800 border-amber-200';
-    }
-  };
+  const filteredLeaves = leaves.filter(l => {
+    if (statusFilter === 'ALL') return true;
+    return l.status === statusFilter;
+  });
+
+  const pendingCount = leaves.filter(l => l.status === 'PENDING').length;
+  const approvedCount = leaves.filter(l => l.status === 'APPROVED').length;
+  const rejectedCount = leaves.filter(l => l.status === 'REJECTED').length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 animate-fadeIn">
+      
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">Leave Management</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage time off, requests, and team approvals.</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Leave & Time-Off Management</h1>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              {leaves.length} Applications
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Review time-off requests, vacation approvals, medical leaves, and company leave quotas
+          </p>
         </div>
+
         <Link 
           to="/leave/apply" 
-          className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-primary hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors w-full sm:w-auto"
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all hover:scale-[1.02] cursor-pointer self-start sm:self-auto"
         >
-          <Plus className="-ml-1 mr-2 h-5 w-5" />
-          Apply for Leave
+          <Plus className="w-4 h-4" />
+          <span>Submit Leave on Behalf</span>
         </Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card-modern p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+            <Clock className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Pending Review</span>
+            <div className="text-2xl font-black text-amber-500">{pendingCount}</div>
+            <span className="text-[11px] text-amber-600 font-medium">Requires supervisor sign-off</span>
+          </div>
+        </div>
+
+        <div className="card-modern p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Approved Leaves</span>
+            <div className="text-2xl font-black text-emerald-600">{approvedCount}</div>
+            <span className="text-[11px] text-emerald-600 font-medium">Recorded in roster</span>
+          </div>
+        </div>
+
+        <div className="card-modern p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
+            <XCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Rejected Requests</span>
+            <div className="text-2xl font-black text-rose-500">{rejectedCount}</div>
+            <span className="text-[11px] text-slate-400 font-medium">Denied by management</span>
+          </div>
+        </div>
+
+        <div className="card-modern p-5 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+            <Calendar className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Total Filings</span>
+            <div className="text-2xl font-black text-slate-900">{leaves.length}</div>
+            <span className="text-[11px] text-indigo-600 font-medium">Fiscal year to date</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Toolbar */}
+      <div className="card-modern p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto custom-scrollbar">
+          {['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map((st) => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                statusFilter === st
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {st === 'ALL' ? `All Applications (${leaves.length})` : st}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Applications Table */}
+      <div className="card-modern overflow-hidden">
         {loading ? (
-          <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+          <div className="flex flex-col justify-center items-center p-16 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+            <span className="text-xs font-semibold text-slate-400">Loading leave requests...</span>
+          </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="min-w-full divide-y divide-gray-200 text-left">
-              <thead className="bg-gray-50">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/90 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200/80">
                 <tr>
-                  {user.role !== 'EMPLOYEE' && <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Employee</th>}
-                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Leave Type</th>
-                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Duration</th>
-                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider hidden sm:table-cell">Reason</th>
-                  <th className="px-4 sm:px-6 py-3.5 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                  {user.role !== 'EMPLOYEE' && <th className="px-4 sm:px-6 py-3.5 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>}
+                  <th className="py-3.5 px-6">Applicant</th>
+                  <th className="py-3.5 px-6">Leave Category</th>
+                  <th className="py-3.5 px-6">Schedule & Duration</th>
+                  <th className="py-3.5 px-6">Reason / Business Context</th>
+                  <th className="py-3.5 px-6">Status</th>
+                  <th className="py-3.5 px-6 text-right">Approval Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {leaves.map((leave) => (
-                  <tr key={leave._id} className="hover:bg-slate-50 transition-colors">
-                    {user.role !== 'EMPLOYEE' && (
-                      <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">
-                          {leave.employeeId?.personalDetails?.firstName} {leave.employeeId?.personalDetails?.lastName}
+              <tbody className="divide-y divide-slate-100">
+                {filteredLeaves.map((leave) => {
+                  const first = leave.employeeId?.personalDetails?.firstName || '';
+                  const last = leave.employeeId?.personalDetails?.lastName || '';
+                  const code = leave.employeeId?.employeeCode || 'CBDP-EMP';
+                  const initials = `${first[0] || '?'}${last[0] || '?'}`;
+
+                  const statusStyles = {
+                    APPROVED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                    PENDING: 'bg-amber-50 text-amber-700 border-amber-200',
+                    REJECTED: 'bg-rose-50 text-rose-700 border-rose-200',
+                    CANCELLED: 'bg-slate-100 text-slate-600 border-slate-200'
+                  };
+
+                  return (
+                    <tr key={leave._id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                            {initials}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 text-xs">{first} {last}</div>
+                            <div className="text-[11px] text-slate-400 font-mono mt-0.5">{code}</div>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 mt-0.5">{leave.employeeId?.employeeCode}</div>
                       </td>
-                    )}
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-medium capitalize">{leave.leaveType ? leave.leaveType.toLowerCase().replace('_', ' ') : 'Leave'}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">Applied: {formatSafeDate(leave.createdAt || leave.appliedAt, 'MMM dd')}</div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 font-medium">
-                        {formatSafeDate(leave.startDate, 'MMM dd, yyyy')}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        to {formatSafeDate(leave.endDate, 'MMM dd, yyyy')}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 hidden sm:table-cell">
-                      <div className="text-xs sm:text-sm text-gray-700 truncate max-w-xs" title={leave.reason}>{leave.reason}</div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-md border ${getStatusColor(leave.status)}`}>
-                        {leave.status}
-                      </span>
-                    </td>
-                    {user.role !== 'EMPLOYEE' && (
-                      <td className="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="py-4 px-6 whitespace-nowrap font-bold text-slate-800">
+                        {leave.leaveType || 'ANNUAL'} Leave
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="font-mono text-xs font-semibold text-slate-800">
+                          {formatSafeDate(leave.startDate, 'MMM dd, yyyy')} &ndash; {formatSafeDate(leave.endDate, 'MMM dd, yyyy')}
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {leave.totalDays ? `${leave.totalDays} Days Requested` : 'Multiple Days'}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-slate-600 max-w-xs truncate">
+                        {leave.reason || '—'}
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusStyles[leave.status] || 'bg-slate-100 text-slate-700'}`}>
+                          {leave.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap text-right">
                         {leave.status === 'PENDING' ? (
-                          <div className="flex justify-end space-x-2">
-                            <button onClick={() => handleUpdateStatus(leave._id, 'APPROVED')} className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors cursor-pointer" title="Approve">
-                              <Check className="h-4 w-4" />
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleUpdateStatus(leave._id, 'APPROVED')}
+                              disabled={processingId === leave._id}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              Approve
                             </button>
-                            <button onClick={() => handleUpdateStatus(leave._id, 'REJECTED')} className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition-colors cursor-pointer" title="Reject">
-                              <X className="h-4 w-4" />
+                            <button
+                              onClick={() => handleUpdateStatus(leave._id, 'REJECTED')}
+                              disabled={processingId === leave._id}
+                              className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              Reject
                             </button>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-xs font-normal bg-gray-100 px-2 py-1 rounded">Processed</span>
+                          <span className="text-[11px] text-slate-400 font-medium">Completed</span>
                         )}
                       </td>
-                    )}
-                  </tr>
-                ))}
-                {leaves.length === 0 && (
+                    </tr>
+                  );
+                })}
+                {filteredLeaves.length === 0 && (
                   <tr>
-                    <td colSpan={user.role !== 'EMPLOYEE' ? 6 : 4} className="px-4 sm:px-6 py-12 text-center text-gray-500 text-sm">
-                      No leave applications found.
+                    <td colSpan="6" className="py-16 text-center text-slate-400">
+                      <Calendar className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+                      <h4 className="text-sm font-bold text-slate-700">No leave applications found</h4>
+                      <p className="text-xs text-slate-400 mt-1">Try switching to another status tab.</p>
                     </td>
                   </tr>
                 )}
@@ -138,6 +251,7 @@ export default function LeaveDashboard() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

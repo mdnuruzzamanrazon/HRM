@@ -1,5 +1,15 @@
 import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from backend/.env or root .env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config();
+
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -19,8 +29,7 @@ import noticeRoutes from './routes/noticeRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import securityRoutes from './routes/securityRoutes.js';
-
-dotenv.config();
+import employeePortalRoutes from './routes/employeePortalRoutes.js';
 
 const app = express();
 
@@ -104,6 +113,7 @@ app.get('/api', (req, res) => {
 
 // Routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
@@ -117,6 +127,8 @@ app.use('/api/v1/notices', noticeRoutes);
 app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/security', securityRoutes);
+app.use('/api/v1/employee-portal', employeePortalRoutes);
+app.use('/api/v1/employee', employeePortalRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Shield, UserCheck, Sparkles } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -16,18 +16,28 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(loginSchema),
   });
 
   const onSubmit = async (data) => {
     try {
       setError('');
-      await login(data);
-      navigate('/dashboard');
+      const user = await login({ ...data, portal: 'HR' });
+      if (user?.role === 'EMPLOYEE') {
+        navigate('/employee/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to login');
     }
+  };
+
+  const fillAdmin = () => {
+    setValue('email', 'mdnuruzzamanrazon@gmail.com');
+    setValue('password', 'ABCabc@123');
+    setError('');
   };
 
   return (
@@ -41,16 +51,41 @@ export default function Login() {
               className="w-full h-full object-contain"
             />
           </div>
+
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60 mb-2">
+            <Shield className="w-3.5 h-3.5" />
+            HR & Management Portal
+          </div>
+
           <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
             Sign in to <span className="text-primary font-black">CBDP</span> HR
           </h2>
-          <p className="mt-2 text-xs sm:text-sm text-gray-500">
-            Center for Development & Peace — Human Resource Portal
+          <p className="mt-1 text-xs sm:text-sm text-gray-500">
+            Center for Development & Peace — Administration & HR
           </p>
         </div>
-        <form className="mt-6 sm:mt-8 space-y-5 sm:space-y-6" onSubmit={handleSubmit(onSubmit)}>
+
+        {/* Quick Demo Credentials Fill */}
+        <div className="p-3.5 bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100/80 rounded-xl flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-indigo-900 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+              Demo Admin Account
+            </p>
+            <p className="text-[11px] text-indigo-700 truncate">mdnuruzzamanrazon@gmail.com</p>
+          </div>
+          <button
+            type="button"
+            onClick={fillAdmin}
+            className="flex-shrink-0 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg shadow-sm transition-colors cursor-pointer"
+          >
+            Auto Fill
+          </button>
+        </div>
+
+        <form className="mt-6 space-y-5" onSubmit={handleSubmit(onSubmit)}>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 p-3.5 rounded-xl text-sm text-center">
+            <div className="bg-red-50 border border-red-200 text-red-600 p-3.5 rounded-xl text-sm text-center leading-snug">
               {error}
             </div>
           )}
@@ -88,12 +123,26 @@ export default function Login() {
               disabled={isSubmitting}
               className="group relative w-full flex justify-center py-2.5 sm:py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-primary hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70 transition-all shadow-md shadow-primary/20 cursor-pointer"
             >
-              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign in to account'}
+              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Sign in to HR Portal'}
             </button>
           </div>
 
-          <div className="text-center pt-3 border-t border-slate-100">
-            <p className="text-xs text-slate-400 font-medium">
+          {/* Switch to Employee Portal Link */}
+          <div className="pt-3 border-t border-slate-100 text-center space-y-2">
+            <p className="text-xs text-slate-500">
+              Are you an Employee looking for Self-Service?
+            </p>
+            <Link
+              to="/employee/login"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline"
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              Switch to Employee Portal &rarr;
+            </Link>
+          </div>
+
+          <div className="text-center pt-2">
+            <p className="text-[11px] text-slate-400 font-medium">
               &copy; {new Date().getFullYear()} CBDP &bull; Hope &bull; Dignity &bull; Resilience
             </p>
           </div>

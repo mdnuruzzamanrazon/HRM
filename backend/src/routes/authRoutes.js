@@ -13,6 +13,9 @@ router.post('/reset-password/:token', resetPassword);
 router.get('/me', authenticate, (req, res) => {
   res.json({ success: true, user: req.user });
 });
+router.get('/profile', authenticate, (req, res) => {
+  res.json({ success: true, user: req.user });
+});
 
 router.put('/update-password', authenticate, updatePassword);
 

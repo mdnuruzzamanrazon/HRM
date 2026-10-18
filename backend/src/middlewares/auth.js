@@ -27,7 +27,7 @@ export const authenticate = async (req, res, next) => {
     }
 
     // Check if user still exists in database
-    const user = await User.findById(decoded.id).select('-passwordHash');
+    const user = await User.findById(decoded.id).select('-passwordHash').populate('employeeProfileId');
     if (!user) {
       return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
     }

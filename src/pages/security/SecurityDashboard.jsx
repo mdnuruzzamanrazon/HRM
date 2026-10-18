@@ -121,12 +121,14 @@ export default function SecurityDashboard() {
   const isAdmin = ['SUPER_ADMIN', 'HR_ADMIN'].includes(user.role);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-10">
+    <div className="w-full space-y-6 pb-12">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center tracking-tight">
-          Security Settings
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center tracking-tight">
+          Security Settings & Access Control
         </h2>
-        <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage account authentication, active sessions, and security policies.</p>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          Manage administrative authentication, enforce cryptographic 2FA policies, and supervise active sessions.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

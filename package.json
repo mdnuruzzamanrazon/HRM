@@ -4,10 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue.bold,green.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "node --watch backend/src/index.js",
+    "dev:frontend": "vite",
     "build": "vite build",
     "start": "node backend/src/index.js",
     "seed": "node backend/seedAdmin.js",
+    "seed:employee": "node backend/seedEmployee.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -46,6 +49,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.6",
     "oxlint": "^1.81.0",
     "vite": "^8.3.0"
   }

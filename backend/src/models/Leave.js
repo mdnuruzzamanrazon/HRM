@@ -10,7 +10,8 @@ const leaveTypeSchema = new mongoose.Schema({
 
 const leaveApplicationSchema = new mongoose.Schema({
   employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
-  leaveTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'LeaveType', required: true },
+  leaveType: { type: String, default: 'ANNUAL' },
+  leaveTypeId: { type: mongoose.Schema.Types.ObjectId, ref: 'LeaveType' },
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
   totalDays: { type: Number, required: true },

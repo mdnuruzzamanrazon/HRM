@@ -1,14 +1,16 @@
 import express from 'express';
-import { createShift, getShifts, assignShift, getShiftAssignments } from '../controllers/shiftController.js';
+import { createShift, getShifts, assignShift, getShiftAssignments, getMyShift } from '../controllers/shiftController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 
 const router = express.Router();
 
 router.use(authenticate);
 
+// Employee routes
+router.get('/my', getMyShift);
+
 // Get all active shifts
 router.get('/', getShifts);
-// Get all active shift assignments
 router.get('/assignments', getShiftAssignments);
 
 // Admin / HR only routes

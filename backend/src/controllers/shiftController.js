@@ -80,3 +80,33 @@ export const getShiftAssignments = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const getMyShift = async (req, res) => {
+  try {
+    const employeeId = req.user?.employeeProfileId?._id || req.user?.employeeProfileId || mockData.adminEmployee._id;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({
+        success: true,
+        data: {
+          shift: mockData.shifts[0] || { name: 'Standard Day Shift', startTime: '09:00', endTime: '17:00', workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] }
+        }
+      });
+    }
+
+    const assignment = await ShiftAssignment.findOne({ employeeId, isActive: true }).populate('shiftId');
+    if (!assignment || !assignment.shiftId) {
+      const defaultShift = await Shift.findOne({ isActive: true });
+      return res.json({
+        success: true,
+        data: {
+          shift: defaultShift || { name: 'Regular Office Shift', startTime: '09:00', endTime: '17:00', workDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'] }
+        }
+      });
+    }
+
+    res.json({ success: true, data: { shift: assignment.shiftId } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

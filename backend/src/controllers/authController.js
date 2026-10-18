@@ -22,7 +22,7 @@ const generateToken = (res, userId) => {
 
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, portal } = req.body;
 
     // Demo Mode fallback when cloud database is not connected
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
@@ -37,9 +37,26 @@ export const loginUser = async (req, res) => {
       }
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).populate('employeeProfileId');
 
     if (user && (await verifyPassword(user.passwordHash, password))) {
+      // Portal-specific access restriction
+      if (portal === 'HR' && user.role === 'EMPLOYEE') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access restricted: Employees must log in through the Employee Portal.',
+          suggestedPortal: 'EMPLOYEE'
+        });
+      }
+
+      if (portal === 'EMPLOYEE' && user.role !== 'EMPLOYEE' && user.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access restricted: Management & HR staff must log in through the HR Portal.',
+          suggestedPortal: 'HR'
+        });
+      }
+
       // Reset failed attempts
       user.failedLoginAttempts = 0;
       user.lastLoginAt = Date.now();
