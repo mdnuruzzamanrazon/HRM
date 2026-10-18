@@ -4,6 +4,7 @@ import { ShiftAssignment } from '../models/ShiftAssignment.js';
 import { Employee } from '../models/Employee.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 export const createShift = async (req, res) => {
   try {
@@ -110,3 +111,101 @@ export const getMyShift = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Admin: Update existing shift details
+export const updateShift = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, startTime, endTime, workDays, description } = req.body;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const s = mockData.shifts.find(item => item._id === id);
+      if (s) {
+        if (name) s.name = name;
+        if (startTime) s.startTime = startTime;
+        if (endTime) s.endTime = endTime;
+        if (workDays) s.workDays = workDays;
+      }
+      return res.json({ success: true, data: s, message: 'Shift updated successfully (Demo Mode)' });
+    }
+
+    const shift = await Shift.findByIdAndUpdate(
+      id,
+      { name, startTime, endTime, workDays, description },
+      { new: true }
+    );
+    if (!shift) return res.status(404).json({ success: false, message: 'Shift not found' });
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'UPDATE',
+      module: 'SHIFT',
+      resourceId: id,
+      newState: shift,
+      req
+    });
+
+    res.json({ success: true, data: shift, message: 'Shift updated successfully' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// Admin: Delete a shift
+export const deleteShift = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      mockData.shifts = mockData.shifts.filter(s => s._id !== id);
+      return res.json({ success: true, message: 'Shift deleted (Demo Mode)' });
+    }
+
+    const shift = await Shift.findByIdAndDelete(id);
+    if (!shift) return res.status(404).json({ success: false, message: 'Shift not found' });
+
+    // Also remove associated assignments
+    await ShiftAssignment.deleteMany({ shiftId: id });
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'DELETE',
+      module: 'SHIFT',
+      resourceId: id,
+      previousState: shift,
+      req
+    });
+
+    res.json({ success: true, message: 'Shift and its assignments deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Admin: Remove an employee from a shift assignment
+export const deleteShiftAssignment = async (req, res) => {
+  try {
+    const { id } = req.params; // assignment ID
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, message: 'Assignment removed (Demo Mode)' });
+    }
+
+    const assignment = await ShiftAssignment.findByIdAndDelete(id);
+    if (!assignment) return res.status(404).json({ success: false, message: 'Assignment not found' });
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'DELETE',
+      module: 'SHIFT_ASSIGNMENT',
+      resourceId: id,
+      previousState: assignment,
+      req
+    });
+
+    res.json({ success: true, message: 'Shift assignment removed successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

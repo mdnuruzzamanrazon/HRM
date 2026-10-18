@@ -3,6 +3,7 @@ import { LeaveApplication } from '../models/Leave.js';
 import { Employee } from '../models/Employee.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 // Apply for leave (Employee)
 export const applyLeave = async (req, res) => {
@@ -225,8 +226,113 @@ export const updateLeaveStatus = async (req, res) => {
     });
 
     await leave.save();
+
+    await logAudit({
+      userId: approverId,
+      action: 'UPDATE',
+      module: 'LEAVE_APPROVAL',
+      resourceId: leave._id,
+      newState: { status, remarks },
+      req
+    });
+
     res.json({ success: true, data: leave, message: `Leave application ${status.toLowerCase()}` });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
+// Admin: Submit a leave application on behalf of an employee
+export const adminCreateLeave = async (req, res) => {
+  try {
+    const { employeeId, leaveType, startDate, endDate, reason, status } = req.body;
+
+    if (!employeeId || !leaveType || !startDate || !endDate) {
+      return res.status(400).json({ success: false, message: 'Employee, leave type, start date, and end date are required' });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end - start);
+    const calculatedDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+    const totalDays = req.body.totalDays ? Number(req.body.totalDays) : calculatedDays;
+    const leaveStatus = status || 'APPROVED';
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const demoLeave = {
+        _id: 'leave-' + Date.now(),
+        employeeId: mockData.employees.find(e => e._id === employeeId) || mockData.adminEmployee,
+        leaveType,
+        startDate,
+        endDate,
+        totalDays,
+        reason: reason || 'Administrative leave entry',
+        status: leaveStatus,
+        createdAt: new Date().toISOString()
+      };
+      mockData.leaves.unshift(demoLeave);
+      return res.status(201).json({ success: true, data: demoLeave, message: 'Leave recorded successfully (Demo Mode)' });
+    }
+
+    const leave = new LeaveApplication({
+      employeeId,
+      leaveType,
+      startDate: start,
+      endDate: end,
+      totalDays,
+      reason: reason || 'Administrative leave record',
+      status: leaveStatus,
+      auditTrail: [{
+        actorId: req.user?._id,
+        action: 'CREATED_BY_ADMIN',
+        comment: reason || 'Recorded by HR Admin',
+        timestamp: new Date()
+      }]
+    });
+
+    await leave.save();
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'CREATE',
+      module: 'LEAVE',
+      resourceId: leave._id,
+      newState: leave,
+      req
+    });
+
+    const populated = await LeaveApplication.findById(leave._id).populate('employeeId', 'personalDetails employeeCode');
+    res.status(201).json({ success: true, data: populated, message: 'Leave recorded successfully' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// Admin: Delete a leave record
+export const deleteLeave = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      mockData.leaves = mockData.leaves.filter(l => l._id !== id);
+      return res.json({ success: true, message: 'Leave record removed' });
+    }
+
+    const leave = await LeaveApplication.findByIdAndDelete(id);
+    if (!leave) return res.status(404).json({ success: false, message: 'Leave record not found' });
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'DELETE',
+      module: 'LEAVE',
+      resourceId: id,
+      previousState: leave,
+      req
+    });
+
+    res.json({ success: true, message: 'Leave record deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

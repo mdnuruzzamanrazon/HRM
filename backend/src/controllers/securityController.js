@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Session } from '../models/Session.js';
 import { SecurityPolicy } from '../models/SecurityPolicy.js';
 import { User } from '../models/User.js';
+import { AuditLog } from '../models/AuditLog.js';
 import * as otplib from 'otplib';
 import qrcode from 'qrcode';
 import { isDemoMode } from '../config/db.js';
@@ -159,3 +160,20 @@ export const disable2FA = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Admin: Get recent administrative audit logs
+export const getAuditLogs = async (req, res) => {
+  try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: [] });
+    }
+    const logs = await AuditLog.find()
+      .populate('userId', 'email role')
+      .sort({ timestamp: -1 })
+      .limit(100);
+    res.json({ success: true, data: logs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

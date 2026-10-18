@@ -4,6 +4,7 @@ import { AttendanceCorrection } from '../models/AttendanceCorrection.js';
 import { Employee } from '../models/Employee.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 export const clockIn = async (req, res) => {
   try {
@@ -312,3 +313,95 @@ export const reviewAttendanceCorrection = async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
+// Admin: Manually log or override attendance for an employee
+export const manualRecordAttendance = async (req, res) => {
+  try {
+    const { employeeId, date, checkInTime, checkOutTime, status } = req.body;
+    if (!employeeId || !date) {
+      return res.status(400).json({ success: false, message: 'Employee ID and date are required' });
+    }
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const demoRec = {
+        _id: 'att-' + Date.now(),
+        employeeId: mockData.employees.find(e => e._id === employeeId) || mockData.adminEmployee,
+        date,
+        checkIn: checkInTime || '09:00',
+        checkOut: checkOutTime || '17:00',
+        status: status || 'PRESENT',
+        workHours: 8
+      };
+      mockData.attendance.unshift(demoRec);
+      return res.status(201).json({ success: true, data: demoRec, message: 'Attendance record saved (Demo Mode)' });
+    }
+
+    let record = await AttendanceRecord.findOne({ employeeId, date });
+    const isNew = !record;
+    if (!record) {
+      record = new AttendanceRecord({ employeeId, date });
+    }
+
+    if (checkInTime) {
+      const [h, m] = checkInTime.split(':').map(Number);
+      const inDate = new Date(`${date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+      record.checkIn = { timestamp: inDate, ip: 'Admin Manual Entry' };
+    }
+
+    if (checkOutTime) {
+      const [h, m] = checkOutTime.split(':').map(Number);
+      const outDate = new Date(`${date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
+      record.checkOut = { timestamp: outDate, ip: 'Admin Manual Entry' };
+    }
+
+    if (record.checkIn?.timestamp && record.checkOut?.timestamp) {
+      const diffMs = new Date(record.checkOut.timestamp).getTime() - new Date(record.checkIn.timestamp).getTime();
+      record.totalWorkMinutes = Math.max(0, Math.floor(diffMs / 60000));
+    }
+
+    record.status = status || (record.checkIn ? 'PRESENT' : 'ABSENT');
+    await record.save();
+
+    await logAudit({
+      userId: req.user?._id,
+      action: isNew ? 'CREATE' : 'UPDATE',
+      module: 'ATTENDANCE',
+      resourceId: record._id,
+      newState: { employeeId, date, status: record.status },
+      req
+    });
+
+    const populated = await AttendanceRecord.findById(record._id).populate('employeeId', 'personalDetails employeeCode');
+    res.status(201).json({ success: true, data: populated, message: 'Attendance recorded successfully' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// Admin: Delete an attendance record
+export const deleteAttendanceRecord = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      mockData.attendance = mockData.attendance.filter(a => a._id !== id);
+      return res.json({ success: true, message: 'Attendance record removed' });
+    }
+
+    const record = await AttendanceRecord.findByIdAndDelete(id);
+    if (!record) return res.status(404).json({ success: false, message: 'Record not found' });
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'DELETE',
+      module: 'ATTENDANCE',
+      resourceId: id,
+      previousState: record,
+      req
+    });
+
+    res.json({ success: true, message: 'Attendance record deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

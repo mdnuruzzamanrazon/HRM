@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Expense } from '../models/Expense.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 // Employee: Submit a new expense
 export const submitExpense = async (req, res) => {
@@ -104,8 +105,104 @@ export const updateExpenseStatus = async (req, res) => {
     }
 
     await expense.save();
+
+    await logAudit({
+      userId: approverId,
+      action: 'UPDATE',
+      module: 'EXPENSE_APPROVAL',
+      resourceId: id,
+      newState: { status, remarks },
+      req
+    });
+
     res.json({ success: true, data: expense, message: `Expense marked as ${status.toLowerCase()}` });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
+// Admin: Submit expense claim on behalf of an employee
+export const adminCreateExpense = async (req, res) => {
+  try {
+    const { employeeId, expenseType, amount, dateIncurred, description, status } = req.body;
+
+    if (!employeeId || !amount) {
+      return res.status(400).json({ success: false, message: 'Employee and amount are required' });
+    }
+
+    const expAmount = Number(amount);
+    const expStatus = status || 'APPROVED';
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const demoExp = {
+        _id: 'exp-' + Date.now(),
+        employeeId: mockData.employees.find(e => e._id === employeeId) || mockData.adminEmployee,
+        category: expenseType || 'OTHER',
+        expenseType: expenseType || 'OTHER',
+        amount: expAmount,
+        currency: 'USD',
+        description: description || 'Administrative expense disbursement',
+        status: expStatus,
+        dateIncurred: dateIncurred || new Date().toISOString().split('T')[0],
+        createdAt: new Date().toISOString()
+      };
+      mockData.expenses.unshift(demoExp);
+      return res.status(201).json({ success: true, data: demoExp, message: 'Expense claim recorded (Demo Mode)' });
+    }
+
+    const expense = new Expense({
+      employeeId,
+      expenseType: expenseType || 'OTHER',
+      amount: expAmount,
+      dateIncurred: dateIncurred ? new Date(dateIncurred) : new Date(),
+      description: description || 'Administrative reimbursement record',
+      status: expStatus,
+      approvedBy: expStatus !== 'PENDING' ? req.user?._id : undefined
+    });
+
+    await expense.save();
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'CREATE',
+      module: 'EXPENSE',
+      resourceId: expense._id,
+      newState: expense,
+      req
+    });
+
+    const populated = await Expense.findById(expense._id).populate('employeeId', 'personalDetails employeeCode');
+    res.status(201).json({ success: true, data: populated, message: 'Expense claim created successfully' });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// Admin: Delete an expense record
+export const deleteExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      mockData.expenses = mockData.expenses.filter(e => e._id !== id);
+      return res.json({ success: true, message: 'Expense deleted (Demo Mode)' });
+    }
+
+    const expense = await Expense.findByIdAndDelete(id);
+    if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'DELETE',
+      module: 'EXPENSE',
+      resourceId: id,
+      previousState: expense,
+      req
+    });
+
+    res.json({ success: true, message: 'Expense record deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
