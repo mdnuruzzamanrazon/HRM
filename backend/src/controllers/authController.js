@@ -15,6 +15,7 @@ const generateToken = (res, user, rememberMe = false) => {
   const token = jwt.sign(
     { 
       id: user._id, 
+      email: user.email,
       role: user.role, 
       tokenVersion: user.tokenVersion || 1 
     }, 
@@ -415,6 +416,18 @@ export const changeFirstLoginPassword = async (req, res) => {
         targetUser.tempPassword = null;
         targetUser.mustChangePassword = false;
         targetUser.tokenVersion = (targetUser.tokenVersion || 1) + 1;
+      } else {
+        mockData.users = mockData.users || [];
+        mockData.users.push({
+          _id: userId,
+          email: req.user?.email,
+          passwordHash: newHash,
+          tempPassword: null,
+          mustChangePassword: false,
+          tokenVersion: 2,
+          role: req.user?.role || 'EMPLOYEE',
+          isActive: true
+        });
       }
       if (req.user) {
         req.user.passwordHash = newHash;

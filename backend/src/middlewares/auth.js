@@ -23,15 +23,41 @@ export const authenticate = async (req, res, next) => {
     // If Demo Mode or database not connected, authenticate with demo user corresponding to token
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
-      const found = allMockUsers.find(u => u._id === decoded.id || u.email === decoded.email);
-      if (found) {
-        if (!found.isActive || found.isDeleted) {
-          return res.status(401).json({ success: false, message: 'Not authorized, account inactive or removed' });
-        }
-        req.user = found;
-        return next();
+      let found = allMockUsers.find(u => 
+        (decoded.id && u._id === decoded.id) || 
+        (decoded.email && u.email?.toLowerCase() === decoded.email.toLowerCase())
+      );
+
+      // If user was created in another worker/session, register into local mock state
+      if (!found && decoded.email) {
+        found = {
+          _id: decoded.id,
+          email: decoded.email,
+          role: decoded.role || 'EMPLOYEE',
+          isActive: true,
+          mustChangePassword: false,
+          tokenVersion: decoded.tokenVersion || 1
+        };
+        mockData.users = mockData.users || [];
+        mockData.users.push(found);
       }
-      req.user = decoded.id === mockData.employeeUser?._id ? mockData.employeeUser : mockData.adminUser;
+
+      if (!found) {
+        return res.status(401).json({ success: false, message: 'Not authorized, user session not found' });
+      }
+
+      if (!found.isActive || found.isDeleted) {
+        return res.status(401).json({ success: false, message: 'Not authorized, account inactive or removed' });
+      }
+
+      if (decoded.tokenVersion && found.tokenVersion && decoded.tokenVersion !== found.tokenVersion) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Session invalidated due to password reset or administrative action. Please log in again.' 
+        });
+      }
+
+      req.user = found;
       return next();
     }
 
