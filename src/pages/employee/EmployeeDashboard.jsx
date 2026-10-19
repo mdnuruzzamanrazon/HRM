@@ -5,12 +5,15 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   Clock, Calendar, CreditCard, Receipt, CalendarClock, 
   CheckCircle2, AlertCircle, ArrowRight, UserCheck, 
-  LogIn, LogOut, Megaphone, Loader2, Sparkles, Building2, MapPin
+  LogIn, LogOut, Megaphone, Loader2, Sparkles, Building2, MapPin,
+  CheckSquare, AlertTriangle
 } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState(null);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clocking, setClocking] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
@@ -18,14 +21,32 @@ export default function EmployeeDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/employee-portal/dashboard');
-      if (res.data?.success) {
-        setData(res.data.data);
+      const [dashRes, tasksRes] = await Promise.all([
+        api.get('/employee-portal/dashboard'),
+        api.get('/tasks')
+      ]);
+      if (dashRes.data?.success) {
+        setData(dashRes.data.data);
+      }
+      if (tasksRes.data?.success) {
+        setTasks(tasksRes.data.data || []);
       }
     } catch (err) {
       console.error('Failed to load employee dashboard:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAcceptTaskFromDashboard = async (taskId) => {
+    try {
+      const res = await api.put(`/tasks/${taskId}/accept`);
+      if (res.data?.success) {
+        setMessage({ text: 'Task accepted successfully! Track your deliverable in My Tasks.', type: 'success' });
+        await fetchDashboardData();
+      }
+    } catch (err) {
+      setMessage({ text: err.response?.data?.message || 'Failed to accept task', type: 'error' });
     }
   };
 
@@ -80,9 +101,64 @@ export default function EmployeeDashboard() {
   const recentPayslip = data?.recentPayslip;
   const notices = data?.notices || [];
 
+  const pendingTasks = tasks.filter(t => t.status === 'AWAITING_ACCEPTANCE');
+  const activeTasks = tasks.filter(t => ['ACCEPTED', 'IN_PROGRESS', 'REVISION_REQUIRED'].includes(t.status));
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-10">
       
+      {/* Prominent Task Notification Banner (Requirement 3) */}
+      {pendingTasks.length > 0 && (
+        <div className="rounded-2xl bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 p-4 sm:p-5 text-white shadow-lg shadow-amber-500/20 border border-amber-400/40 animate-fadeIn">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0 ring-1 ring-white/30">
+                <AlertTriangle className="w-5 h-5 text-white animate-bounce" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider bg-white/25 px-2 py-0.5 rounded-md">
+                    Action Required
+                  </span>
+                  <span className="text-xs font-bold text-amber-100">
+                    {pendingTasks.length} task{pendingTasks.length > 1 ? 's' : ''} awaiting your acceptance
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight">
+                  {pendingTasks[0].title}
+                </h3>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-amber-100">
+                  <span>Assigned: {pendingTasks[0].createdAt ? format(new Date(pendingTasks[0].createdAt), 'MMM dd, yyyy') : 'Recent'}</span>
+                  <span>&bull;</span>
+                  <span className="font-bold text-white">Deadline: {pendingTasks[0].dueDate ? format(new Date(pendingTasks[0].dueDate), 'MMM dd, yyyy') : 'N/A'}</span>
+                  <span>&bull;</span>
+                  <span className="font-extrabold uppercase bg-white text-amber-900 px-2 py-0.2 rounded text-[10px]">
+                    {pendingTasks[0].priority} Priority
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 self-end md:self-center">
+              <button
+                onClick={() => handleAcceptTaskFromDashboard(pendingTasks[0]._id)}
+                className="px-4 py-2.5 bg-white hover:bg-amber-50 text-amber-900 font-black text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Accept Task Now</span>
+              </button>
+              <Link
+                to={`/employee/tasks?taskId=${pendingTasks[0]._id}`}
+                className="px-4 py-2.5 bg-amber-700/60 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-all border border-white/20 flex items-center gap-1.5"
+              >
+                <span>View Details</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Alert / Notification banner */}
       {message.text && (
         <div className={`p-4 rounded-xl text-sm font-medium flex items-center justify-between shadow-sm transition-all animate-fadeIn ${
@@ -285,7 +361,23 @@ export default function EmployeeDashboard() {
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
           Quick Employee Services
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <Link
+            to="/employee/tasks"
+            className="flex flex-col items-center justify-center p-3.5 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/70 hover:border-emerald-200 transition-all text-center group cursor-pointer relative"
+          >
+            {pendingTasks.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-xs animate-pulse">
+                {pendingTasks.length}
+              </span>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-white shadow-xs text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+              <CheckSquare className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-slate-800 group-hover:text-emerald-700">My Tasks</span>
+            <span className="text-[10px] text-slate-400">Deliverables & work</span>
+          </Link>
+
           <Link
             to="/employee/leave"
             className="flex flex-col items-center justify-center p-3.5 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/70 hover:border-emerald-200 transition-all text-center group cursor-pointer"
@@ -342,6 +434,64 @@ export default function EmployeeDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Active Tasks Widget */}
+      {activeTasks.length > 0 && (
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="w-4 h-4 text-emerald-600" />
+              <h3 className="text-sm font-bold text-slate-900">Active Tasks & Deliverables</h3>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                {activeTasks.length} in progress
+              </span>
+            </div>
+            <Link to="/employee/tasks" className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+              All Tasks <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {activeTasks.slice(0, 3).map(task => (
+              <Link
+                key={task._id}
+                to={`/employee/tasks?taskId=${task._id}`}
+                className="p-4 rounded-xl border border-slate-100 hover:border-emerald-300 hover:shadow-xs bg-slate-50/50 hover:bg-emerald-50/20 transition-all flex flex-col justify-between group"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
+                      task.priority === 'URGENT' ? 'bg-rose-100 text-rose-800' :
+                      task.priority === 'HIGH' ? 'bg-amber-100 text-amber-800' :
+                      'bg-slate-200 text-slate-700'
+                    }`}>
+                      {task.priority}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      task.status === 'REVISION_REQUIRED' ? 'bg-rose-100 text-rose-800' :
+                      task.status === 'IN_PROGRESS' ? 'bg-sky-100 text-sky-800' :
+                      'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {task.status === 'REVISION_REQUIRED' ? 'Revision Needed' : task.status === 'IN_PROGRESS' ? 'In Progress' : 'Accepted'}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 line-clamp-1 mt-1">
+                    {task.title}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 line-clamp-2">
+                    {task.description || 'Deliverable assigned by HR.'}
+                  </p>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Due: {task.dueDate ? format(new Date(task.dueDate), 'MMM dd') : 'N/A'}</span>
+                  <span className="font-bold text-emerald-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                    Open <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Two Column Layout: Recent Leave & Company Notices */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

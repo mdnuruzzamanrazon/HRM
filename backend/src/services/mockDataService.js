@@ -269,20 +269,139 @@ export const mockData = {
   tasks: [
     {
       _id: 'task-001',
-      title: 'Complete Q3 Performance Self-Appraisals',
-      description: 'Submit peer feedback and OKR achievements for the quarterly review cycle.',
-      status: 'IN_PROGRESS',
+      title: 'Complete Annual Workplace Safety Compliance & Fire Drill Log',
+      description: 'Review the updated 2026 OSHA protocols and submit the quarterly facility evacuation inspection report.',
+      instructions: '1. Inspect emergency exits and first aid kits on floor 3.\n2. Complete the standardized inspection checklist.\n3. Upload the signed inspection log in PDF or Word format.',
+      assignedTo: {
+        _id: '6618d0987f83b1001a123458',
+        employeeCode: 'CBDP-EMP-001',
+        personalDetails: { firstName: 'Sarah', lastName: 'Jenkins' }
+      },
+      assignedBy: {
+        _id: '6618d0987f83b1001a123456',
+        employeeCode: 'CBDP-ADMIN-001',
+        personalDetails: { firstName: 'System', lastName: 'Admin' }
+      },
+      dueDate: '2026-10-28',
       priority: 'HIGH',
-      dueDate: '2026-10-25',
+      status: 'AWAITING_ACCEPTANCE',
+      acceptanceStatus: 'PENDING',
+      attachments: [],
+      submissions: [],
+      messages: [],
+      timeline: [
+        {
+          action: 'ASSIGNED',
+          actorName: 'System Admin',
+          actorRole: 'SUPER_ADMIN',
+          timestamp: new Date().toISOString(),
+          details: 'Task assigned to Sarah Jenkins'
+        }
+      ],
+      createdAt: new Date().toISOString()
     },
     {
       _id: 'task-002',
+      title: 'Deliver Regional Operations Budget & Vendor Cost Analysis',
+      description: 'Prepare breakdown of Q3 vendor invoices, transportation expenditure, and cost optimization opportunities.',
+      instructions: 'Please assemble the cost spreadsheet with variance analysis compared to Q2.',
+      assignedTo: {
+        _id: '6618d0987f83b1001a123458',
+        employeeCode: 'CBDP-EMP-001',
+        personalDetails: { firstName: 'Sarah', lastName: 'Jenkins' }
+      },
+      assignedBy: {
+        _id: '6618d0987f83b1001a123456',
+        employeeCode: 'CBDP-ADMIN-001',
+        personalDetails: { firstName: 'System', lastName: 'Admin' }
+      },
+      dueDate: '2026-10-31',
+      priority: 'URGENT',
+      status: 'IN_PROGRESS',
+      acceptanceStatus: 'ACCEPTED',
+      acceptedAt: new Date().toISOString(),
+      attachments: [],
+      submissions: [],
+      messages: [
+        {
+          messageId: 'msg-01',
+          senderName: 'System Admin',
+          senderRole: 'SUPER_ADMIN',
+          text: 'Please include the regional fuel surcharge estimates in row 42.',
+          createdAt: new Date().toISOString()
+        }
+      ],
+      timeline: [
+        {
+          action: 'ASSIGNED',
+          actorName: 'System Admin',
+          actorRole: 'SUPER_ADMIN',
+          timestamp: new Date(Date.now() - 86400000).toISOString(),
+          details: 'Task assigned to Sarah Jenkins'
+        },
+        {
+          action: 'ACCEPTED',
+          actorName: 'Sarah Jenkins',
+          actorRole: 'EMPLOYEE',
+          timestamp: new Date().toISOString(),
+          details: 'Sarah Jenkins accepted the assignment'
+        }
+      ],
+      createdAt: new Date(Date.now() - 86400000).toISOString()
+    },
+    {
+      _id: 'task-003',
       title: 'Review Engineering Health Insurance Add-ons',
       description: 'Elect optional dental and vision supplementary coverage plans.',
-      status: 'COMPLETED',
-      priority: 'MEDIUM',
+      instructions: 'Complete and sign the enrollment form.',
+      assignedTo: {
+        _id: '6618d0987f83b1001a123458',
+        employeeCode: 'CBDP-EMP-001',
+        personalDetails: { firstName: 'Sarah', lastName: 'Jenkins' }
+      },
+      assignedBy: {
+        _id: '6618d0987f83b1001a123456',
+        employeeCode: 'CBDP-ADMIN-001',
+        personalDetails: { firstName: 'System', lastName: 'Admin' }
+      },
       dueDate: '2026-10-10',
-    },
+      priority: 'MEDIUM',
+      status: 'COMPLETED',
+      acceptanceStatus: 'ACCEPTED',
+      acceptedAt: new Date(Date.now() - 500000000).toISOString(),
+      attachments: [],
+      submissions: [
+        {
+          _id: 'sub-001',
+          version: 1,
+          submittedAt: new Date(Date.now() - 400000000).toISOString(),
+          notes: 'Completed enrollment questionnaire and plan selection.',
+          files: [
+            {
+              fileId: 'f-001',
+              name: 'Benefits_Form_Signed.pdf',
+              originalName: 'Benefits_Form_Signed.pdf',
+              path: '',
+              size: 245000,
+              mimeType: 'application/pdf'
+            }
+          ],
+          status: 'APPROVED',
+          feedback: 'All forms in order. Enrolled successfully.'
+        }
+      ],
+      messages: [],
+      timeline: [
+        {
+          action: 'COMPLETED',
+          actorName: 'System Admin',
+          actorRole: 'SUPER_ADMIN',
+          timestamp: new Date(Date.now() - 350000000).toISOString(),
+          details: 'HR approved submission and marked task completed.'
+        }
+      ],
+      createdAt: new Date(Date.now() - 600000000).toISOString()
+    }
   ],
 
   notifications: [

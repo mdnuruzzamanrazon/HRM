@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue.bold,green.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "node --watch backend/src/index.js",
+    "dev:backend": "node --watch --watch-path=backend/src backend/src/index.js",
     "dev:frontend": "vite",
     "build": "vite build",
     "start": "node backend/src/index.js",
@@ -33,6 +33,7 @@
     "lucide-react": "^1.55.0",
     "mongoose": "^9.11.1",
     "morgan": "^1.12.1",
+    "multer": "^2.4.0",
     "otplib": "^13.5.0",
     "postcss": "^8.5.29",
     "qrcode": "^1.5.4",

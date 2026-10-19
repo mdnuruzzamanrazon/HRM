@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Clock, Calendar, CreditCard, 
   CalendarClock, Receipt, Megaphone, User, LogOut, 
   Menu, X, Bell, Shield, ArrowUpRight, ChevronRight,
-  ShieldCheck, Sparkles, Building2
+  ShieldCheck, Sparkles, Building2, CheckSquare
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -70,6 +70,7 @@ export default function EmployeeLayout() {
       group: 'Portal Hub',
       items: [
         { name: 'Dashboard', href: '/employee/dashboard', icon: LayoutDashboard },
+        { name: 'My Tasks', href: '/employee/tasks', icon: CheckSquare },
         { name: 'Attendance & Hours', href: '/employee/attendance', icon: Clock },
         { name: 'Leave & Time Off', href: '/employee/leave', icon: Calendar },
       ]

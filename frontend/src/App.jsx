@@ -38,6 +38,7 @@ import EmployeeExpenses from './pages/employee/EmployeeExpenses';
 import EmployeeShifts from './pages/employee/EmployeeShifts';
 import EmployeeNotices from './pages/employee/EmployeeNotices';
 import EmployeeProfile from './pages/employee/EmployeeProfile';
+import EmployeeTasks from './pages/employee/EmployeeTasks';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -80,6 +81,7 @@ function App() {
               <Route path="/employee/shifts" element={<EmployeeShifts />} />
               <Route path="/employee/notices" element={<EmployeeNotices />} />
               <Route path="/employee/profile" element={<EmployeeProfile />} />
+              <Route path="/employee/tasks" element={<EmployeeTasks />} />
             </Route>
           </Route>
 
