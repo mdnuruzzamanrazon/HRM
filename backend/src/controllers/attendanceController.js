@@ -2,13 +2,111 @@ import mongoose from 'mongoose';
 import { AttendanceRecord } from '../models/AttendanceRecord.js';
 import { AttendanceCorrection } from '../models/AttendanceCorrection.js';
 import { Employee } from '../models/Employee.js';
+import { WorkplaceLocation } from '../models/WorkplaceLocation.js';
+import { TrackingLog } from '../models/TrackingLog.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 import { logAudit } from '../utils/auditLogger.js';
+import { calculateDistanceMeters, isValidCoordinate, formatDistance } from '../utils/geoUtils.js';
+
+// Helper to verify device GPS coordinates against authorized workplace geofences
+async function verifyGeofence({ latitude, longitude, accuracy, workplaceId, req, actionName }) {
+  let activeWorkplaces = [];
+  if (isDemoMode() || mongoose.connection.readyState !== 1) {
+    activeWorkplaces = (mockData.workplaces || []).filter(w => w.isActive);
+  } else {
+    activeWorkplaces = await WorkplaceLocation.find({ isActive: true });
+  }
+
+  if (!activeWorkplaces || activeWorkplaces.length === 0) {
+    // If no active workplaces are configured in the system, allow bypass
+    return { verified: false, workplace: null, distance: null };
+  }
+
+  let targetWorkplace = null;
+  if (workplaceId) {
+    targetWorkplace = activeWorkplaces.find(w => w._id.toString() === workplaceId.toString());
+  }
+
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+
+  if (!isValidCoordinate(lat, lng)) {
+    const error = new Error('Physical GPS coordinates are required to verify attendance within the authorized workplace area.');
+    error.statusCode = 400;
+    error.code = 'LOCATION_REQUIRED';
+    throw error;
+  }
+
+  // If no specific workplace was selected, choose the nearest active workplace
+  if (!targetWorkplace) {
+    let minDistance = Infinity;
+    for (const wp of activeWorkplaces) {
+      const d = calculateDistanceMeters(lat, lng, wp.coordinates.lat, wp.coordinates.lng);
+      if (d < minDistance) {
+        minDistance = d;
+        targetWorkplace = wp;
+      }
+    }
+  }
+
+  if (!targetWorkplace) {
+    targetWorkplace = activeWorkplaces[0];
+  }
+
+  // Check GPS accuracy threshold
+  const maxAcc = targetWorkplace.maxAccuracyThreshold || 200;
+  if (accuracy !== undefined && accuracy !== null && !isNaN(Number(accuracy))) {
+    const accNum = Number(accuracy);
+    if (accNum > maxAcc) {
+      const error = new Error(`GPS reading accuracy is too low (±${Math.round(accNum)}m). High-accuracy GPS is required (within ±${maxAcc}m). Please enable high accuracy / Wi-Fi positioning and try again.`);
+      error.statusCode = 400;
+      error.code = 'ACCURACY_TOO_LOW';
+      throw error;
+    }
+  }
+
+  // Calculate distance between employee device and workplace coordinates
+  const distance = calculateDistanceMeters(lat, lng, targetWorkplace.coordinates.lat, targetWorkplace.coordinates.lng);
+
+  // If geofence is enforced on this workplace, check radius restriction
+  if (targetWorkplace.geofenceEnforced && distance > targetWorkplace.radiusMeters) {
+    await logAudit({
+      userId: req.user?._id,
+      action: 'ATTENDANCE_BLOCKED_OUTSIDE_GEOFENCE',
+      resource: 'AttendanceRecord',
+      details: `Employee attempted ${actionName} from ${formatDistance(distance)} away from '${targetWorkplace.name}' (permitted radius: ${targetWorkplace.radiusMeters}m). Attendance action blocked.`,
+      ip: req.ip
+    });
+
+    const error = new Error('You are outside the authorized workplace area. Please move within the permitted location to check in or check out.');
+    error.statusCode = 403;
+    error.code = 'OUTSIDE_GEOFENCE';
+    error.data = {
+      workplaceName: targetWorkplace.name,
+      workplaceAddress: targetWorkplace.address,
+      distanceMeters: distance,
+      distanceFormatted: formatDistance(distance),
+      permittedRadius: targetWorkplace.radiusMeters,
+      excessMeters: distance - targetWorkplace.radiusMeters
+    };
+    throw error;
+  }
+
+  return {
+    verified: true,
+    workplace: targetWorkplace,
+    distance,
+    lat,
+    lng,
+    accuracy: accuracy ? Math.round(Number(accuracy)) : null
+  };
+}
 
 export const clockIn = async (req, res) => {
   try {
     const employeeId = req.body.employeeId || req.user?.employeeProfileId?._id || req.user?.employeeProfileId || mockData.adminEmployee._id;
+    const { latitude, longitude, accuracy, workplaceId } = req.body;
     const date = new Date().toISOString().split('T')[0];
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
@@ -34,6 +132,16 @@ export const clockIn = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Already clocked in for today' });
     }
 
+    // Verify GPS Geofence Restriction on Backend
+    const geoResult = await verifyGeofence({
+      latitude,
+      longitude,
+      accuracy,
+      workplaceId,
+      req,
+      actionName: 'Clock-In'
+    });
+
     const now = new Date();
     // Attendance rule: Check if late (e.g. after 09:30 AM local)
     const hours = now.getHours();
@@ -46,24 +154,74 @@ export const clockIn = async (req, res) => {
       status: isLate ? 'LATE' : 'PRESENT'
     });
 
-    record.checkIn = {
-      timestamp: now,
-      ip: req.ip
-    };
+    if (geoResult.verified) {
+      record.checkIn = {
+        timestamp: now,
+        ip: req.ip,
+        geo: { lat: geoResult.lat, lng: geoResult.lng },
+        accuracy: geoResult.accuracy,
+        distanceMeters: geoResult.distance,
+        workplaceId: geoResult.workplace._id,
+        workplaceName: geoResult.workplace.name,
+        verificationStatus: 'VERIFIED',
+        verificationMethod: 'GPS_GEOFENCE'
+      };
+
+      try {
+        await new TrackingLog({
+          employeeId,
+          activityType: 'LOCATION_CHECKIN',
+          description: `GPS Verified Check-In at ${geoResult.workplace.name} (${formatDistance(geoResult.distance)} from branch center, radius ${geoResult.workplace.radiusMeters}m)`,
+          ipAddress: req.ip,
+          deviceInfo: req.headers['user-agent'] || 'Web Client'
+        }).save();
+      } catch (tErr) {
+        console.error('Failed to record tracking log on check-in:', tErr.message);
+      }
+    } else {
+      record.checkIn = {
+        timestamp: now,
+        ip: req.ip,
+        verificationStatus: 'UNVERIFIED',
+        verificationMethod: 'NONE'
+      };
+    }
+
     if (!existingRecord) {
       record.status = isLate ? 'LATE' : 'PRESENT';
     }
 
     await record.save();
-    res.status(201).json({ success: true, data: record, message: isLate ? 'Clocked in (Marked Late)' : 'Clocked in successfully' });
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'EMPLOYEE_CLOCKED_IN',
+      resource: 'AttendanceRecord',
+      resourceId: record._id,
+      details: `Clocked in successfully. GPS Verified: ${geoResult.verified ? `Yes (${geoResult.workplace.name})` : 'No'}`,
+      ip: req.ip
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      data: record, 
+      message: isLate ? 'Clocked in (Marked Late)' : 'Clocked in successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ 
+      success: false, 
+      code: error.code || 'ATTENDANCE_ERROR',
+      message: error.message,
+      data: error.data || null
+    });
   }
 };
 
 export const clockOut = async (req, res) => {
   try {
     const employeeId = req.body.employeeId || req.user?.employeeProfileId?._id || req.user?.employeeProfileId || mockData.adminEmployee._id;
+    const { latitude, longitude, accuracy, workplaceId } = req.body;
     const date = new Date().toISOString().split('T')[0];
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
@@ -88,20 +246,78 @@ export const clockOut = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Already clocked out for today' });
     }
 
+    // Verify GPS Geofence Restriction on Backend
+    const geoResult = await verifyGeofence({
+      latitude,
+      longitude,
+      accuracy,
+      workplaceId,
+      req,
+      actionName: 'Clock-Out'
+    });
+
     const now = new Date();
-    record.checkOut = {
-      timestamp: now,
-      ip: req.ip
-    };
+    if (geoResult.verified) {
+      record.checkOut = {
+        timestamp: now,
+        ip: req.ip,
+        geo: { lat: geoResult.lat, lng: geoResult.lng },
+        accuracy: geoResult.accuracy,
+        distanceMeters: geoResult.distance,
+        workplaceId: geoResult.workplace._id,
+        workplaceName: geoResult.workplace.name,
+        verificationStatus: 'VERIFIED',
+        verificationMethod: 'GPS_GEOFENCE'
+      };
+
+      try {
+        await new TrackingLog({
+          employeeId,
+          activityType: 'LOCATION_CHECKIN',
+          description: `GPS Verified Check-Out at ${geoResult.workplace.name} (${formatDistance(geoResult.distance)} from branch center)`,
+          ipAddress: req.ip,
+          deviceInfo: req.headers['user-agent'] || 'Web Client'
+        }).save();
+      } catch (tErr) {
+        console.error('Failed to record tracking log on check-out:', tErr.message);
+      }
+    } else {
+      record.checkOut = {
+        timestamp: now,
+        ip: req.ip,
+        verificationStatus: 'UNVERIFIED',
+        verificationMethod: 'NONE'
+      };
+    }
 
     const checkInTime = new Date(record.checkIn.timestamp);
     const diffMs = now.getTime() - checkInTime.getTime();
     record.totalWorkMinutes = Math.max(0, Math.floor(diffMs / 60000));
 
     await record.save();
-    res.json({ success: true, data: record, message: 'Clocked out successfully' });
+
+    await logAudit({
+      userId: req.user?._id,
+      action: 'EMPLOYEE_CLOCKED_OUT',
+      resource: 'AttendanceRecord',
+      resourceId: record._id,
+      details: `Clocked out successfully. Total Work: ${record.totalWorkMinutes} mins. GPS Verified: ${geoResult.verified ? 'Yes' : 'No'}`,
+      ip: req.ip
+    });
+
+    res.json({ 
+      success: true, 
+      data: record, 
+      message: 'Clocked out successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({ 
+      success: false, 
+      code: error.code || 'ATTENDANCE_ERROR',
+      message: error.message,
+      data: error.data || null
+    });
   }
 };
 

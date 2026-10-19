@@ -478,4 +478,42 @@ export const mockData = {
       sessionTimeoutMinutes: 60,
     },
   },
+
+  workplaces: [
+    {
+      _id: '6618d0987f83b1001a123991',
+      name: 'CBDP Global Operations Headquarters',
+      code: 'HQ-MAIN',
+      address: '100 Innovation Way, Tech Campus Suite 400',
+      city: 'San Francisco, CA',
+      country: 'United States',
+      coordinates: { lat: 37.774929, lng: -122.419416 },
+      radiusMeters: 100,
+      maxAccuracyThreshold: 200,
+      isDefault: true,
+      isActive: true,
+      geofenceEnforced: true,
+      description: 'Primary corporate facility and executive technology center.',
+      attendanceCount: 14,
+      createdAt: '2026-01-01T00:00:00.000Z'
+    },
+    {
+      _id: '6618d0987f83b1001a123992',
+      name: 'Manhattan Regional Division',
+      code: 'BR-NY01',
+      address: '350 Fifth Ave, Empire Tower Level 42',
+      city: 'New York, NY',
+      country: 'United States',
+      coordinates: { lat: 40.748441, lng: -73.985664 },
+      radiusMeters: 150,
+      maxAccuracyThreshold: 250,
+      isDefault: false,
+      isActive: true,
+      geofenceEnforced: true,
+      description: 'East coast financial and operations branch.',
+      attendanceCount: 9,
+      createdAt: '2026-02-15T00:00:00.000Z'
+    }
+  ],
 };
+

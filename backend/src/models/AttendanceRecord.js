@@ -6,12 +6,32 @@ const attendanceRecordSchema = new mongoose.Schema({
   checkIn: {
     timestamp: { type: Date },
     ip: { type: String },
-    geo: { lat: Number, lng: Number }
+    geo: { lat: Number, lng: Number },
+    accuracy: { type: Number },
+    distanceMeters: { type: Number },
+    workplaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'WorkplaceLocation' },
+    workplaceName: { type: String },
+    verificationStatus: { 
+      type: String, 
+      enum: ['VERIFIED', 'OUTSIDE_GEOFENCE', 'ACCURACY_POOR', 'BYPASS_ADMIN', 'UNVERIFIED'],
+      default: 'UNVERIFIED'
+    },
+    verificationMethod: { type: String, default: 'GPS_GEOFENCE' }
   },
   checkOut: {
     timestamp: { type: Date },
     ip: { type: String },
-    geo: { lat: Number, lng: Number }
+    geo: { lat: Number, lng: Number },
+    accuracy: { type: Number },
+    distanceMeters: { type: Number },
+    workplaceId: { type: mongoose.Schema.Types.ObjectId, ref: 'WorkplaceLocation' },
+    workplaceName: { type: String },
+    verificationStatus: { 
+      type: String, 
+      enum: ['VERIFIED', 'OUTSIDE_GEOFENCE', 'ACCURACY_POOR', 'BYPASS_ADMIN', 'UNVERIFIED'],
+      default: 'UNVERIFIED'
+    },
+    verificationMethod: { type: String, default: 'GPS_GEOFENCE' }
   },
   totalWorkMinutes: { type: Number, default: 0 },
   breakMinutes: { type: Number, default: 0 },

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LogOut, LayoutDashboard, Users, Clock, Calendar, CreditCard, 
   CalendarClock, Receipt, Calculator, MapPin, Megaphone, CheckSquare, 
-  Bell, Shield, Menu, X, ChevronRight, UserCheck, Search, Sparkles
+  Bell, Shield, Menu, X, ChevronRight, UserCheck, Search, Sparkles, Building2
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -70,6 +70,7 @@ export default function AdminLayout() {
       group: 'Time & Attendance',
       items: [
         { name: 'Attendance Records', href: '/attendance', icon: Clock },
+        { name: 'Workplace Locations', href: '/locations', icon: Building2 },
         { name: 'Leave Management', href: '/leave', icon: Calendar },
         { name: 'Shift Roster', href: '/shift', icon: CalendarClock },
         { name: 'Workforce Tracking', href: '/tracking', icon: MapPin },

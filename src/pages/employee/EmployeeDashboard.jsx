@@ -97,8 +97,45 @@ export default function EmployeeDashboard() {
     try {
       setClocking(true);
       setMessage({ text: '', type: '' });
+
+      // Request GPS location
+      const getPosition = () => {
+        return new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            return reject(new Error('Geolocation is not supported by your browser.'));
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({
+              latitude: Number(pos.coords.latitude.toFixed(6)),
+              longitude: Number(pos.coords.longitude.toFixed(6)),
+              accuracy: Math.round(pos.coords.accuracy || 0),
+            }),
+            (err) => {
+              if (err.code === 1) {
+                reject(new Error('Location permission was denied. Please allow location access in your browser settings to verify attendance.'));
+              } else {
+                reject(new Error('Unable to retrieve GPS coordinates. Please enable device location.'));
+              }
+            },
+            { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+          );
+        });
+      };
+
+      let coords = null;
+      try {
+        coords = await getPosition();
+      } catch (locErr) {
+        setMessage({
+          text: locErr.message,
+          type: 'error'
+        });
+        setClocking(false);
+        return;
+      }
+
       const endpoint = action === 'in' ? '/attendance/clock-in' : '/attendance/clock-out';
-      const res = await api.post(endpoint, {});
+      const res = await api.post(endpoint, coords);
       
       if (res.data?.success) {
         setMessage({ 
@@ -108,8 +145,9 @@ export default function EmployeeDashboard() {
         await fetchDashboardData();
       }
     } catch (err) {
+      const respData = err.response?.data;
       setMessage({ 
-        text: err.response?.data?.message || 'Attendance action failed. Please try again.', 
+        text: respData?.message || 'Attendance action failed. Please try again.', 
         type: 'error' 
       });
     } finally {

@@ -28,6 +28,7 @@ import NoticeBoard from './pages/noticeboard/NoticeBoard';
 import TaskDashboard from './pages/task/TaskDashboard';
 import NotificationsDashboard from './pages/notifications/NotificationsDashboard';
 import SecurityDashboard from './pages/security/SecurityDashboard';
+import WorkplaceLocations from './pages/locations/WorkplaceLocations';
 
 // Employee Portal Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
@@ -93,6 +94,7 @@ function App() {
               <Route path="/employees/new" element={<EmployeeForm />} />
               <Route path="/employees/:id" element={<EmployeeDetail />} />
               <Route path="/attendance" element={<AttendanceDashboard />} />
+              <Route path="/locations" element={<WorkplaceLocations />} />
               <Route path="/leave" element={<LeaveDashboard />} />
               <Route path="/leave/apply" element={<LeaveApplicationForm />} />
               <Route path="/payroll" element={<PayrollDashboard />} />

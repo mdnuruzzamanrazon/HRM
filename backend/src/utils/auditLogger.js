@@ -24,10 +24,19 @@ export const logAudit = async ({
   try {
     if (mongoose.connection.readyState !== 1) return;
 
+    let normalizedAction = (action || 'UPDATE').toUpperCase();
+    if (normalizedAction.includes('CREATE')) normalizedAction = 'CREATE';
+    else if (normalizedAction.includes('DELETE')) normalizedAction = 'DELETE';
+    else if (normalizedAction.includes('LOGIN') || normalizedAction.includes('CLOCK')) normalizedAction = 'LOGIN';
+    else if (normalizedAction.includes('EXPORT')) normalizedAction = 'EXPORT';
+    else if (!['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'EXPORT'].includes(normalizedAction)) {
+      normalizedAction = 'UPDATE';
+    }
+
     const logEntry = new AuditLog({
       userId: userId || req?.user?._id,
-      action: action || 'UPDATE',
-      module: module || 'GENERAL',
+      action: normalizedAction,
+      module: module || 'WORKPLACE',
       resourceId: resourceId ? (mongoose.Types.ObjectId.isValid(resourceId) ? resourceId : undefined) : undefined,
       previousState: previousState ? JSON.parse(JSON.stringify(previousState)) : undefined,
       newState: newState ? JSON.parse(JSON.stringify(newState)) : undefined,

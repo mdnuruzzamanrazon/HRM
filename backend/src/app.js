@@ -30,6 +30,7 @@ import taskRoutes from './routes/taskRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import securityRoutes from './routes/securityRoutes.js';
 import employeePortalRoutes from './routes/employeePortalRoutes.js';
+import workplaceRoutes from './routes/workplaceRoutes.js';
 
 const app = express();
 
@@ -129,6 +130,8 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/security', securityRoutes);
 app.use('/api/v1/employee-portal', employeePortalRoutes);
 app.use('/api/v1/employee', employeePortalRoutes);
+app.use('/api/v1/workplaces', workplaceRoutes);
+app.use('/api/workplaces', workplaceRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

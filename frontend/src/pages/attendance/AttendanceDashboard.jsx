@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { 
   Clock, CheckCircle2, XCircle, Loader2, Calendar, 
   Users, AlertTriangle, ArrowUpDown, Check, Filter,
-  Plus, Trash2, Edit3, X, AlertCircle, Save, Shield
+  Plus, Trash2, Edit3, X, AlertCircle, Save, Shield, MapPin
 } from 'lucide-react';
 import { formatSafeDate } from '../../utils/date';
 import { useAuth } from '../../context/AuthContext';
@@ -183,6 +184,15 @@ export default function AttendanceDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {/* Geofence Management Link */}
+          <Link
+            to="/locations"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-xl border border-emerald-200 transition-all text-xs cursor-pointer shadow-xs"
+          >
+            <MapPin className="w-4 h-4 text-emerald-600" />
+            <span>Workplace Geofences</span>
+          </Link>
+
           {/* Admin Manual Attendance Entry Button */}
           <button
             onClick={() => {
@@ -339,6 +349,7 @@ export default function AttendanceDashboard() {
                     <th className="py-3.5 px-6">Employee</th>
                     <th className="py-3.5 px-6">Employee Code</th>
                     <th className="py-3.5 px-6">Attendance Status</th>
+                    <th className="py-3.5 px-6">GPS Geofence Verification</th>
                     <th className="py-3.5 px-6">Check In</th>
                     <th className="py-3.5 px-6">Check Out</th>
                     <th className="py-3.5 px-6">Hours Logged</th>
@@ -378,6 +389,27 @@ export default function AttendanceDashboard() {
                             {record.status}
                           </span>
                         </td>
+                        <td className="py-4 px-6 whitespace-nowrap">
+                          {record.checkIn?.verificationStatus === 'VERIFIED' ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                              <div>
+                                <div className="font-semibold text-emerald-800 text-xs flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 text-emerald-600" />
+                                  {record.checkIn.workplaceName || 'Authorized Workplace'}
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-mono">
+                                  {record.checkIn.distanceMeters !== undefined ? `${record.checkIn.distanceMeters}m from center` : 'Verified within perimeter'}
+                                  {record.checkIn.accuracy ? ` (±${record.checkIn.accuracy}m)` : ''}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                              {record.isRemote ? 'Remote VPN' : 'Manual / Legacy'}
+                            </span>
+                          )}
+                        </td>
                         <td className="py-4 px-6 whitespace-nowrap font-mono text-slate-700">
                           {formatTime(record.checkIn)}
                         </td>
@@ -410,7 +442,7 @@ export default function AttendanceDashboard() {
                   })}
                   {records.length === 0 && (
                     <tr>
-                      <td colSpan="7" className="py-16 text-center text-slate-400">
+                      <td colSpan="8" className="py-16 text-center text-slate-400">
                         <Clock className="w-10 h-10 mx-auto text-slate-300 mb-2" />
                         <h4 className="text-sm font-bold text-slate-700">No attendance records on {date}</h4>
                         <p className="text-xs text-slate-400 mt-1">Select another date or click "Manual Entry / Override" to record attendance.</p>
