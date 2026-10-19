@@ -28,6 +28,8 @@ export default function EmployeeDetail() {
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
+    email: '',
+    department: 'Engineering & Technology',
     phone: '',
     contactAddress: '',
     title: '',
@@ -39,7 +41,8 @@ export default function EmployeeDetail() {
 
   const [passwordForm, setPasswordForm] = useState({
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    isTemporary: true
   });
 
   const [docForm, setDocForm] = useState({
@@ -60,6 +63,8 @@ export default function EmployeeDetail() {
         setEditForm({
           firstName: data.data.personalDetails?.firstName || '',
           lastName: data.data.personalDetails?.lastName || '',
+          email: data.data.email || data.data.personalDetails?.email || data.data.userAccount?.email || '',
+          department: data.data.jobDetails?.department || data.data.jobDetails?.departmentId?.name || 'Engineering & Technology',
           phone: data.data.personalDetails?.phone || '',
           contactAddress: data.data.personalDetails?.contactAddress || '',
           title: data.data.jobDetails?.title || '',
@@ -87,14 +92,17 @@ export default function EmployeeDetail() {
     setActionLoading(true);
     try {
       await api.put(`/employees/${id}`, {
+        email: editForm.email,
         personalDetails: {
           firstName: editForm.firstName,
           lastName: editForm.lastName,
+          email: editForm.email,
           phone: editForm.phone,
           contactAddress: editForm.contactAddress
         },
         jobDetails: {
           title: editForm.title,
+          department: editForm.department,
           employmentType: editForm.employmentType,
           status: editForm.status
         },
@@ -103,7 +111,7 @@ export default function EmployeeDetail() {
           taxId: editForm.taxId
         }
       });
-      notify('success', 'Employee profile updated successfully');
+      notify('success', 'Employee profile and credentials synchronized successfully');
       setIsEditModalOpen(false);
       await fetchEmployee();
     } catch (err) {
@@ -155,11 +163,12 @@ export default function EmployeeDetail() {
     setActionLoading(true);
     try {
       const res = await api.post(`/employees/${id}/reset-password`, {
-        newPassword: passwordForm.newPassword
+        newPassword: passwordForm.newPassword,
+        isTemporary: passwordForm.isTemporary
       });
       notify('success', res.data?.message || 'Password successfully updated');
       setIsResetPasswordModalOpen(false);
-      setPasswordForm({ newPassword: '', confirmPassword: '' });
+      setPasswordForm({ newPassword: '', confirmPassword: '', isTemporary: true });
       await fetchEmployee();
     } catch (err) {
       notify('error', err.response?.data?.message || 'Failed to reset password');

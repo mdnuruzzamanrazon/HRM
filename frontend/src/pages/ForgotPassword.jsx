@@ -1,109 +1,330 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import api from '../services/api';
-import { Loader2, ArrowLeft, MailCheck } from 'lucide-react';
+import { 
+  Loader2, ArrowLeft, MailCheck, KeyRound, Lock, 
+  ShieldCheck, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff 
+} from 'lucide-react';
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
+const emailStepSchema = z.object({
+  email: z.string().trim().email('Please enter a valid official email address'),
+});
+
+const resetStepSchema = z.object({
+  code: z.string().trim().length(6, 'Verification code must be exactly 6 digits'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters long'),
+  confirmPassword: z.string().min(6, 'Please confirm your new password'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 export default function ForgotPassword() {
-  const [status, setStatus] = useState({ type: '', message: '' });
-  const [isSuccess, setIsSuccess] = useState(false);
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1); // 1: Email entry, 2: Code & New Password, 3: Success
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [devCode, setDevCode] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
-    resolver: zodResolver(forgotPasswordSchema),
+  // Form 1: Email
+  const { 
+    register: registerEmail, 
+    handleSubmit: handleEmailSubmit, 
+    formState: { errors: emailErrors } 
+  } = useForm({
+    resolver: zodResolver(emailStepSchema),
   });
 
-  const onSubmit = async (data) => {
+  // Form 2: Code + Password
+  const { 
+    register: registerReset, 
+    handleSubmit: handleResetSubmit, 
+    setValue: setResetValue,
+    formState: { errors: resetErrors } 
+  } = useForm({
+    resolver: zodResolver(resetStepSchema),
+  });
+
+  // Step 1: Submit email to request code
+  const onEmailSubmit = async (data) => {
     try {
-      setStatus({ type: '', message: '' });
-      const response = await api.post('/auth/forgot-password', data);
-      setIsSuccess(true);
-      setStatus({ type: 'success', message: response.data.message });
+      setIsSubmitting(true);
+      setErrorMsg('');
+      const normalizedEmail = data.email.toLowerCase().trim();
+      const res = await api.post('/auth/forgot-password', { email: normalizedEmail });
+      
+      setRegisteredEmail(normalizedEmail);
+      if (res.data?.verificationCode) {
+        setDevCode(res.data.verificationCode);
+        setResetValue('code', res.data.verificationCode);
+      }
+      setSuccessMsg(res.data?.message || 'Verification code dispatched to your registered email.');
+      setStep(2);
     } catch (err) {
-      setStatus({ 
-        type: 'error', 
-        message: err.response?.data?.message || 'Something went wrong. Please try again.' 
+      setErrorMsg(err.response?.data?.message || 'Unable to initiate password reset. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Step 2: Submit code and set new password
+  const onResetSubmit = async (data) => {
+    try {
+      setIsSubmitting(true);
+      setErrorMsg('');
+      const res = await api.post('/auth/reset-password', {
+        email: registeredEmail,
+        code: data.code,
+        newPassword: data.newPassword,
       });
+
+      if (res.data?.success) {
+        setStep(3);
+        setSuccessMsg(res.data.message || 'Password successfully updated.');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2200);
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Invalid or expired 6-digit verification code.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-6 sm:space-y-8 bg-white p-6 sm:p-8 md:p-10 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100">
-        {!isSuccess ? (
-          <>
-            <div className="text-center">
-              <div className="mx-auto w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-2 shadow-md shadow-slate-200/60 border border-slate-100 flex items-center justify-center mb-4 transition-transform duration-300 hover:scale-105">
-                <img 
-                  src="/cbdp-logo.png" 
-                  alt="CBDP Logo" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <h2 className="text-center text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-                Reset your password
-              </h2>
-              <p className="mt-2 text-center text-xs sm:text-sm text-gray-600">
-                Enter your registered CBDP email and we'll send you a secure link to reset your credentials.
-              </p>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50/80 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Ambient background decoration */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="max-w-md w-full relative z-10">
+        
+        {/* Card Container */}
+        <div className="bg-white p-7 sm:p-10 rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80">
+          
+          {/* Header Branding */}
+          <div className="text-center mb-6">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-white p-2 shadow-md shadow-slate-200/60 border border-slate-100 flex items-center justify-center mb-3">
+              <img 
+                src="/cbdp-logo.png" 
+                alt="CBDP Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
-            
-            <form className="mt-6 sm:mt-8 space-y-5 sm:space-y-6" onSubmit={handleSubmit(onSubmit)}>
-              {status.message && (
-                <div className={`p-3.5 rounded-xl text-sm text-center ${status.type === 'error' ? 'bg-red-50 border border-red-200 text-red-600' : 'bg-emerald-50 border border-emerald-200 text-emerald-700'}`}>
-                  {status.message}
-                </div>
-              )}
-              
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
+              {step === 1 && 'Reset Account Password'}
+              {step === 2 && 'Verify Code & Set Password'}
+              {step === 3 && 'Password Reset Complete!'}
+            </h2>
+            <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+              {step === 1 && 'Enter your registered official email address to receive a secure 6-digit recovery code.'}
+              {step === 2 && `Enter the 6-digit verification code issued for ${registeredEmail}.`}
+              {step === 3 && 'Your credentials have been securely updated in the database.'}
+            </p>
+          </div>
+
+          {/* Feedback Messages */}
+          {errorMsg && (
+            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {successMsg && step !== 3 && (
+            <div className="mb-5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* Development / Demo helper alert */}
+          {devCode && step === 2 && (
+            <div className="mb-5 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs flex items-center justify-between">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Email address</label>
+                <span className="font-bold">Active Verification Code:</span>{' '}
+                <span className="font-mono font-black text-sm text-indigo-700 tracking-widest">{devCode}</span>
+              </div>
+              <span className="text-[10px] text-indigo-600 bg-indigo-100/80 px-2 py-0.5 rounded-full font-semibold">Valid 15m</span>
+            </div>
+          )}
+
+          {/* STEP 1: Email Form */}
+          {step === 1 && (
+            <form onSubmit={handleEmailSubmit(onEmailSubmit)} className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+                  Registered Work Email <span className="text-rose-500">*</span>
+                </label>
                 <input
-                  {...register('email')}
+                  {...registerEmail('email')}
                   type="email"
-                  className="appearance-none block w-full px-3.5 py-2.5 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-sm transition-shadow"
-                  placeholder="you@cbdp.org"
+                  placeholder="e.g. employee@cbdp.org"
+                  className={`w-full px-3.5 py-3 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 font-mono ${
+                    emailErrors.email ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-100'
+                  }`}
                 />
-                {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+                {emailErrors.email && (
+                  <p className="mt-1 text-xs text-rose-500 font-medium">{emailErrors.email.message}</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-75 active:scale-[0.99]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Validating Account &amp; Sending Code...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Dispatch Recovery Code</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+
+          {/* STEP 2: Code & New Password Form */}
+          {step === 2 && (
+            <form onSubmit={handleResetSubmit(onResetSubmit)} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">
+                  6-Digit Verification Code <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  {...registerReset('code')}
+                  type="text"
+                  maxLength={6}
+                  placeholder="123456"
+                  className={`w-full px-3.5 py-2.5 text-center text-lg tracking-widest font-mono font-bold rounded-xl border bg-white text-slate-900 focus:outline-none focus:ring-2 ${
+                    resetErrors.code ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-100'
+                  }`}
+                />
+                {resetErrors.code && (
+                  <p className="mt-1 text-xs text-rose-500 font-medium">{resetErrors.code.message}</p>
+                )}
               </div>
 
               <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">
+                  New Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    {...registerReset('newPassword')}
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter at least 6 characters"
+                    className={`w-full px-3.5 pr-10 py-2.5 text-sm rounded-xl border bg-white text-slate-900 focus:outline-none focus:ring-2 ${
+                      resetErrors.newPassword ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-100'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {resetErrors.newPassword && (
+                  <p className="mt-1 text-xs text-rose-500 font-medium">{resetErrors.newPassword.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">
+                  Confirm New Password <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  {...registerReset('confirmPassword')}
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Re-enter new password"
+                  className={`w-full px-3.5 py-2.5 text-sm rounded-xl border bg-white text-slate-900 focus:outline-none focus:ring-2 ${
+                    resetErrors.confirmPassword ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-100'
+                  }`}
+                />
+                {resetErrors.confirmPassword && (
+                  <p className="mt-1 text-xs text-rose-500 font-medium">{resetErrors.confirmPassword.message}</p>
+                )}
+              </div>
+
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="group relative w-full flex justify-center py-2.5 sm:py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-primary hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-70 transition-all shadow-md shadow-primary/20 cursor-pointer"
+                  className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-75 active:scale-[0.99]"
                 >
-                  {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send reset link'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Hashing &amp; Updating Password...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Save New Password &amp; Sign In</span>
+                      <ShieldCheck className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               </div>
-              
-              <div className="text-center mt-4">
-                <Link to="/login" className="inline-flex items-center text-xs sm:text-sm font-medium text-primary hover:text-brand-700">
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Back to login
-                </Link>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setStep(1); setErrorMsg(''); }}
+                  className="text-xs text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                >
+                  Change email address
+                </button>
               </div>
             </form>
-          </>
-        ) : (
-          <div className="text-center py-4 sm:py-6">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-emerald-100 mb-4">
-              <MailCheck className="h-6 w-6 text-emerald-600" />
+          )}
+
+          {/* STEP 3: Success Confirmation */}
+          {step === 3 && (
+            <div className="text-center py-4 space-y-4">
+              <div className="mx-auto w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Your Password Has Been Updated</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Previous sessions have been invalidated and your new password is now active in the database. Redirecting to sign in...
+              </p>
+              <Link
+                to="/login"
+                className="inline-flex justify-center w-full py-2.5 px-4 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors"
+              >
+                Sign In Immediately
+              </Link>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Check your email</h2>
-            <p className="text-xs sm:text-sm text-gray-600 mb-6">{status.message}</p>
-            <Link 
-              to="/login"
-              className="inline-flex justify-center w-full py-2.5 sm:py-3 px-4 border border-gray-300 shadow-xs text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-            >
-              Return to login
-            </Link>
-          </div>
-        )}
+          )}
+
+          {/* Back to Login Link */}
+          {step !== 3 && (
+            <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+              <Link 
+                to="/login" 
+                className="inline-flex items-center text-xs font-bold text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                <span>Return to Sign-In Gateway</span>
+              </Link>
+            </div>
+          )}
+
+        </div>
       </div>
     </div>
   );

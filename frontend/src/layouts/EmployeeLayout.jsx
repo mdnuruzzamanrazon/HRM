@@ -5,8 +5,10 @@ import {
   LayoutDashboard, Clock, Calendar, CreditCard, 
   CalendarClock, Receipt, Megaphone, User, LogOut, 
   Menu, X, Bell, Shield, ArrowUpRight, ChevronRight,
-  ShieldCheck, Sparkles, Building2, CheckSquare
+  ShieldCheck, Sparkles, Building2, CheckSquare,
+  KeyRound, Lock, Loader2, AlertCircle, CheckCircle2
 } from 'lucide-react';
+import api from '../services/api';
 import { cn } from '../utils/cn';
 import ErrorBoundary from '../components/ErrorBoundary';
 import LogoutModal from '../components/LogoutModal';
@@ -19,6 +21,46 @@ export default function EmployeeLayout() {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // First-Login Password Setup Modal
+  const [isFirstLoginModalOpen, setIsFirstLoginModalOpen] = useState(false);
+  const [firstLoginPassword, setFirstLoginPassword] = useState('');
+  const [firstLoginConfirm, setFirstLoginConfirm] = useState('');
+  const [firstLoginError, setFirstLoginError] = useState('');
+  const [firstLoginSaving, setFirstLoginSaving] = useState(false);
+
+  useEffect(() => {
+    if (user && user.mustChangePassword) {
+      setIsFirstLoginModalOpen(true);
+    }
+  }, [user]);
+
+  const handleSaveFirstLoginPassword = async (e) => {
+    e.preventDefault();
+    if (firstLoginPassword.length < 6) {
+      setFirstLoginError('New password must be at least 6 characters long');
+      return;
+    }
+    if (firstLoginPassword !== firstLoginConfirm) {
+      setFirstLoginError('Passwords do not match');
+      return;
+    }
+    try {
+      setFirstLoginSaving(true);
+      setFirstLoginError('');
+      const res = await api.post('/auth/change-first-login-password', {
+        newPassword: firstLoginPassword
+      });
+      if (res.data?.success) {
+        setIsFirstLoginModalOpen(false);
+        if (user) user.mustChangePassword = false;
+      }
+    } catch (err) {
+      setFirstLoginError(err.response?.data?.message || 'Failed to update initial password');
+    } finally {
+      setFirstLoginSaving(false);
+    }
+  };
 
   // Live Clock updater
   useEffect(() => {
@@ -339,6 +381,93 @@ export default function EmployeeLayout() {
           </div>
         </main>
       </div>
+
+      {/* First-Login Mandatory Password Setup Modal */}
+      {isFirstLoginModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200/90 animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 tracking-tight font-heading">First-Login Security Setup</h3>
+                  <p className="text-[11px] text-slate-500">Configure your private permanent password</p>
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveFirstLoginPassword} className="p-6 space-y-4">
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-xs text-amber-900 leading-relaxed">
+                <p className="font-bold mb-0.5">Corporate Security Requirement</p>
+                You have been authenticated using a temporary administrative password. Please establish your private password to secure your account.
+              </div>
+
+              {firstLoginError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                  <span>{firstLoginError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">
+                  New Private Password <span className="text-rose-500">* (min 6 characters)</span>
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter new password..."
+                    value={firstLoginPassword}
+                    onChange={(e) => setFirstLoginPassword(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">
+                  Confirm Private Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="password"
+                    required
+                    placeholder="Re-enter new password..."
+                    value={firstLoginConfirm}
+                    onChange={(e) => setFirstLoginConfirm(e.target.value)}
+                    className="w-full pl-10 pr-3.5 py-2.5 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={firstLoginSaving}
+                  className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-70 active:scale-[0.99]"
+                >
+                  {firstLoginSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving Secure Credentials...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Save Permanent Password &amp; Enter Workspace</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Logout Confirmation Dialog */}
       <LogoutModal

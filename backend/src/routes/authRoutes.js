@@ -1,5 +1,13 @@
 import express from 'express';
-import { loginUser, logoutUser, forgotPassword, resetPassword, updatePassword } from '../controllers/authController.js';
+import { 
+  loginUser, 
+  logoutUser, 
+  forgotPassword, 
+  verifyResetCode, 
+  resetPassword, 
+  changeFirstLoginPassword, 
+  updatePassword 
+} from '../controllers/authController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 
 const router = express.Router();
@@ -7,7 +15,10 @@ const router = express.Router();
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
 router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-code', verifyResetCode);
+router.post('/reset-password', resetPassword);
 router.post('/reset-password/:token', resetPassword);
+router.post('/change-first-login-password', authenticate, changeFirstLoginPassword);
 
 // Example protected route
 router.get('/me', authenticate, (req, res) => {
@@ -20,3 +31,4 @@ router.get('/profile', authenticate, (req, res) => {
 router.put('/update-password', authenticate, updatePassword);
 
 export default router;
+

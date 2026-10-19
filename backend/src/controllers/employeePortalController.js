@@ -55,8 +55,14 @@ export const getEmployeeDashboardData = async (req, res) => {
       .populate('jobDetails.departmentId', 'name')
       .populate('jobDetails.managerId', 'personalDetails employeeCode');
 
-    if (!employee) {
-      employee = await Employee.findOne();
+    if (!employee || employee.isDeleted) {
+      if (['SUPER_ADMIN', 'HR_ADMIN'].includes(req.user?.role)) {
+        employee = await Employee.findOne({ isDeleted: { $ne: true } })
+          .populate('jobDetails.departmentId', 'name')
+          .populate('jobDetails.managerId', 'personalDetails employeeCode');
+      } else {
+        return res.status(404).json({ success: false, message: 'Employee profile not found or inactive.' });
+      }
     }
 
     // 2. Fetch Today's Attendance
@@ -144,15 +150,17 @@ export const getEmployeeProfile = async (req, res) => {
     const employeeId = req.user?.employeeProfileId?._id || req.user?.employeeProfileId || mockData.adminEmployee._id;
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      return res.json({ success: true, data: mockData.adminEmployee });
+      const allMockEmps = mockData.employees || [];
+      const found = allMockEmps.find(e => e._id === employeeId || e.email === req.user?.email);
+      return res.json({ success: true, data: found || mockData.adminEmployee });
     }
 
     const employee = await Employee.findById(employeeId)
       .populate('jobDetails.departmentId', 'name')
       .populate('jobDetails.managerId', 'personalDetails employeeCode');
 
-    if (!employee) {
-      return res.status(404).json({ success: false, message: 'Employee profile not found' });
+    if (!employee || employee.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Employee profile not found or inactive' });
     }
 
     res.json({ success: true, data: employee });

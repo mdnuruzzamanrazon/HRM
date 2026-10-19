@@ -22,18 +22,23 @@ export const authenticate = async (req, res, next) => {
 
     // If Demo Mode or database not connected, authenticate with demo user corresponding to token
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      if (decoded.id === mockData.employeeUser?._id) {
-        req.user = mockData.employeeUser;
-      } else {
-        req.user = mockData.adminUser;
+      const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
+      const found = allMockUsers.find(u => u._id === decoded.id || u.email === decoded.email);
+      if (found) {
+        if (!found.isActive || found.isDeleted) {
+          return res.status(401).json({ success: false, message: 'Not authorized, account inactive or removed' });
+        }
+        req.user = found;
+        return next();
       }
+      req.user = decoded.id === mockData.employeeUser?._id ? mockData.employeeUser : mockData.adminUser;
       return next();
     }
 
     // Check if user still exists in database
     const user = await User.findById(decoded.id).select('-passwordHash').populate('employeeProfileId');
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Not authorized, user not found' });
+    if (!user || user.isDeleted) {
+      return res.status(401).json({ success: false, message: 'Not authorized, user not found or deleted' });
     }
 
     // Check if user is active
@@ -41,10 +46,25 @@ export const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized, account inactive' });
     }
 
+    // Check tokenVersion for immediate session revocation
+    if (decoded.tokenVersion && user.tokenVersion && decoded.tokenVersion !== user.tokenVersion) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Session invalidated due to password reset or administrative action. Please log in again.' 
+      });
+    }
+
+    // If employee role, check linked employee status
+    if (user.role === 'EMPLOYEE' && user.employeeProfileId) {
+      const emp = user.employeeProfileId;
+      if (emp.isDeleted || emp.jobDetails?.status === 'DELETED' || emp.jobDetails?.status === 'TERMINATED') {
+        return res.status(401).json({ success: false, message: 'Employee profile is deactivated or terminated.' });
+      }
+    }
+
     req.user = user;
     next();
   } catch (error) {
-    console.error(error);
     res.status(401).json({ success: false, message: 'Not authorized, token failed' });
   }
 };

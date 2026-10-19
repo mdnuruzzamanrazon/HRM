@@ -6,18 +6,42 @@ import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 import { logAudit } from '../utils/auditLogger.js';
 
-// Get all employees with user account status
+
+// Get all non-deleted employees with user account status
 export const getEmployees = async (req, res) => {
   try {
-    if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      return res.json({ success: true, data: mockData.employees });
-    }
-    const employees = await Employee.find().sort({ createdAt: -1 });
+    const { includeDeleted, status } = req.query;
 
-    // Attach linked user account info (email, role, isActive, lastLoginAt)
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      let list = (mockData.employees || []).filter(e => includeDeleted === 'true' || !e.isDeleted);
+      if (status && status !== 'ALL') {
+        list = list.filter(e => e.jobDetails?.status === status);
+      }
+      return res.json({ 
+        success: true, 
+        data: list,
+        count: list.length,
+        isDemoMode: true 
+      });
+    }
+
+    const filter = {};
+    if (includeDeleted !== 'true') {
+      filter.isDeleted = { $ne: true };
+    }
+    if (status && status !== 'ALL') {
+      filter['jobDetails.status'] = status;
+    }
+
+    const employees = await Employee.find(filter)
+      .populate('jobDetails.departmentId', 'name code')
+      .populate('userId', 'email role isActive mustChangePassword lastLoginAt')
+      .sort({ createdAt: -1 });
+
+    // Fetch linked user account info for complete synchronization
     const employeeIds = employees.map(e => e._id);
     const users = await User.find({ employeeProfileId: { $in: employeeIds } })
-      .select('email role isActive lastLoginAt employeeProfileId');
+      .select('email role isActive mustChangePassword lastLoginAt employeeProfileId');
 
     const userMap = {};
     users.forEach(u => {
@@ -26,17 +50,27 @@ export const getEmployees = async (req, res) => {
         email: u.email,
         role: u.role,
         isActive: u.isActive,
+        mustChangePassword: Boolean(u.mustChangePassword),
         lastLoginAt: u.lastLoginAt
       };
     });
 
     const enrichedEmployees = employees.map(emp => {
       const plain = emp.toObject();
-      plain.userAccount = userMap[emp._id.toString()] || null;
+      plain.userAccount = userMap[emp._id.toString()] || (plain.userId ? {
+        _id: plain.userId._id,
+        email: plain.userId.email,
+        role: plain.userId.role,
+        isActive: plain.userId.isActive,
+        mustChangePassword: plain.userId.mustChangePassword,
+        lastLoginAt: plain.userId.lastLoginAt
+      } : null);
+      // Guarantee plain.email is always present
+      plain.email = plain.email || plain.personalDetails?.email || plain.userAccount?.email;
       return plain;
     });
 
-    res.json({ success: true, data: enrichedEmployees });
+    res.json({ success: true, data: enrichedEmployees, count: enrichedEmployees.length });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -46,24 +80,26 @@ export const getEmployees = async (req, res) => {
 export const getEmployeeById = async (req, res) => {
   try {
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      const emp = mockData.employees.find(e => e._id === req.params.id) || mockData.employees[0];
-      return res.json({ success: true, data: emp });
+      const emp = (mockData.employees || []).find(e => e._id === req.params.id) || mockData.employees[0];
+      return res.json({ success: true, data: emp, isDemoMode: true });
     }
 
     const employee = await Employee.findById(req.params.id)
       .populate('jobDetails.departmentId', 'name code')
-      .populate('jobDetails.managerId', 'personalDetails employeeCode');
+      .populate('jobDetails.managerId', 'personalDetails employeeCode')
+      .populate('userId', 'email role isActive mustChangePassword lastLoginAt createdAt');
 
-    if (!employee) {
-      return res.status(404).json({ success: false, message: 'Employee not found' });
+    if (!employee || employee.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Employee record not found' });
     }
 
     // Attach user account
     const userAccount = await User.findOne({ employeeProfileId: employee._id })
-      .select('email role isActive lastLoginAt createdAt');
+      .select('email role isActive mustChangePassword lastLoginAt createdAt');
 
     const plain = employee.toObject();
-    plain.user = userAccount || null;
+    plain.userAccount = userAccount || plain.userId || null;
+    plain.email = plain.email || plain.personalDetails?.email || userAccount?.email;
 
     res.json({ success: true, data: plain });
   } catch (error) {
@@ -71,159 +107,334 @@ export const getEmployeeById = async (req, res) => {
   }
 };
 
-// Create a new employee
+// Create a new employee with mandatory email and synchronized portal account
 export const createEmployee = async (req, res) => {
   try {
     const { 
       firstName, lastName, email, employeeCode, 
-      title, joinDate, phone, contactAddress, dob, 
-      gender, employmentType, status, salary 
+      title, department, joinDate, phone, contactAddress, dob, 
+      gender, employmentType, status, salary, initialPassword,
+      temporaryPassword, mustChangePassword
     } = req.body;
 
-    if (!firstName || !lastName || !employeeCode || !title) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'First name, last name, employee code, and job title are required' 
-      });
+    const rawCode = employeeCode || req.body.employeeId;
+    const rawTitle = title || req.body.designation;
+    const rawJoinDate = joinDate || req.body.joiningDate;
+
+    // 1. Mandatory Fields Validation
+    if (!firstName || !firstName.trim()) {
+      return res.status(400).json({ success: false, message: 'First name is required' });
+    }
+    if (!lastName || !lastName.trim()) {
+      return res.status(400).json({ success: false, message: 'Last name is required' });
+    }
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Official email address is required for employee account creation' });
+    }
+    if (!rawCode || !rawCode.trim()) {
+      return res.status(400).json({ success: false, message: 'Employee ID / Code is required' });
+    }
+    if (!rawTitle || !rawTitle.trim()) {
+      return res.status(400).json({ success: false, message: 'Job title / designation is required' });
+    }
+    if (!department || !department.trim()) {
+      return res.status(400).json({ success: false, message: 'Department is required' });
+    }
+    if (!rawJoinDate) {
+      return res.status(400).json({ success: false, message: 'Date of joining is required' });
     }
 
-    // In-memory demo mode fallback
+    // 2. Email format validation
+    const normalizedEmail = email.toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid official email address format (e.g. name@cbdp.org)' });
+    }
+
+    const normalizedCode = rawCode.trim().toUpperCase();
+    const effectiveDepartment = department.trim();
+    const effectiveTitle = rawTitle.trim();
+    const effectiveJoinDate = rawJoinDate;
+    const effectiveStatus = status || 'ACTIVE';
+    const effectiveEmploymentType = employmentType || 'FULL_TIME';
+
+    // 3. Demo Mode Fallback
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      if (!mockData.employees) mockData.employees = [];
+      if (!mockData.users) mockData.users = [];
+
+      // Check duplicate code
+      if (mockData.employees.some(e => e.employeeCode === normalizedCode && !e.isDeleted)) {
+        return res.status(400).json({ success: false, message: `Employee ID '${normalizedCode}' is already registered.` });
+      }
+
+      // Check duplicate email
+      if (mockData.employees.some(e => (e.email === normalizedEmail || e.personalDetails?.email === normalizedEmail) && !e.isDeleted) ||
+          mockData.users.some(u => u.email === normalizedEmail && !u.isDeleted)) {
+        return res.status(400).json({ success: false, message: `Official email address '${normalizedEmail}' is already registered.` });
+      }
+
+      const newEmpId = 'emp-' + Date.now();
+      const newUserId = 'user-' + Date.now();
+      const chosenPassword = temporaryPassword || initialPassword || 'CBDP@123';
+      const passwordHash = await hashPassword(chosenPassword);
+
       const newEmployee = {
-        _id: 'emp-' + Date.now(),
-        employeeCode: employeeCode || `CBDP-${mockData.employees.length + 101}`,
+        _id: newEmpId,
+        employeeCode: normalizedCode,
+        email: normalizedEmail,
+        userId: newUserId,
+        isDeleted: false,
         personalDetails: { 
-          firstName, 
-          lastName,
-          phone: phone || '+1 (555) 019-2834',
+          firstName: firstName.trim(), 
+          lastName: lastName.trim(),
+          email: normalizedEmail,
+          phone: phone ? phone.trim() : '',
           dob: dob || '1995-01-01',
-          contactAddress: contactAddress || '100 Corporate Blvd'
+          contactAddress: contactAddress ? contactAddress.trim() : ''
         },
         jobDetails: { 
-          title, 
+          title: effectiveTitle, 
+          department: effectiveDepartment,
           joinDate: joinDate || new Date().toISOString().split('T')[0], 
-          status: status || 'ACTIVE',
-          employmentType: employmentType || 'FULL_TIME',
+          status: effectiveStatus,
+          employmentType: effectiveEmploymentType,
           salary: Number(salary) || 75000
         },
-        documents: []
+        userAccount: {
+          _id: newUserId,
+          email: normalizedEmail,
+          role: 'EMPLOYEE',
+          isActive: effectiveStatus !== 'INACTIVE' && effectiveStatus !== 'TERMINATED',
+          mustChangePassword: mustChangePassword !== false,
+          lastLoginAt: null
+        },
+        documents: [],
+        createdAt: new Date().toISOString()
+      };
+
+      const newUser = {
+        _id: newUserId,
+        email: normalizedEmail,
+        passwordHash,
+        tempPassword: chosenPassword,
+        role: 'EMPLOYEE',
+        employeeProfileId: newEmpId,
+        isActive: effectiveStatus !== 'INACTIVE' && effectiveStatus !== 'TERMINATED',
+        mustChangePassword: mustChangePassword !== false,
+        tokenVersion: 1,
+        isDeleted: false,
+        createdAt: new Date().toISOString()
       };
 
       mockData.employees.unshift(newEmployee);
+      mockData.users.push(newUser);
 
       return res.status(201).json({ 
         success: true, 
         data: newEmployee, 
-        message: 'Employee created successfully' 
+        userAccount: {
+          email: newUser.email,
+          role: newUser.role,
+          isActive: newUser.isActive,
+          mustChangePassword: newUser.mustChangePassword
+        },
+        message: 'Employee record and portal authentication account created successfully',
+        isDemoMode: true
       });
     }
-    
-    // Check if employee code already exists
-    const existingEmp = await Employee.findOne({ employeeCode });
-    if (existingEmp) {
-      return res.status(400).json({ success: false, message: `Employee code ${employeeCode} already exists.` });
+
+    // 4. Production Database Uniqueness Checks
+    const existingEmpByCode = await Employee.findOne({ employeeCode: normalizedCode, isDeleted: { $ne: true } });
+    if (existingEmpByCode) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Employee ID '${normalizedCode}' is already registered to ${existingEmpByCode.personalDetails?.firstName} ${existingEmpByCode.personalDetails?.lastName}.` 
+      });
     }
 
-    // Create Employee in Database
+    const existingEmpByEmail = await Employee.findOne({ email: normalizedEmail, isDeleted: { $ne: true } });
+    const existingUserByEmail = await User.findOne({ email: normalizedEmail, isDeleted: { $ne: true } });
+    if (existingEmpByEmail || existingUserByEmail) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Official email address '${normalizedEmail}' is already registered in the system.` 
+      });
+    }
+
+    // 5. Establish Initial Password & Credentials
+    const chosenPassword = temporaryPassword || initialPassword || 'CBDP@123';
+    if (chosenPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Initial password must be at least 6 characters long' });
+    }
+    const passwordHash = await hashPassword(chosenPassword);
+
+    // 6. Create Employee Record in MongoDB
     const employee = new Employee({
-      employeeCode,
+      employeeCode: normalizedCode,
+      email: normalizedEmail,
       personalDetails: { 
-        firstName, 
-        lastName, 
-        phone: phone || '', 
-        contactAddress: contactAddress || '',
+        firstName: firstName.trim(), 
+        lastName: lastName.trim(), 
+        email: normalizedEmail,
+        phone: phone ? phone.trim() : '', 
+        contactAddress: contactAddress ? contactAddress.trim() : '',
         dob: dob ? new Date(dob) : undefined
       },
       jobDetails: { 
-        title, 
-        joinDate: joinDate ? new Date(joinDate) : new Date(), 
-        status: status || 'ACTIVE',
-        employmentType: employmentType || 'FULL_TIME'
-      }
+        title: effectiveTitle, 
+        department: effectiveDepartment,
+        joinDate: effectiveJoinDate ? new Date(effectiveJoinDate) : new Date(), 
+        status: effectiveStatus,
+        employmentType: effectiveEmploymentType
+      },
+      isDeleted: false
     });
 
     await employee.save();
 
-    // Auto-create User account if email provided
-    let createdUser = null;
-    if (email) {
-      const existingUser = await User.findOne({ email: email.toLowerCase() });
-      if (!existingUser) {
-        const passwordHash = await hashPassword('CBDP@123'); // Default password
-        createdUser = new User({
-          email: email.toLowerCase(),
-          passwordHash,
-          role: 'EMPLOYEE',
-          employeeProfileId: employee._id,
-          isActive: true
-        });
-        await createdUser.save();
-      }
-    }
+    // 7. Create Corresponding Authentication User in MongoDB
+    const createdUser = new User({
+      email: normalizedEmail,
+      passwordHash,
+      role: 'EMPLOYEE',
+      employeeProfileId: employee._id,
+      isActive: effectiveStatus !== 'INACTIVE' && effectiveStatus !== 'TERMINATED',
+      mustChangePassword: mustChangePassword !== false,
+      tokenVersion: 1,
+      isDeleted: false
+    });
+
+    await createdUser.save();
+
+    // Link user ID to employee document for bidirectional integrity
+    employee.userId = createdUser._id;
+    await employee.save();
 
     await logAudit({
       userId: req.user?._id,
       action: 'CREATE',
       module: 'EMPLOYEE',
       resourceId: employee._id,
-      newState: employee,
+      newState: {
+        employeeCode: employee.employeeCode,
+        name: `${employee.personalDetails.firstName} ${employee.personalDetails.lastName}`,
+        email: employee.email,
+        title: employee.jobDetails.title,
+        department: employee.jobDetails.department
+      },
       req
     });
 
+    const responseEmployee = employee.toObject();
+    responseEmployee.userAccount = {
+      _id: createdUser._id,
+      email: createdUser.email,
+      role: createdUser.role,
+      isActive: createdUser.isActive,
+      mustChangePassword: createdUser.mustChangePassword
+    };
+
     res.status(201).json({ 
       success: true, 
-      data: employee, 
-      userAccount: createdUser,
-      message: 'Employee created successfully' 
+      data: responseEmployee, 
+      userAccount: responseEmployee.userAccount,
+      message: 'Employee record and portal authentication account created successfully' 
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
 };
 
-// Update employee details (personal, job, bank)
+// Update employee details (personal, job, bank, and credentials sync)
 export const updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
-    const { personalDetails, jobDetails, bankDetails, employeeCode } = req.body;
+    const { personalDetails, jobDetails, bankDetails, employeeCode, email } = req.body;
+
+    const newEmail = email || personalDetails?.email;
+    const normalizedEmail = newEmail ? newEmail.toLowerCase().trim() : null;
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      const emp = mockData.employees.find(e => e._id === id);
+      const emp = (mockData.employees || []).find(e => e._id === id);
       if (emp) {
         if (personalDetails) emp.personalDetails = { ...emp.personalDetails, ...personalDetails };
         if (jobDetails) emp.jobDetails = { ...emp.jobDetails, ...jobDetails };
-        if (employeeCode) emp.employeeCode = employeeCode;
+        if (employeeCode) emp.employeeCode = employeeCode.trim().toUpperCase();
+        if (normalizedEmail) {
+          emp.email = normalizedEmail;
+          if (emp.personalDetails) emp.personalDetails.email = normalizedEmail;
+          // Synchronize mock user account
+          const u = (mockData.users || []).find(user => user.employeeProfileId === id || user._id === emp.userId);
+          if (u) u.email = normalizedEmail;
+        }
+        if (jobDetails?.status) {
+          const u = (mockData.users || []).find(user => user.employeeProfileId === id || user._id === emp.userId);
+          if (u) {
+            u.isActive = jobDetails.status !== 'TERMINATED' && jobDetails.status !== 'INACTIVE';
+            if (!u.isActive) u.tokenVersion = (u.tokenVersion || 1) + 1;
+          }
+        }
       }
-      return res.json({ success: true, data: emp || req.body, message: 'Employee updated successfully' });
+      return res.json({ success: true, data: emp || req.body, message: 'Employee profile updated successfully', isDemoMode: true });
     }
 
     const employee = await Employee.findById(id);
-    if (!employee) {
+    if (!employee || employee.isDeleted) {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
 
     const previousState = employee.toObject();
 
-    if (employeeCode) employee.employeeCode = employeeCode;
+    // Check employeeCode uniqueness if changed
+    if (employeeCode && employeeCode.trim().toUpperCase() !== employee.employeeCode) {
+      const codeUpper = employeeCode.trim().toUpperCase();
+      const codeConflict = await Employee.findOne({ employeeCode: codeUpper, _id: { $ne: id }, isDeleted: { $ne: true } });
+      if (codeConflict) {
+        return res.status(400).json({ success: false, message: `Employee ID '${codeUpper}' is already in use.` });
+      }
+      employee.employeeCode = codeUpper;
+    }
+
+    // Check email uniqueness and synchronize with User if changed
+    if (normalizedEmail && normalizedEmail !== employee.email) {
+      const emailConflict = await User.findOne({ email: normalizedEmail, employeeProfileId: { $ne: id }, isDeleted: { $ne: true } });
+      if (emailConflict) {
+        return res.status(400).json({ success: false, message: `Email address '${normalizedEmail}' is already registered to another account.` });
+      }
+      employee.email = normalizedEmail;
+      await User.updateMany({ employeeProfileId: employee._id }, { email: normalizedEmail });
+    }
+
     if (personalDetails) {
       employee.personalDetails = {
         ...employee.personalDetails.toObject(),
-        ...personalDetails
+        ...personalDetails,
+        email: normalizedEmail || employee.personalDetails.email || employee.email
       };
     }
+
     if (jobDetails) {
+      const prevStatus = employee.jobDetails.status;
       employee.jobDetails = {
         ...employee.jobDetails.toObject(),
         ...jobDetails
       };
 
-      // If status changed to TERMINATED, deactivate user account
-      if (jobDetails.status === 'TERMINATED') {
-        await User.updateMany({ employeeProfileId: employee._id }, { isActive: false });
-      } else if (jobDetails.status === 'ACTIVE') {
-        await User.updateMany({ employeeProfileId: employee._id }, { isActive: true });
+      // If status changed to TERMINATED or INACTIVE, immediately deactivate portal account & revoke sessions
+      if (['TERMINATED', 'INACTIVE'].includes(jobDetails.status)) {
+        await User.updateMany(
+          { employeeProfileId: employee._id }, 
+          { isActive: false, $inc: { tokenVersion: 1 } }
+        );
+      } else if (jobDetails.status === 'ACTIVE' && ['TERMINATED', 'INACTIVE'].includes(prevStatus)) {
+        await User.updateMany(
+          { employeeProfileId: employee._id }, 
+          { isActive: true }
+        );
       }
     }
+
     if (bankDetails) {
       employee.bankDetails = {
         ...employee.bankDetails?.toObject(),
@@ -249,25 +460,32 @@ export const updateEmployee = async (req, res) => {
   }
 };
 
-// Update employee employment status (ACTIVE, TERMINATED, ON_LEAVE, PROBATION)
+// Update employee employment status (ACTIVE, INACTIVE, TERMINATED, ON_LEAVE, PROBATION)
 export const updateEmployeeStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['ACTIVE', 'TERMINATED', 'ON_LEAVE', 'PROBATION'];
+    const validStatuses = ['ACTIVE', 'INACTIVE', 'TERMINATED', 'ON_LEAVE', 'PROBATION'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      const emp = mockData.employees.find(e => e._id === id);
-      if (emp) emp.jobDetails.status = status;
-      return res.json({ success: true, data: emp, message: `Status updated to ${status}` });
+      const emp = (mockData.employees || []).find(e => e._id === id);
+      if (emp) {
+        emp.jobDetails.status = status;
+        const u = (mockData.users || []).find(user => user.employeeProfileId === id);
+        if (u) {
+          u.isActive = status !== 'TERMINATED' && status !== 'INACTIVE';
+          if (!u.isActive) u.tokenVersion = (u.tokenVersion || 1) + 1;
+        }
+      }
+      return res.json({ success: true, data: emp, message: `Status updated to ${status}`, isDemoMode: true });
     }
 
     const employee = await Employee.findById(id);
-    if (!employee) {
+    if (!employee || employee.isDeleted) {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
 
@@ -275,11 +493,17 @@ export const updateEmployeeStatus = async (req, res) => {
     employee.jobDetails.status = status;
     await employee.save();
 
-    // If terminated, deactivate portal login
-    if (status === 'TERMINATED') {
-      await User.updateMany({ employeeProfileId: employee._id }, { isActive: false });
-    } else if (status === 'ACTIVE' && prevStatus === 'TERMINATED') {
-      await User.updateMany({ employeeProfileId: employee._id }, { isActive: true });
+    // If terminated or deactivated, revoke all active sessions
+    if (['TERMINATED', 'INACTIVE'].includes(status)) {
+      await User.updateMany(
+        { employeeProfileId: employee._id }, 
+        { isActive: false, $inc: { tokenVersion: 1 } }
+      );
+    } else if (status === 'ACTIVE' && ['TERMINATED', 'INACTIVE'].includes(prevStatus)) {
+      await User.updateMany(
+        { employeeProfileId: employee._id }, 
+        { isActive: true }
+      );
     }
 
     await logAudit({
@@ -302,24 +526,40 @@ export const updateEmployeeStatus = async (req, res) => {
 export const resetEmployeePassword = async (req, res) => {
   try {
     const { id } = req.params; // employeeId
-    const { newPassword } = req.body;
+    const { newPassword, isTemporary } = req.body;
 
     if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
     }
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
+      const u = allMockUsers.find(user => user.employeeProfileId === id || user._id === id);
+      if (u) {
+        u.tempPassword = newPassword;
+        u.mustChangePassword = Boolean(isTemporary);
+        u.tokenVersion = (u.tokenVersion || 1) + 1;
+        return res.json({ 
+          success: true, 
+          message: `Password for ${u.email} reset successfully (Demo Mode)` 
+        });
+      }
       return res.json({ success: true, message: 'Password updated successfully (Demo Mode)' });
     }
 
-    const user = await User.findOne({ employeeProfileId: id });
+    const user = await User.findOne({ 
+      $or: [{ employeeProfileId: id }, { _id: mongoose.isValidObjectId(id) ? id : null }] 
+    });
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'No portal user account found for this employee' });
     }
 
     user.passwordHash = await hashPassword(newPassword);
+    user.mustChangePassword = Boolean(isTemporary);
     user.lockUntil = undefined;
     user.failedLoginAttempts = 0;
+    user.tokenVersion = (user.tokenVersion || 1) + 1; // Immediately revoke previous employee sessions
     await user.save();
 
     await logAudit({
@@ -327,10 +567,17 @@ export const resetEmployeePassword = async (req, res) => {
       action: 'UPDATE',
       module: 'PASSWORD_RESET',
       resourceId: user._id,
+      newState: {
+        isTemporary: Boolean(isTemporary),
+        accountEmail: user.email
+      },
       req
     });
 
-    res.json({ success: true, message: `Password for ${user.email} reset successfully` });
+    res.json({ 
+      success: true, 
+      message: `Password for ${user.email} reset successfully.${isTemporary ? ' Employee must set a new password upon first login.' : ''}` 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -342,15 +589,32 @@ export const toggleEmployeeAccount = async (req, res) => {
     const { id } = req.params; // employeeId
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      return res.json({ success: true, message: 'Account status toggled (Demo Mode)' });
+      const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
+      const u = allMockUsers.find(user => user.employeeProfileId === id || user._id === id);
+      if (u) {
+        u.isActive = !u.isActive;
+        if (!u.isActive) u.tokenVersion = (u.tokenVersion || 1) + 1;
+        return res.json({ 
+          success: true, 
+          isActive: u.isActive, 
+          message: `Employee portal account ${u.isActive ? 'activated' : 'deactivated'} successfully (Demo Mode)` 
+        });
+      }
+      return res.json({ success: true, isActive: true, message: 'Account status toggled (Demo Mode)' });
     }
 
-    const user = await User.findOne({ employeeProfileId: id });
+    const user = await User.findOne({ 
+      $or: [{ employeeProfileId: id }, { _id: mongoose.isValidObjectId(id) ? id : null }] 
+    });
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'No portal user account associated with this employee' });
     }
 
     user.isActive = !user.isActive;
+    if (!user.isActive) {
+      user.tokenVersion = (user.tokenVersion || 1) + 1; // Terminate active logins immediately
+    }
     await user.save();
 
     await logAudit({
@@ -372,14 +636,26 @@ export const toggleEmployeeAccount = async (req, res) => {
   }
 };
 
-// Delete / Archive employee record
+// Delete employee record (Soft-delete by default to protect historical payroll and attendance)
 export const deleteEmployee = async (req, res) => {
   try {
     const { id } = req.params;
+    const { permanent, force } = req.query;
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      mockData.employees = mockData.employees.filter(e => e._id !== id);
-      return res.json({ success: true, message: 'Employee deleted successfully (Demo Mode)' });
+      const emp = (mockData.employees || []).find(e => e._id === id);
+      if (emp) {
+        emp.isDeleted = true;
+        emp.jobDetails.status = 'DELETED';
+      }
+      const u = (mockData.users || []).find(user => user.employeeProfileId === id);
+      if (u) {
+        u.isActive = false;
+        u.isDeleted = true;
+        u.tokenVersion = (u.tokenVersion || 1) + 1;
+      }
+      mockData.employees = (mockData.employees || []).filter(e => e._id !== id);
+      return res.json({ success: true, message: 'Employee record and portal account removed successfully' });
     }
 
     const employee = await Employee.findById(id);
@@ -387,22 +663,46 @@ export const deleteEmployee = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Employee record not found' });
     }
 
-    // Delete linked user account
-    await User.deleteMany({ employeeProfileId: id });
+    // Immediately revoke and invalidate authentication account
+    await User.updateMany(
+      { employeeProfileId: id },
+      { 
+        isActive: false, 
+        isDeleted: true, 
+        deletedAt: new Date(),
+        $inc: { tokenVersion: 1 } // Terminate active sessions immediately
+      }
+    );
 
-    // Delete employee record
-    await Employee.findByIdAndDelete(id);
+    if (permanent === 'true' || force === 'true') {
+      await User.deleteMany({ employeeProfileId: id });
+      await Employee.findByIdAndDelete(id);
+    } else {
+      // Soft deletion preserves historical integrity for payroll, attendance, and audit logs
+      employee.isDeleted = true;
+      employee.deletedAt = new Date();
+      employee.deletedBy = req.user?._id;
+      employee.jobDetails.status = 'DELETED';
+      await employee.save();
+    }
 
     await logAudit({
       userId: req.user?._id,
       action: 'DELETE',
       module: 'EMPLOYEE',
       resourceId: id,
-      previousState: employee,
+      previousState: {
+        employeeCode: employee.employeeCode,
+        name: `${employee.personalDetails?.firstName} ${employee.personalDetails?.lastName}`,
+        email: employee.email
+      },
       req
     });
 
-    res.json({ success: true, message: 'Employee record and associated user account removed successfully' });
+    res.json({ 
+      success: true, 
+      message: 'Employee record deactivated and portal access revoked successfully' 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -430,7 +730,7 @@ export const uploadEmployeeDocument = async (req, res) => {
     }
 
     const employee = await Employee.findById(id);
-    if (!employee) {
+    if (!employee || employee.isDeleted) {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
 
@@ -449,6 +749,7 @@ export const uploadEmployeeDocument = async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
 
 // Delete employee document
 export const deleteEmployeeDocument = async (req, res) => {
