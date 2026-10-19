@@ -6,28 +6,28 @@ import { hashPassword, verifyPassword } from '../utils/authUtils.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 
-const generateToken = (res, userId) => {
+const generateToken = (res, userId, rememberMe = false) => {
   const token = jwt.sign({ id: userId }, process.env.JWT_SECRET || 'super_secret_jwt_key_cbdp_2026', {
-    expiresIn: '1d',
+    expiresIn: rememberMe ? '30d' : '1d',
   });
 
   res.cookie('jwt', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 15 * 60 * 1000, // 15 mins
+    maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
   });
   return token;
 };
 
 export const loginUser = async (req, res) => {
   try {
-    const { email, password, portal } = req.body;
+    const { email, password, portal, rememberMe } = req.body;
 
     // Demo Mode fallback when cloud database is not connected
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       if (email === 'employee@cbdp.org' || email?.toLowerCase().includes('employee')) {
-        const token = generateToken(res, mockData.employeeUser._id);
+        const token = generateToken(res, mockData.employeeUser._id, rememberMe);
         return res.json({
           success: true,
           token,
@@ -36,7 +36,7 @@ export const loginUser = async (req, res) => {
         });
       }
       if (email === 'mdnuruzzamanrazon@gmail.com' || email?.includes('admin') || email?.includes('@')) {
-        const token = generateToken(res, mockData.adminUser._id);
+        const token = generateToken(res, mockData.adminUser._id, rememberMe);
         return res.json({
           success: true,
           token,
@@ -71,7 +71,7 @@ export const loginUser = async (req, res) => {
       user.lastLoginAt = Date.now();
       await user.save();
 
-      const token = generateToken(res, user._id);
+      const token = generateToken(res, user._id, rememberMe);
 
       res.json({
         success: true,
