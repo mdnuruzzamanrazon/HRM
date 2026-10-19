@@ -19,6 +19,7 @@ router.post('/submit', submitExpense);
 router.get('/my', getMyExpenses);
 
 // Admin / Manager / Finance routes
+router.get('/', authorize(hrAndFinanceRoles), getAllExpenses);
 router.get('/all', authorize(hrAndFinanceRoles), getAllExpenses);
 router.post('/admin-create', authorize(hrAndFinanceRoles), adminCreateExpense);
 router.put('/:id/status', authorize(hrAndFinanceRoles), updateExpenseStatus);

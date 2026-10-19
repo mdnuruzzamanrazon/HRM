@@ -17,6 +17,7 @@ const financeRoles = ['SUPER_ADMIN', 'FINANCE_OFFICER', 'HR_ADMIN'];
 router.get('/my', authenticate, getMyPayslips);
 
 // Admin / Finance routes
+router.get('/', authenticate, authorize(financeRoles), getAllPayslips);
 router.post('/generate', authenticate, authorize(financeRoles), generatePayroll);
 router.post('/manual', authenticate, authorize(financeRoles), createPayslipManual);
 router.get('/all', authenticate, authorize(financeRoles), getAllPayslips);

@@ -21,6 +21,7 @@ router.get('/balances', authenticate, getLeaveBalances);
 router.put('/:id/cancel', authenticate, cancelLeave);
 
 // Admin / Manager routes
+router.get('/', authenticate, authorize([...hrRoles, 'DEPT_MANAGER']), getAllLeaves);
 router.get('/all', authenticate, authorize([...hrRoles, 'DEPT_MANAGER']), getAllLeaves);
 router.post('/admin-create', authenticate, authorize(hrRoles), adminCreateLeave);
 router.put('/:id/status', authenticate, authorize([...hrRoles, 'DEPT_MANAGER']), updateLeaveStatus);
