@@ -27,6 +27,7 @@ export default function EmployeeList() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [dbStatus, setDbStatus] = useState(null);
+  const [showNotice, setShowNotice] = useState(true);
 
   // Modals state
   const [editModalEmployee, setEditModalEmployee] = useState(null);
@@ -282,10 +283,10 @@ export default function EmployeeList() {
       </div>
 
       {/* Cloud Serverless Notice if not connected to live MongoDB */}
-      {dbStatus && dbStatus.status !== 'CONNECTED' && (
-        <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 flex items-start gap-3.5 text-xs text-amber-900 shadow-xs animate-in fade-in">
+      {showNotice && dbStatus && dbStatus.status !== 'CONNECTED' && (
+        <div className="relative bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 flex items-start gap-3.5 text-xs text-amber-900 shadow-xs animate-in fade-in">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-1.5 leading-relaxed">
+          <div className="space-y-1.5 leading-relaxed pr-6">
             <p className="font-bold text-amber-950 text-sm">
               Live Vercel Cloud Deployment: MongoDB Connection Required for Permanent Storage
             </p>
@@ -302,6 +303,14 @@ export default function EmployeeList() {
               <span className="bg-white/80 border border-amber-300 px-2 py-0.5 rounded font-mono">3. Redeploy</span>
             </div>
           </div>
+          <button 
+            type="button"
+            onClick={() => setShowNotice(false)} 
+            className="absolute top-3.5 right-3.5 text-amber-500 hover:text-amber-800 p-1 rounded-lg hover:bg-amber-100/60 transition-colors cursor-pointer"
+            title="Dismiss notice"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
