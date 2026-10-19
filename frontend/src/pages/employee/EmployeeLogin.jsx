@@ -21,7 +21,6 @@ export default function EmployeeLogin() {
   const [portal, setPortal] = useState('EMPLOYEE');
   const [rememberMe, setRememberMe] = useState(true);
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const [activePreset, setActivePreset] = useState(null);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -79,24 +78,9 @@ export default function EmployeeLogin() {
       setLoginSuccess(false);
       setError(
         err.response?.data?.message || 
-        'Authentication failed. Please verify your email and password.'
+        'Authentication failed. Please check your credentials and try again.'
       );
     }
-  };
-
-  const fillPreset = (type) => {
-    setError('');
-    setActivePreset(type);
-    if (type === 'admin') {
-      setPortal('HR');
-      setValue('email', 'mdnuruzzamanrazon@gmail.com', { shouldValidate: true });
-      setValue('password', 'ABCabc@123', { shouldValidate: true });
-    } else {
-      setPortal('EMPLOYEE');
-      setValue('email', 'employee@cbdp.org', { shouldValidate: true });
-      setValue('password', 'ABCabc@123', { shouldValidate: true });
-    }
-    setTimeout(() => setActivePreset(null), 1800);
   };
 
   return (
@@ -136,11 +120,11 @@ export default function EmployeeLogin() {
                   CBDP <span className="text-emerald-400">Self-Service</span>
                 </span>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                  Employee Hub
+                  Staff Portal
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-medium">
-                Center for Development & Peace
+                Center for Development &amp; Peace
               </p>
             </div>
           </div>
@@ -166,7 +150,7 @@ export default function EmployeeLogin() {
           </h1>
 
           <p className="mt-4 text-base text-slate-300/90 leading-relaxed">
-            Clock in with precision GPS geofencing, submit leave applications, review monthly payslips, and collaborate on organizational tasks from any device.
+            Clock in with precision GPS geofencing, submit leave applications, review monthly payslips, and collaborate on organizational tasks from any authorized device.
           </p>
 
           {/* Key Feature Highlight Cards */}
@@ -243,7 +227,7 @@ export default function EmployeeLogin() {
       {/* ============================================================== */}
       {/* RIGHT COLUMN: AUTHENTICATION FORM                             */}
       {/* ============================================================== */}
-      <div className="flex-1 lg:col-span-6 xl:col-span-5 flex items-center justify-center p-4 sm:p-8 md:p-12 lg:p-14 bg-slate-50 relative min-h-screen">
+      <div className="flex-1 lg:col-span-6 xl:col-span-5 flex items-center justify-center p-4 sm:p-8 md:p-12 lg:p-14 bg-slate-50/80 relative min-h-screen">
         
         <div className="w-full max-w-md my-auto relative z-10">
 
@@ -264,16 +248,16 @@ export default function EmployeeLogin() {
             </p>
           </div>
 
-          {/* Card Container */}
-          <div className="bg-white rounded-3xl p-6 sm:p-9 shadow-xl shadow-slate-200/70 border border-slate-200/80">
+          {/* Premium Corporate Form Card */}
+          <div className="bg-white rounded-3xl p-7 sm:p-10 shadow-xl shadow-slate-200/70 border border-slate-200/80">
             
             {/* Portal Switcher Tabs */}
-            <div className="mb-6">
+            <div className="mb-7">
               <div className="p-1 rounded-2xl bg-slate-100/90 border border-slate-200/70 flex items-center gap-1">
                 <button
                   type="button"
                   onClick={() => { setPortal('HR'); setError(''); }}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                     portal === 'HR'
                       ? 'bg-white text-indigo-700 shadow-sm shadow-slate-200 font-extrabold'
                       : 'text-slate-600 hover:text-slate-900'
@@ -285,7 +269,7 @@ export default function EmployeeLogin() {
                 <button
                   type="button"
                   onClick={() => { setPortal('EMPLOYEE'); setError(''); }}
-                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
                     portal === 'EMPLOYEE'
                       ? 'bg-white text-emerald-700 shadow-sm shadow-slate-200 font-extrabold'
                       : 'text-slate-600 hover:text-slate-900'
@@ -298,79 +282,34 @@ export default function EmployeeLogin() {
             </div>
 
             {/* Welcome Title */}
-            <div className="mb-6">
+            <div className="mb-7">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
-                  Employee Sign In
+                  Staff Sign-In
                 </h2>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                   Self-Service
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Access your personalized workspace, attendance check-in, and salary records.
+              <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                Access your personalized workspace, GPS attendance check-in, and monthly salary statements.
               </p>
-            </div>
-
-            {/* Quick Demo Credentials */}
-            <div className="mb-6 p-3 rounded-2xl bg-slate-50 border border-slate-200/70">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  Quick Demo Access
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium">Click to fill</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => fillPreset('employee')}
-                  className={`p-2 rounded-xl text-left transition-all border text-xs cursor-pointer ${
-                    activePreset === 'employee'
-                      ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-400/20'
-                      : 'bg-white hover:bg-slate-50 border-slate-200/80 hover:border-emerald-200 shadow-2xs'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800 text-[11px]">Staff Employee</span>
-                    <UserCheck className="w-3 h-3 text-emerald-600" />
-                  </div>
-                  <p className="text-[10px] text-slate-400 truncate mt-0.5">employee@cbdp.org</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => fillPreset('admin')}
-                  className={`p-2 rounded-xl text-left transition-all border text-xs cursor-pointer ${
-                    activePreset === 'admin'
-                      ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-400/20'
-                      : 'bg-white hover:bg-slate-50 border-slate-200/80 hover:border-indigo-200 shadow-2xs'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-800 text-[11px]">Super Admin</span>
-                    <Shield className="w-3 h-3 text-indigo-600" />
-                  </div>
-                  <p className="text-[10px] text-slate-400 truncate mt-0.5">mdnuruzzamanrazon@...</p>
-                </button>
-              </div>
             </div>
 
             {/* Error Banner */}
             {error && (
-              <div className="mb-5 p-3.5 rounded-2xl bg-red-50 border border-red-200/80 text-red-700 text-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200/80 text-red-700 text-xs flex items-start gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
                 <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-semibold">Sign-in Notice</p>
-                  <p className="text-red-600 mt-0.5">{error}</p>
+                  <p className="font-semibold">Sign-In Failed</p>
+                  <p className="text-red-600 mt-0.5 leading-normal">{error}</p>
                 </div>
               </div>
             )}
 
             {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Staff Email Address <span className="text-red-500">*</span>
@@ -382,7 +321,7 @@ export default function EmployeeLogin() {
                     type="email"
                     autoComplete="email"
                     placeholder="employee@cbdp.org"
-                    className={`w-full pl-10 pr-3.5 py-2.5 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 transition-all duration-150 focus:outline-none focus:ring-2 ${
+                    className={`w-full pl-10 pr-3.5 py-3 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 transition-all duration-150 focus:outline-none focus:ring-2 ${
                       errors.email 
                         ? 'border-red-300 focus:border-red-500 focus:ring-red-200 bg-red-50/20' 
                         : 'border-slate-300 focus:border-emerald-600 focus:ring-emerald-100 hover:border-slate-400'
@@ -390,8 +329,8 @@ export default function EmployeeLogin() {
                   />
                 </div>
                 {errors.email && (
-                  <p className="mt-1 text-xs text-red-500 flex items-center gap-1 font-medium">
-                    <AlertCircle className="w-3 h-3" />
+                  <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1 font-medium">
+                    <AlertCircle className="w-3.5 h-3.5" />
                     {errors.email.message}
                   </p>
                 )}
@@ -415,8 +354,8 @@ export default function EmployeeLogin() {
                     {...register('password')}
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    placeholder="Enter your password"
-                    className={`w-full pl-10 pr-11 py-2.5 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 transition-all duration-150 focus:outline-none focus:ring-2 ${
+                    placeholder="Enter your account password"
+                    className={`w-full pl-10 pr-11 py-3 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 transition-all duration-150 focus:outline-none focus:ring-2 ${
                       errors.password 
                         ? 'border-red-300 focus:border-red-500 focus:ring-red-200 bg-red-50/20' 
                         : 'border-slate-300 focus:border-emerald-600 focus:ring-emerald-100 hover:border-slate-400'
@@ -425,15 +364,15 @@ export default function EmployeeLogin() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="mt-1 text-xs text-red-500 flex items-center gap-1 font-medium">
-                    <AlertCircle className="w-3 h-3" />
+                  <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1 font-medium">
+                    <AlertCircle className="w-3.5 h-3.5" />
                     {errors.password.message}
                   </p>
                 )}
@@ -452,7 +391,7 @@ export default function EmployeeLogin() {
                   </span>
                 </label>
 
-                <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Encrypted</span>
                 </div>
@@ -462,7 +401,7 @@ export default function EmployeeLogin() {
                 <button
                   type="submit"
                   disabled={isSubmitting || loginSuccess}
-                  className={`w-full py-3 px-4 rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed ${
+                  className={`w-full py-3.5 px-4 rounded-xl text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-md cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed ${
                     loginSuccess 
                       ? 'bg-emerald-600 shadow-emerald-500/25'
                       : portal === 'EMPLOYEE'
@@ -482,7 +421,7 @@ export default function EmployeeLogin() {
                     </>
                   ) : (
                     <>
-                      <span>Sign in to {portal === 'EMPLOYEE' ? 'Employee Portal' : 'HR Portal'}</span>
+                      <span>Sign In to {portal === 'EMPLOYEE' ? 'Employee Portal' : 'HR Portal'}</span>
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                     </>
                   )}
@@ -490,7 +429,7 @@ export default function EmployeeLogin() {
               </div>
             </form>
 
-            <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+            <div className="mt-7 pt-6 border-t border-slate-100 text-center">
               <p className="text-xs text-slate-500">
                 HR Administrator or Management?{' '}
                 <Link
@@ -504,12 +443,12 @@ export default function EmployeeLogin() {
             </div>
           </div>
 
-          <div className="mt-6 text-center space-y-1">
+          <div className="mt-7 text-center space-y-1">
             <p className="text-[11px] text-slate-400 font-medium">
-              Protected by automated session tracking and zero-trust verification.
+              Protected by multi-tier encryption and automated session tracking.
             </p>
             <p className="text-[10px] text-slate-400">
-              Center for Development & Peace &bull; Bangladesh &amp; Global Operations
+              Center for Development &amp; Peace &bull; Bangladesh &amp; Global Operations
             </p>
           </div>
 
