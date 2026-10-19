@@ -65,8 +65,13 @@ export const getEmployees = async (req, res) => {
         mustChangePassword: plain.userId.mustChangePassword,
         lastLoginAt: plain.userId.lastLoginAt
       } : null);
-      // Guarantee plain.email is always present
+      // Guarantee both top-level and nested fields are always fully populated
+      plain.firstName = plain.firstName || plain.personalDetails?.firstName || '';
+      plain.lastName = plain.lastName || plain.personalDetails?.lastName || '';
       plain.email = plain.email || plain.personalDetails?.email || plain.userAccount?.email;
+      plain.title = plain.title || plain.jobDetails?.title || '';
+      plain.department = plain.department || plain.jobDetails?.department || '';
+      plain.status = plain.status || plain.jobDetails?.status || 'ACTIVE';
       return plain;
     });
 
@@ -182,7 +187,14 @@ export const createEmployee = async (req, res) => {
       const newEmployee = {
         _id: newEmpId,
         employeeCode: normalizedCode,
+        employeeId: normalizedCode,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         email: normalizedEmail,
+        title: effectiveTitle,
+        department: effectiveDepartment,
+        status: effectiveStatus,
+        employmentType: effectiveEmploymentType,
         userId: newUserId,
         isDeleted: false,
         personalDetails: { 
@@ -327,6 +339,12 @@ export const createEmployee = async (req, res) => {
     });
 
     const responseEmployee = employee.toObject();
+    responseEmployee.firstName = employee.personalDetails.firstName;
+    responseEmployee.lastName = employee.personalDetails.lastName;
+    responseEmployee.title = employee.jobDetails.title;
+    responseEmployee.department = employee.jobDetails.department;
+    responseEmployee.status = employee.jobDetails.status;
+    responseEmployee.employmentType = employee.jobDetails.employmentType;
     responseEmployee.userAccount = {
       _id: createdUser._id,
       email: createdUser.email,

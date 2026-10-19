@@ -92,6 +92,14 @@ export const mockData = {
       personalDetails: { firstName: 'System', lastName: 'Admin', email: 'mdnuruzzamanrazon@gmail.com' },
       jobDetails: { title: 'Super Administrator', department: 'Executive Management', status: 'ACTIVE', joinDate: '2023-01-01', employmentType: 'FULL_TIME' },
       compensation: { baseSalary: 120000, currency: 'USD' },
+      userAccount: {
+        _id: '6618d0987f83b1001a123456',
+        email: 'mdnuruzzamanrazon@gmail.com',
+        role: 'SUPER_ADMIN',
+        isActive: true,
+        mustChangePassword: false,
+        lastLoginAt: null
+      }
     },
     {
       _id: '6618d0987f83b1001a123458',
@@ -102,6 +110,14 @@ export const mockData = {
       personalDetails: { firstName: 'Sarah', lastName: 'Jenkins', email: 'employee@cbdp.org' },
       jobDetails: { title: 'Lead Software Architect', department: 'Engineering & Technology', status: 'ACTIVE', joinDate: '2023-03-15', employmentType: 'FULL_TIME' },
       compensation: { baseSalary: 105000, currency: 'USD' },
+      userAccount: {
+        _id: '6618d0987f83b1001a123458',
+        email: 'employee@cbdp.org',
+        role: 'EMPLOYEE',
+        isActive: true,
+        mustChangePassword: false,
+        lastLoginAt: null
+      }
     },
     {
       _id: '6ad55c85756ca88a01f6bb5f',
@@ -112,6 +128,14 @@ export const mockData = {
       personalDetails: { firstName: 'Robert', lastName: 'Chen', email: 'robert.chen@cbdp.org' },
       jobDetails: { title: 'Senior HR Specialist', department: 'Human Resources', status: 'ACTIVE', joinDate: '2023-06-01', employmentType: 'FULL_TIME' },
       compensation: { baseSalary: 78000, currency: 'USD' },
+      userAccount: {
+        _id: 'user-emp-002',
+        email: 'robert.chen@cbdp.org',
+        role: 'EMPLOYEE',
+        isActive: true,
+        mustChangePassword: false,
+        lastLoginAt: null
+      }
     },
   ],
 

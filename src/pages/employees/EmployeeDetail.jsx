@@ -61,15 +61,15 @@ export default function EmployeeDetail() {
       setEmployee(data.data);
       if (data.data) {
         setEditForm({
-          firstName: data.data.personalDetails?.firstName || '',
-          lastName: data.data.personalDetails?.lastName || '',
+          firstName: data.data.personalDetails?.firstName || data.data.firstName || '',
+          lastName: data.data.personalDetails?.lastName || data.data.lastName || '',
           email: data.data.email || data.data.personalDetails?.email || data.data.userAccount?.email || '',
-          department: data.data.jobDetails?.department || data.data.jobDetails?.departmentId?.name || 'Engineering & Technology',
+          department: data.data.jobDetails?.department || data.data.department || data.data.jobDetails?.departmentId?.name || 'Engineering & Technology',
           phone: data.data.personalDetails?.phone || '',
           contactAddress: data.data.personalDetails?.contactAddress || '',
-          title: data.data.jobDetails?.title || '',
-          employmentType: data.data.jobDetails?.employmentType || 'FULL_TIME',
-          status: data.data.jobDetails?.status || 'ACTIVE',
+          title: data.data.jobDetails?.title || data.data.title || data.data.jobDetails?.designation || data.data.designation || '',
+          employmentType: data.data.jobDetails?.employmentType || data.data.employmentType || 'FULL_TIME',
+          status: data.data.jobDetails?.status || data.data.status || 'ACTIVE',
           accountNumber: data.data.bankDetails?.accountNumber || '',
           taxId: data.data.bankDetails?.taxId || ''
         });
@@ -244,9 +244,12 @@ export default function EmployeeDetail() {
     );
   }
 
-  const { personalDetails = {}, jobDetails = {}, bankDetails = {}, employeeCode, user: userAccount, documents = [] } = employee;
-  const fullName = `${personalDetails.firstName || ''} ${personalDetails.lastName || ''}`.trim() || 'Employee Profile';
-  const isAccountActive = userAccount ? userAccount.isActive : false;
+  const { personalDetails = {}, jobDetails = {}, bankDetails = {}, employeeCode, user: rawUserAccount, documents = [] } = employee;
+  const userAccount = rawUserAccount || employee.userAccount;
+  const firstName = personalDetails.firstName || employee.firstName || '';
+  const lastName = personalDetails.lastName || employee.lastName || '';
+  const fullName = `${firstName} ${lastName}`.trim() || 'Employee Profile';
+  const isAccountActive = userAccount ? userAccount.isActive : true;
 
   return (
     <div className="w-full space-y-6 pb-16">

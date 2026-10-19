@@ -195,19 +195,21 @@ export default function EmployeeList() {
   };
 
   const filtered = employees.filter(e => {
-    const firstName = e.personalDetails?.firstName || '';
-    const lastName = e.personalDetails?.lastName || '';
-    const code = e.employeeCode || '';
+    const firstName = e.personalDetails?.firstName || e.firstName || '';
+    const lastName = e.personalDetails?.lastName || e.lastName || '';
+    const code = e.employeeCode || e.employeeId || '';
     const email = e.email || e.personalDetails?.email || e.userAccount?.email || '';
-    const department = e.jobDetails?.department || e.jobDetails?.departmentId?.name || '';
+    const department = e.jobDetails?.department || e.department || e.jobDetails?.departmentId?.name || '';
+    const title = e.jobDetails?.title || e.title || e.jobDetails?.designation || e.designation || '';
     
     const matchesSearch = firstName.toLowerCase().includes(search.toLowerCase()) || 
       lastName.toLowerCase().includes(search.toLowerCase()) ||
       code.toLowerCase().includes(search.toLowerCase()) ||
       email.toLowerCase().includes(search.toLowerCase()) ||
-      department.toLowerCase().includes(search.toLowerCase());
+      department.toLowerCase().includes(search.toLowerCase()) ||
+      title.toLowerCase().includes(search.toLowerCase());
 
-    const status = e.jobDetails?.status || 'ACTIVE';
+    const status = e.jobDetails?.status || e.status || 'ACTIVE';
     const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
 
     return matchesSearch && matchesStatus;
@@ -320,13 +322,18 @@ export default function EmployeeList() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((emp) => {
-                  const first = emp.personalDetails?.firstName || '';
-                  const last = emp.personalDetails?.lastName || '';
+                  const first = emp.personalDetails?.firstName || emp.firstName || '';
+                  const last = emp.personalDetails?.lastName || emp.lastName || '';
                   const email = emp.email || emp.personalDetails?.email || emp.userAccount?.email || 'unregistered@cbdp.org';
-                  const initials = `${first[0] || 'E'}${last[0] || 'M'}`;
-                  const status = emp.jobDetails?.status || 'ACTIVE';
-                  const isAccountActive = emp.userAccount ? emp.userAccount.isActive : false;
-                  const mustChangePassword = emp.userAccount ? Boolean(emp.userAccount.mustChangePassword) : false;
+                  const initials = `${(first[0] || 'E')}${(last[0] || 'M')}`.toUpperCase();
+                  const code = emp.employeeCode || emp.employeeId || 'EMP-UNKNOWN';
+                  const title = emp.jobDetails?.title || emp.title || emp.jobDetails?.designation || emp.designation || 'Team Member';
+                  const department = emp.jobDetails?.department || emp.department || emp.jobDetails?.departmentId?.name || 'General Operations';
+                  const employmentType = emp.jobDetails?.employmentType || emp.employmentType || 'FULL_TIME';
+                  const status = emp.jobDetails?.status || emp.status || 'ACTIVE';
+                  const hasAccount = Boolean(emp.userAccount || emp.userId || emp.email);
+                  const isAccountActive = emp.userAccount ? emp.userAccount.isActive : (emp.isActive !== undefined ? emp.isActive : (status === 'ACTIVE'));
+                  const mustChangePassword = emp.userAccount ? Boolean(emp.userAccount.mustChangePassword) : Boolean(emp.mustChangePassword);
 
                   return (
                     <tr key={emp._id} className="hover:bg-slate-50/80 transition-colors">
@@ -355,19 +362,19 @@ export default function EmployeeList() {
 
                       {/* Code */}
                       <td className="py-4 px-6 whitespace-nowrap font-mono font-bold text-slate-800 text-xs">
-                        {emp.employeeCode || 'EMP-UNKNOWN'}
+                        {code}
                       </td>
 
                       {/* Job title & Department */}
                       <td className="py-4 px-6 whitespace-nowrap">
                         <div className="font-bold text-slate-800 text-xs">
-                          {emp.jobDetails?.title || emp.jobDetails?.designation || 'Team Member'}
+                          {title}
                         </div>
                         <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-medium">
                           <Building className="w-3 h-3 text-slate-400" />
-                          <span>{emp.jobDetails?.department || emp.jobDetails?.departmentId?.name || 'Operations'}</span>
+                          <span>{department}</span>
                           <span>&bull;</span>
-                          <span>{emp.jobDetails?.employmentType || 'FULL_TIME'}</span>
+                          <span>{employmentType}</span>
                         </div>
                       </td>
 
@@ -380,7 +387,7 @@ export default function EmployeeList() {
 
                       {/* Portal Access Status */}
                       <td className="py-4 px-6 whitespace-nowrap">
-                        {emp.userAccount ? (
+                        {hasAccount ? (
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleToggleAccount(emp)}
