@@ -591,17 +591,22 @@ export const toggleEmployeeAccount = async (req, res) => {
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
-      const u = allMockUsers.find(user => user.employeeProfileId === id || user._id === id);
+      const emp = (mockData.employees || []).find(e => e._id === id || e.employeeCode === id);
+      const u = allMockUsers.find(user => 
+        user.employeeProfileId === id || 
+        user._id === id || 
+        (emp && (user._id === emp.userId || user.email?.toLowerCase() === emp.email?.toLowerCase() || user.email?.toLowerCase() === emp.personalDetails?.email?.toLowerCase()))
+      );
       if (u) {
         u.isActive = !u.isActive;
         if (!u.isActive) u.tokenVersion = (u.tokenVersion || 1) + 1;
         return res.json({ 
           success: true, 
           isActive: u.isActive, 
-          message: `Employee portal account ${u.isActive ? 'activated' : 'deactivated'} successfully (Demo Mode)` 
+          message: `Employee portal account ${u.isActive ? 'activated' : 'deactivated'} successfully` 
         });
       }
-      return res.json({ success: true, isActive: true, message: 'Account status toggled (Demo Mode)' });
+      return res.status(404).json({ success: false, message: 'No portal user account associated with this employee' });
     }
 
     const user = await User.findOne({ 
@@ -644,12 +649,17 @@ export const deleteEmployee = async (req, res) => {
     const { permanent, force } = req.query;
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      const emp = (mockData.employees || []).find(e => e._id === id);
+      const emp = (mockData.employees || []).find(e => e._id === id || e.employeeCode === id);
       if (emp) {
         emp.isDeleted = true;
-        emp.jobDetails.status = 'DELETED';
+        if (emp.jobDetails) emp.jobDetails.status = 'DELETED';
       }
-      const u = (mockData.users || []).find(user => user.employeeProfileId === id);
+      const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
+      const u = allMockUsers.find(user => 
+        user.employeeProfileId === id || 
+        user._id === id || 
+        (emp && (user._id === emp.userId || user.email?.toLowerCase() === emp.email?.toLowerCase() || user.email?.toLowerCase() === emp.personalDetails?.email?.toLowerCase()))
+      );
       if (u) {
         u.isActive = false;
         u.isDeleted = true;
