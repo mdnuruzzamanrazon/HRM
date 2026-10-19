@@ -7,6 +7,17 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error('[api/index] Database connection error:', err.message);
   }
-  return app(req, res);
-}
 
+  try {
+    return app(req, res);
+  } catch (err) {
+    console.error('[api/index] Fatal handler error:', err);
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Internal Server Error in API handler',
+        error: err.message,
+      });
+    }
+  }
+}

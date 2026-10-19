@@ -55,7 +55,10 @@ app.use(async (req, res, next) => {
 });
 
 // Middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: false,
+}));
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Private-Network', 'true');
   next();
