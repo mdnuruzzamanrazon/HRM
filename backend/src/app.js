@@ -14,7 +14,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { connectDB } from './config/db.js';
+import mongoose from 'mongoose';
+import { connectDB, isDemoMode } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
@@ -37,7 +38,7 @@ const app = express();
 // Database auto-connection middleware for serverless / requests
 app.use(async (req, res, next) => {
   // Allow health checks to run even if DB is still connecting
-  if (req.path === '/api/health' || req.path === '/api/v1/health') {
+  if (req.path === '/api/health' || req.path === '/api/v1/health' || req.path === '/api') {
     return next();
   }
 
@@ -46,11 +47,14 @@ app.use(async (req, res, next) => {
     next();
   } catch (error) {
     console.error('[DB Middleware Error]:', error.message);
-    res.status(503).json({
-      success: false,
-      message: 'Database connection failed. Please ensure MONGO_URI is properly configured.',
-      error: error.message,
-    });
+    if (!isDemoMode()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection failed. Please ensure your MongoDB Atlas cluster has Network Access configured to Allow Access from Anywhere (0.0.0.0/0) and credentials in MONGO_URI are correct.',
+        error: error.message,
+      });
+    }
+    next();
   }
 });
 
@@ -98,9 +102,15 @@ const healthHandler = (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'CBDP HR API',
     nodeEnv: process.env.NODE_ENV || 'production',
-    version: '2.0.2-prod',
-    hasMongoUri: !!detectedKey,
-    detectedEnvVar: detectedKey || 'NONE (Please add MONGO_URI in Vercel Settings -> Environment Variables)'
+    version: '2.0.3-prod',
+    database: {
+      type: 'MongoDB',
+      hasMongoUri: !!detectedKey,
+      detectedEnvVar: detectedKey || 'NONE (Add MONGO_URI in Vercel Settings -> Environment Variables)',
+      readyState: mongoose.connection.readyState,
+      status: mongoose.connection.readyState === 1 ? 'CONNECTED' : (detectedKey ? 'CONNECTING_OR_FAILED' : 'DEMO_FALLBACK'),
+      host: mongoose.connection.host || null
+    }
   });
 };
 

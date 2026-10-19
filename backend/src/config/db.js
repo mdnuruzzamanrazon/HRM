@@ -1,9 +1,14 @@
 import mongoose from 'mongoose';
 
-// Disable Mongoose command buffering globally to prevent 10s hangs when DB is not connected
+// Disable Mongoose command buffering globally to prevent hangs when DB is not connected
 mongoose.set('bufferCommands', false);
 
-let cachedConnection = null;
+// Global connection cache across serverless warm invocations
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 export const isDemoMode = () => {
   const mongoUri =
@@ -17,47 +22,43 @@ export const isDemoMode = () => {
 };
 
 export const connectDB = async () => {
-  // If in demo mode, resolve immediately
+  // If no MONGO_URI is configured, run in demo mode
   if (isDemoMode()) {
-    console.log('[Database] Demo Mode active (no MONGO_URI). Running with in-memory store.');
     return null;
   }
 
-  // If already connected, reuse connection
-  if (mongoose.connection.readyState === 1) {
-    return mongoose.connection;
+  // If already connected, reuse existing connection
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
   }
 
-  // If in the process of connecting, wait for it
-  if (cachedConnection) {
-    try {
-      const conn = await cachedConnection;
-      return conn;
-    } catch {
-      cachedConnection = null;
-    }
+  if (!cached.promise) {
+    const mongoUri =
+      process.env.MONGO_URI ||
+      process.env.MONGODB_URI ||
+      process.env.MONGODB_URL ||
+      process.env.DATABASE_URL ||
+      process.env.MONGO_URL;
+
+    const opts = {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 8000,
+      maxPoolSize: 10,
+    };
+
+    cached.promise = mongoose.connect(mongoUri, opts).then((mongooseInstance) => {
+      console.log(`[MongoDB] Connected successfully to host: ${mongooseInstance.connection.host}`);
+      return mongooseInstance;
+    });
   }
-
-  const mongoUri =
-    process.env.MONGO_URI ||
-    process.env.MONGODB_URI ||
-    process.env.MONGODB_URL ||
-    process.env.DATABASE_URL ||
-    process.env.MONGO_URL;
-
-  cachedConnection = mongoose.connect(mongoUri, {
-    serverSelectionTimeoutMS: 10000,
-  });
 
   try {
-    const conn = await cachedConnection;
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-    return conn;
+    cached.conn = await cached.promise;
+    return cached.conn;
   } catch (error) {
-    cachedConnection = null;
-    console.error(`MongoDB Connection Error: ${error.message}. Falling back to Demo Mode.`);
-    // Don't crash in production if connection fails, allow graceful fallback
-    return null;
+    cached.promise = null;
+    console.error(`[MongoDB] Connection error: ${error.message}`);
+    throw error;
   }
 };
 

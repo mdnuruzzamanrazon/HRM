@@ -26,6 +26,7 @@ export default function EmployeeList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [dbStatus, setDbStatus] = useState(null);
 
   // Modals state
   const [editModalEmployee, setEditModalEmployee] = useState(null);
@@ -65,8 +66,18 @@ export default function EmployeeList() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/employees');
-      setEmployees(data.data || []);
+      const [empRes, healthRes] = await Promise.all([
+        api.get('/employees'),
+        api.get('/health').catch(() => null)
+      ]);
+      setEmployees(empRes.data?.data || []);
+      if (healthRes?.data?.database) {
+        setDbStatus(healthRes.data.database);
+      } else if (empRes.data?.isDemoMode) {
+        setDbStatus({ status: 'DEMO_FALLBACK' });
+      } else {
+        setDbStatus({ status: 'CONNECTED' });
+      }
     } catch (error) {
       console.error(error);
       showToast('Failed to load employee records from database', 'error');
@@ -240,13 +251,21 @@ export default function EmployeeList() {
       {/* Top Banner & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-heading">
               Workforce Directory
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
-              MongoDB Persistent
-            </span>
+            {dbStatus?.status === 'CONNECTED' ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-mono shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                MongoDB Connected ({dbStatus.host ? dbStatus.host.split('.')[0] : 'Persistent'})
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 font-mono shadow-xs" title="Add MONGO_URI in Vercel Settings -> Environment Variables to connect MongoDB Atlas">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                Serverless Demo Mode (Add MONGO_URI for Atlas)
+              </span>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
             Database-backed employee records, mandatory email management, portal access controls, and administrative password tools.
@@ -261,6 +280,30 @@ export default function EmployeeList() {
           <span>Add New Employee</span>
         </Link>
       </div>
+
+      {/* Cloud Serverless Notice if not connected to live MongoDB */}
+      {dbStatus && dbStatus.status !== 'CONNECTED' && (
+        <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 flex items-start gap-3.5 text-xs text-amber-900 shadow-xs animate-in fade-in">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1.5 leading-relaxed">
+            <p className="font-bold text-amber-950 text-sm">
+              Live Vercel Cloud Deployment: MongoDB Connection Required for Permanent Storage
+            </p>
+            <p className="text-amber-900">
+              Your local environment is connected to <span className="font-mono font-semibold bg-amber-100/70 px-1 py-0.5 rounded">mongodb://127.0.0.1:27017/cbdp</span>, but the live Vercel cloud serverless deployment has no <code className="bg-amber-100/80 px-1.5 py-0.5 rounded font-mono font-bold text-amber-950">MONGO_URI</code> configured in its Vercel Environment Variables.
+            </p>
+            <p className="text-amber-900 font-medium">
+              Because Vercel serverless containers are ephemeral, in-memory records reset whenever a serverless function cold-starts (e.g. after logout/login or idle periods).
+            </p>
+            <div className="pt-1 text-[11px] font-semibold text-amber-950 flex flex-wrap gap-2 items-center">
+              <span>Quick Fix:</span>
+              <span className="bg-white/80 border border-amber-300 px-2 py-0.5 rounded font-mono">1. Vercel Dashboard &rarr; Project Settings &rarr; Environment Variables</span>
+              <span className="bg-white/80 border border-amber-300 px-2 py-0.5 rounded font-mono">2. Add MONGO_URI = mongodb+srv://...</span>
+              <span className="bg-white/80 border border-amber-300 px-2 py-0.5 rounded font-mono">3. Redeploy</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
