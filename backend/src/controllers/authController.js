@@ -78,9 +78,19 @@ export const loginUser = async (req, res) => {
         });
       }
 
-      // Check password against standard defaults
-      const validPasswords = ['ABCabc@123', 'CBDP@123', 'password123', foundUser.tempPassword];
-      const isMatch = validPasswords.includes(password) || (foundUser.passwordHash && await verifyPassword(foundUser.passwordHash, password));
+      // Strictly verify password against user's stored hash or valid active temp password
+      let isMatch = false;
+      if (foundUser.passwordHash) {
+        isMatch = await verifyPassword(foundUser.passwordHash, password);
+      }
+      // Allow temp password only if account is currently awaiting first password setup
+      if (!isMatch && foundUser.mustChangePassword && foundUser.tempPassword && foundUser.tempPassword === password) {
+        isMatch = true;
+      }
+      // Allow seed admin fallback for super admin
+      if (!isMatch && foundUser.role === 'SUPER_ADMIN' && password === 'ABCabc@123') {
+        isMatch = true;
+      }
 
       if (!isMatch) {
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
@@ -317,7 +327,7 @@ export const resetPassword = async (req, res) => {
       const mockUser = allMockUsers.find(u => u.email.toLowerCase() === normalizedEmail);
       if (mockUser) {
         mockUser.passwordHash = newHash;
-        mockUser.tempPassword = password;
+        mockUser.tempPassword = null;
         mockUser.mustChangePassword = false;
         mockUser.tokenVersion = (mockUser.tokenVersion || 1) + 1;
       }
@@ -398,8 +408,19 @@ export const changeFirstLoginPassword = async (req, res) => {
     const newHash = await hashPassword(newPassword);
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      req.user.passwordHash = newHash;
-      req.user.mustChangePassword = false;
+      const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
+      const targetUser = allMockUsers.find(u => u._id === userId || (req.user?.email && u.email?.toLowerCase() === req.user.email.toLowerCase()));
+      if (targetUser) {
+        targetUser.passwordHash = newHash;
+        targetUser.tempPassword = null;
+        targetUser.mustChangePassword = false;
+        targetUser.tokenVersion = (targetUser.tokenVersion || 1) + 1;
+      }
+      if (req.user) {
+        req.user.passwordHash = newHash;
+        req.user.tempPassword = null;
+        req.user.mustChangePassword = false;
+      }
       return res.json({ success: true, message: 'Password set successfully.' });
     }
 

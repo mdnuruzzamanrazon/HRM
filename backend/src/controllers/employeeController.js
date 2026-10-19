@@ -536,12 +536,13 @@ export const resetEmployeePassword = async (req, res) => {
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
       const u = allMockUsers.find(user => user.employeeProfileId === id || user._id === id);
       if (u) {
-        u.tempPassword = newPassword;
+        u.passwordHash = await hashPassword(newPassword);
+        u.tempPassword = isTemporary ? newPassword : null;
         u.mustChangePassword = Boolean(isTemporary);
         u.tokenVersion = (u.tokenVersion || 1) + 1;
         return res.json({ 
           success: true, 
-          message: `Password for ${u.email} reset successfully (Demo Mode)` 
+          message: `Password for ${u.email} reset successfully.${isTemporary ? ' Employee must set a new password upon first login.' : ''}` 
         });
       }
       return res.json({ success: true, message: 'Password updated successfully (Demo Mode)' });
