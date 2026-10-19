@@ -109,19 +109,34 @@ export const clockIn = async (req, res) => {
     const { latitude, longitude, accuracy, workplaceId } = req.body;
     const date = new Date().toISOString().split('T')[0];
 
+    // 1. Verify GPS Geofence Restriction on Backend FIRST
+    const geoResult = await verifyGeofence({
+      latitude,
+      longitude,
+      accuracy,
+      workplaceId,
+      req,
+      actionName: 'Clock-In'
+    });
+
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      const existing = mockData.attendance.find(a => a.date === date);
+      const empIdStr = String(employeeId);
+      const existing = mockData.attendance.find(a => 
+        a.date === date && (String(a.employeeId?._id) === empIdStr || String(a.employeeId) === empIdStr)
+      );
       if (existing && existing.checkIn) {
         return res.status(400).json({ success: false, message: 'Already clocked in for today' });
       }
       const newRecord = {
         _id: 'att-' + Date.now(),
-        employeeId: mockData.adminEmployee,
+        employeeId: req.user?.employeeProfileId || mockData.adminEmployee,
         date,
         checkIn: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         checkOut: null,
         status: 'PRESENT',
-        workHours: 0
+        workHours: 0,
+        geofenceVerified: geoResult.verified,
+        workplaceName: geoResult.workplace?.name
       };
       mockData.attendance.unshift(newRecord);
       return res.status(201).json({ success: true, data: newRecord, message: 'Clocked in successfully' });
@@ -131,16 +146,6 @@ export const clockIn = async (req, res) => {
     if (existingRecord && existingRecord.checkIn?.timestamp) {
       return res.status(400).json({ success: false, message: 'Already clocked in for today' });
     }
-
-    // Verify GPS Geofence Restriction on Backend
-    const geoResult = await verifyGeofence({
-      latitude,
-      longitude,
-      accuracy,
-      workplaceId,
-      req,
-      actionName: 'Clock-In'
-    });
 
     const now = new Date();
     // Attendance rule: Check if late (e.g. after 09:30 AM local)
@@ -224,8 +229,21 @@ export const clockOut = async (req, res) => {
     const { latitude, longitude, accuracy, workplaceId } = req.body;
     const date = new Date().toISOString().split('T')[0];
 
+    // 1. Verify GPS Geofence Restriction on Backend FIRST
+    const geoResult = await verifyGeofence({
+      latitude,
+      longitude,
+      accuracy,
+      workplaceId,
+      req,
+      actionName: 'Clock-Out'
+    });
+
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      const record = mockData.attendance.find(a => a.date === date) || mockData.attendance[0];
+      const empIdStr = String(employeeId);
+      const record = mockData.attendance.find(a => 
+        a.date === date && (String(a.employeeId?._id) === empIdStr || String(a.employeeId) === empIdStr)
+      ) || mockData.attendance[0];
       if (!record) {
         return res.status(404).json({ success: false, message: 'No check-in record found for today' });
       }
@@ -234,6 +252,7 @@ export const clockOut = async (req, res) => {
       }
       record.checkOut = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       record.workHours = 8.5;
+      record.geofenceVerified = geoResult.verified;
       return res.json({ success: true, data: record, message: 'Clocked out successfully' });
     }
 
@@ -245,16 +264,6 @@ export const clockOut = async (req, res) => {
     if (record.checkOut && record.checkOut.timestamp) {
       return res.status(400).json({ success: false, message: 'Already clocked out for today' });
     }
-
-    // Verify GPS Geofence Restriction on Backend
-    const geoResult = await verifyGeofence({
-      latitude,
-      longitude,
-      accuracy,
-      workplaceId,
-      req,
-      actionName: 'Clock-Out'
-    });
 
     const now = new Date();
     if (geoResult.verified) {

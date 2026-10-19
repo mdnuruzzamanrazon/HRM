@@ -94,7 +94,7 @@ export const mockData = {
         employeeCode: 'CBDP-ADMIN-001',
         personalDetails: { firstName: 'System', lastName: 'Admin' }
       },
-      date: new Date().toISOString().split('T')[0],
+      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
       checkIn: '08:58 AM',
       checkOut: '05:30 PM',
       status: 'PRESENT',
@@ -107,7 +107,7 @@ export const mockData = {
         employeeCode: 'CBDP-ENG-002',
         personalDetails: { firstName: 'Sarah', lastName: 'Connor' }
       },
-      date: new Date().toISOString().split('T')[0],
+      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
       checkIn: '09:05 AM',
       checkOut: '06:00 PM',
       status: 'PRESENT',
@@ -120,7 +120,7 @@ export const mockData = {
         employeeCode: 'CBDP-HR-003',
         personalDetails: { firstName: 'Elena', lastName: 'Rostova' }
       },
-      date: new Date().toISOString().split('T')[0],
+      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
       checkIn: '09:18 AM',
       checkOut: null,
       status: 'LATE',
