@@ -9,6 +9,15 @@ export const mockData = {
     isActive: true,
   },
 
+  employeeUser: {
+    _id: '6618d0987f83b1001a123458',
+    email: 'employee@cbdp.org',
+    role: 'EMPLOYEE',
+    employeeProfileId: '6618d0987f83b1001a123458',
+    isTwoFactorEnabled: false,
+    isActive: true,
+  },
+
   adminEmployee: {
     _id: '6618d0987f83b1001a123457',
     employeeCode: 'CBDP-ADMIN-001',

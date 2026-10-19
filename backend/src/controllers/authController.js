@@ -26,7 +26,16 @@ export const loginUser = async (req, res) => {
 
     // Demo Mode fallback when cloud database is not connected
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      if (email === 'mdnuruzzamanrazon@gmail.com' || email.includes('admin') || email.includes('@')) {
+      if (email === 'employee@cbdp.org' || email?.toLowerCase().includes('employee')) {
+        const token = generateToken(res, mockData.employeeUser._id);
+        return res.json({
+          success: true,
+          token,
+          user: mockData.employeeUser,
+          isDemoMode: true,
+        });
+      }
+      if (email === 'mdnuruzzamanrazon@gmail.com' || email?.includes('admin') || email?.includes('@')) {
         const token = generateToken(res, mockData.adminUser._id);
         return res.json({
           success: true,

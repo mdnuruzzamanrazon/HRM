@@ -20,9 +20,13 @@ export const authenticate = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_jwt_key_cbdp_2026');
 
-    // If Demo Mode or database not connected, authenticate with demo admin user
+    // If Demo Mode or database not connected, authenticate with demo user corresponding to token
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      req.user = mockData.adminUser;
+      if (decoded.id === mockData.employeeUser?._id) {
+        req.user = mockData.employeeUser;
+      } else {
+        req.user = mockData.adminUser;
+      }
       return next();
     }
 
