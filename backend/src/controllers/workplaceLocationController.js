@@ -522,3 +522,116 @@ export const deleteWorkplace = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Resolve Google Maps link or shortlink (maps.app.goo.gl, etc.)
+export const resolveMapLink = async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ success: false, message: 'URL query parameter is required' });
+    }
+
+    const trimmedUrl = url.trim();
+
+    // If raw coordinates were passed directly
+    const rawMatch = trimmedUrl.match(/^(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)$/);
+    if (rawMatch) {
+      const lat = parseFloat(rawMatch[1]);
+      const lng = parseFloat(rawMatch[2]);
+      return res.json({
+        success: true,
+        data: {
+          lat,
+          lng,
+          address: '',
+          city: '',
+          country: '',
+          resolvedUrl: trimmedUrl,
+        },
+      });
+    }
+
+    // Follow redirect
+    const headRes = await fetch(trimmedUrl, {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    const finalUrl = headRes.url;
+    let lat = null;
+    let lng = null;
+
+    // Pattern 1: search/lat,+lng or search/lat,lng
+    const searchMatch = finalUrl.match(/search\/(-?\d+\.\d+),\+?(-?\d+\.\d+)/);
+    if (searchMatch) {
+      lat = parseFloat(searchMatch[1]);
+      lng = parseFloat(searchMatch[2]);
+    }
+
+    // Pattern 2: @lat,lng
+    if (!lat) {
+      const atMatch = finalUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (atMatch) {
+        lat = parseFloat(atMatch[1]);
+        lng = parseFloat(atMatch[2]);
+      }
+    }
+
+    // Pattern 3: !3d/!4d
+    if (!lat) {
+      const dMatch = finalUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+      if (dMatch) {
+        lat = parseFloat(dMatch[1]);
+        lng = parseFloat(dMatch[2]);
+      }
+    }
+
+    // Pattern 4: check HTML body
+    if (!lat || !lng) {
+      const html = await headRes.text();
+      const textMatch = html.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/) || html.match(/\[(-?\d+\.\d{4,}),(-?\d+\.\d{4,})\]/);
+      if (textMatch) {
+        lat = parseFloat(textMatch[1]);
+        lng = parseFloat(textMatch[2]);
+      }
+    }
+
+    if (!lat || !lng) {
+      return res.status(422).json({ success: false, message: 'Could not extract coordinates from link', finalUrl });
+    }
+
+    // Reverse geocode via OpenStreetMap Nominatim
+    let address = '';
+    let city = '';
+    let country = '';
+    try {
+      const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en`, {
+        headers: { 'User-Agent': 'CBDP-HRM/2.0' }
+      });
+      const geoData = await geoRes.json();
+      if (geoData?.display_name) {
+        address = geoData.display_name;
+        city = geoData.address?.city || geoData.address?.town || geoData.address?.county || '';
+        country = geoData.address?.country || '';
+      }
+    } catch (e) {
+      console.warn('Reverse geocode error:', e.message);
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        lat: Number(lat.toFixed(6)),
+        lng: Number(lng.toFixed(6)),
+        address: address || `${lat}, ${lng}`,
+        city: city || '',
+        country: country || '',
+        resolvedUrl: finalUrl,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};

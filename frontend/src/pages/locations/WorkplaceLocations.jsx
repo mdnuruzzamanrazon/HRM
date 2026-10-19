@@ -137,7 +137,7 @@ export default function WorkplaceLocations() {
   };
 
   // Google Maps link & coordinates paste parser
-  const handlePastedLinkParse = (text) => {
+  const handlePastedLinkParse = async (text) => {
     setPastedLink(text);
     const parsed = parseLocationInput(text);
     if (parsed) {
@@ -152,6 +152,31 @@ export default function WorkplaceLocations() {
           : `Extracted GPS coordinates: ${parsed.lat}, ${parsed.lng}`
       );
       setTimeout(() => setFormSuccess(''), 4500);
+      return;
+    }
+
+    if (text.includes('http://') || text.includes('https://') || text.includes('goo.gl')) {
+      try {
+        setFormSuccess('Resolving Google Maps shortlink and extracting coordinates...');
+        const res = await api.get(`/api/v1/workplaces/resolve-link?url=${encodeURIComponent(text.trim())}`);
+        if (res.data?.success && res.data.data) {
+          const { lat, lng, address, city, country } = res.data.data;
+          setFormData((prev) => ({
+            ...prev,
+            latitude: lat,
+            longitude: lng,
+            ...(address ? { address } : {}),
+            ...(city ? { city } : {}),
+            ...(country ? { country } : {}),
+            ...(!prev.name.trim() ? { name: city ? `${city} Operations Office` : 'Workplace Office' } : {})
+          }));
+          setFormSuccess(`Resolved Google Maps Link: ${address || `${lat}, ${lng}`}`);
+          setTimeout(() => setFormSuccess(''), 5000);
+        }
+      } catch (e) {
+        setFormError('Could not resolve Google Maps shortlink. Please verify the URL.');
+        setTimeout(() => setFormError(''), 4000);
+      }
     }
   };
 

@@ -26,6 +26,23 @@ const seedWorkplaces = async () => {
 
     const defaultLocations = [
       {
+        name: 'CBDP Head Office & Operations Center',
+        code: 'BD-HQ01',
+        address: 'Nabogram Road, Barishal 8200',
+        city: 'Barishal',
+        country: 'Bangladesh',
+        coordinates: {
+          lat: 22.703934,
+          lng: 90.339038,
+        },
+        radiusMeters: 100,
+        maxAccuracyThreshold: 200,
+        isDefault: true,
+        isActive: true,
+        geofenceEnforced: true,
+        description: 'Primary corporate operations center and country head office in Bangladesh.',
+      },
+      {
         name: 'CBDP Corporate Headquarters',
         code: 'CBDP-HQ-01',
         address: '100 Innovation Way, Suite 400, Tech Park',
@@ -37,7 +54,7 @@ const seedWorkplaces = async () => {
         },
         radiusMeters: 150, // 150 meters permitted radius
         maxAccuracyThreshold: 200,
-        isDefault: true,
+        isDefault: false,
         isActive: true,
         geofenceEnforced: true,
         description: 'Main headquarters building and administrative campus. Includes floors 1-5 and north parking.',

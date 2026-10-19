@@ -490,6 +490,23 @@ export const mockData = {
 
   workplaces: [
     {
+      _id: '6618d0987f83b1001a123990',
+      name: 'CBDP Head Office & Operations Center',
+      code: 'BD-HQ01',
+      address: 'Nabogram Road, Barishal 8200',
+      city: 'Barishal',
+      country: 'Bangladesh',
+      coordinates: { lat: 22.703934, lng: 90.339038 },
+      radiusMeters: 100,
+      maxAccuracyThreshold: 200,
+      isDefault: true,
+      isActive: true,
+      geofenceEnforced: true,
+      description: 'Primary corporate operations center and country head office in Bangladesh.',
+      attendanceCount: 24,
+      createdAt: '2026-01-01T00:00:00.000Z'
+    },
+    {
       _id: '6618d0987f83b1001a123991',
       name: 'CBDP Global Operations Headquarters',
       code: 'HQ-MAIN',
@@ -499,7 +516,7 @@ export const mockData = {
       coordinates: { lat: 37.774929, lng: -122.419416 },
       radiusMeters: 100,
       maxAccuracyThreshold: 200,
-      isDefault: true,
+      isDefault: false,
       isActive: true,
       geofenceEnforced: true,
       description: 'Primary corporate facility and executive technology center.',

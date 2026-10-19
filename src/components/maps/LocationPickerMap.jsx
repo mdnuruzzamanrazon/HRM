@@ -6,6 +6,7 @@ import {
   Info, Sparkles, Map as MapIcon, X, CheckCircle2, AlertTriangle
 } from 'lucide-react';
 import { parseLocationInput, sanitizeCoordinates, isReversedCoordinates } from '../../utils/geoParser';
+import api from '../../services/api';
 
 // Pixel-perfect SVG Pin Marker for Leaflet
 const createWorkplacePinIcon = () => {
@@ -677,7 +678,7 @@ export default function LocationPickerMap({
   };
 
   // Submit Search / Google Maps URL / Raw Coordinates
-  const handleSearchSubmit = () => {
+  const handleSearchSubmit = async () => {
     if (!searchQuery.trim()) return;
 
     // Check if Google Maps link or coordinates
@@ -705,6 +706,55 @@ export default function LocationPickerMap({
         type: 'success',
       });
       return;
+    }
+
+    // If query is a URL (e.g. maps.app.goo.gl, goo.gl, or full link)
+    if (searchQuery.includes('http://') || searchQuery.includes('https://') || searchQuery.includes('goo.gl')) {
+      try {
+        setIsSearching(true);
+        setStatusMessage({ text: 'Resolving Google Maps shortlink and identifying office location...', type: 'info' });
+        const res = await api.get(`/api/v1/workplaces/resolve-link?url=${encodeURIComponent(searchQuery.trim())}`);
+        setIsSearching(false);
+        if (res.data?.success && res.data.data) {
+          const { lat: pLat, lng: pLng, address, city, country } = res.data.data;
+          if (mapEngine === 'google' && gmapInstanceRef.current && gmarkerRef.current) {
+            const loc = { lat: pLat, lng: pLng };
+            gmarkerRef.current.setPosition(loc);
+            gcircleRef.current?.setCenter(loc);
+            gmapInstanceRef.current.panTo(loc);
+            gmapInstanceRef.current.setZoom(18);
+          } else if (leafletMapRef.current && leafletMarkerRef.current) {
+            leafletMarkerRef.current.setLatLng([pLat, pLng]);
+            leafletCircleRef.current?.setLatLng([pLat, pLng]);
+            leafletMapRef.current.setView([pLat, pLng], 18, { animate: true });
+          }
+
+          handleCoordinateSelect(pLat, pLng);
+          setShowSuggestions(false);
+          if (onChange) {
+            onChange({
+              lat: pLat,
+              lng: pLng,
+              radiusMeters,
+              address: address || '',
+              city: city || '',
+              country: country || '',
+            });
+          }
+          setStatusMessage({
+            text: `Identified location: ${address || `${pLat}, ${pLng}`}`,
+            type: 'success',
+          });
+          return;
+        }
+      } catch (err) {
+        setIsSearching(false);
+        setStatusMessage({
+          text: err.response?.data?.message || 'Could not resolve Google Maps shortlink. Please verify the URL.',
+          type: 'error',
+        });
+        return;
+      }
     }
 
     // If suggestions available, select the first

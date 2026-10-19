@@ -7,6 +7,7 @@ import {
   updateWorkplace,
   toggleWorkplaceStatus,
   deleteWorkplace,
+  resolveMapLink,
 } from '../controllers/workplaceLocationController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 
@@ -15,6 +16,9 @@ const hrRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER'];
 
 // Authenticate all workplace routes
 router.use(authenticate);
+
+// Resolve Google Maps link or shortlink
+router.get('/resolve-link', resolveMapLink);
 
 // Publicly active workplaces for all authenticated users (e.g. employee check-in verification)
 router.get('/active', getActiveWorkplaces);
