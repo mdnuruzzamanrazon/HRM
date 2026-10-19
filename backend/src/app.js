@@ -122,6 +122,7 @@ app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/employees', employeeRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/leave', leaveRoutes);
+app.use('/api/v1/leaves', leaveRoutes);
 app.use('/api/v1/payroll', payrollRoutes);
 app.use('/api/v1/shifts', shiftRoutes);
 app.use('/api/v1/expenses', expenseRoutes);
