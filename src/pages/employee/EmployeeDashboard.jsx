@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -6,7 +6,7 @@ import {
   Clock, Calendar, CreditCard, Receipt, CalendarClock, 
   CheckCircle2, AlertCircle, ArrowRight, UserCheck, 
   LogIn, LogOut, Megaphone, Loader2, Sparkles, Building2, MapPin,
-  CheckSquare, AlertTriangle
+  CheckSquare, AlertTriangle, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -17,6 +17,29 @@ export default function EmployeeDashboard() {
   const [loading, setLoading] = useState(true);
   const [clocking, setClocking] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+
+  // Horizontal Task Scroll Controls
+  const taskScrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateTaskScrollButtons = () => {
+    if (taskScrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = taskScrollRef.current;
+      setCanScrollLeft(scrollLeft > 10);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  const handleTaskScroll = (direction) => {
+    if (taskScrollRef.current) {
+      const scrollAmount = 360;
+      taskScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -53,6 +76,22 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    const el = taskScrollRef.current;
+    if (!el) return;
+
+    updateTaskScrollButtons();
+    el.addEventListener('scroll', updateTaskScrollButtons, { passive: true });
+    window.addEventListener('resize', updateTaskScrollButtons);
+    const timer = setTimeout(updateTaskScrollButtons, 350);
+
+    return () => {
+      el.removeEventListener('scroll', updateTaskScrollButtons);
+      window.removeEventListener('resize', updateTaskScrollButtons);
+      clearTimeout(timer);
+    };
+  }, [tasks]);
 
   const handleClockAction = async (action) => {
     try {
@@ -435,60 +474,156 @@ export default function EmployeeDashboard() {
         </div>
       </div>
 
-      {/* Active Tasks Widget */}
+      {/* Active Tasks Widget - Modern Horizontal Scroll Carousel */}
       {activeTasks.length > 0 && (
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-sm font-bold text-slate-900">Active Tasks & Deliverables</h3>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {activeTasks.length} in progress
-              </span>
-            </div>
-            <Link to="/employee/tasks" className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
-              All Tasks <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {activeTasks.slice(0, 3).map(task => (
-              <Link
-                key={task._id}
-                to={`/employee/tasks?taskId=${task._id}`}
-                className="p-4 rounded-xl border border-slate-100 hover:border-emerald-300 hover:shadow-xs bg-slate-50/50 hover:bg-emerald-50/20 transition-all flex flex-col justify-between group"
-              >
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
-                      task.priority === 'URGENT' ? 'bg-rose-100 text-rose-800' :
-                      task.priority === 'HIGH' ? 'bg-amber-100 text-amber-800' :
-                      'bg-slate-200 text-slate-700'
-                    }`}>
-                      {task.priority}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      task.status === 'REVISION_REQUIRED' ? 'bg-rose-100 text-rose-800' :
-                      task.status === 'IN_PROGRESS' ? 'bg-sky-100 text-sky-800' :
-                      'bg-emerald-100 text-emerald-800'
-                    }`}>
-                      {task.status === 'REVISION_REQUIRED' ? 'Revision Needed' : task.status === 'IN_PROGRESS' ? 'In Progress' : 'Accepted'}
-                    </span>
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-800 group-hover:text-emerald-700 line-clamp-1 mt-1">
-                    {task.title}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 line-clamp-2">
-                    {task.description || 'Deliverable assigned by HR.'}
-                  </p>
-                </div>
-                <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Due: {task.dueDate ? format(new Date(task.dueDate), 'MMM dd') : 'N/A'}</span>
-                  <span className="font-bold text-emerald-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                    Open <ArrowRight className="w-3 h-3" />
+        <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/80 shadow-xs relative">
+          
+          {/* Header Row: Title + Status Badge + Navigation Controls */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                <CheckSquare className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">Active Tasks & Deliverables</h3>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {activeTasks.length} {activeTasks.length === 1 ? 'task' : 'tasks'}
                   </span>
                 </div>
+                <p className="text-[11px] text-slate-400 mt-0.5 hidden sm:block">
+                  Scroll horizontally to browse your assigned deliverables and deadlines
+                </p>
+              </div>
+            </div>
+
+            {/* Controls: Scroll Arrows & "All Tasks" Button */}
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              {/* Arrow navigation buttons */}
+              <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/70">
+                <button
+                  type="button"
+                  onClick={() => handleTaskScroll('left')}
+                  disabled={!canScrollLeft}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-white text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-emerald-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                  title="Scroll left"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTaskScroll('right')}
+                  disabled={!canScrollRight}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center bg-white text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-emerald-700 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                  title="Scroll right"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* All Tasks Link */}
+              <Link 
+                to="/employee/tasks" 
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-emerald-50 text-xs font-bold text-slate-700 hover:text-emerald-700 border border-slate-200/80 hover:border-emerald-200 transition-all shadow-2xs group cursor-pointer"
+                title="View all tasks in My Tasks portal"
+              >
+                <span>All Tasks</span>
+                <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-transform" />
               </Link>
-            ))}
+            </div>
+          </div>
+
+          {/* Horizontal Scroll Track */}
+          <div 
+            ref={taskScrollRef}
+            className="flex gap-4 overflow-x-auto pb-3 pt-1 px-0.5 custom-scrollbar snap-x snap-mandatory scroll-smooth focus:outline-none"
+            tabIndex={0}
+            role="region"
+            aria-label="Active tasks carousel"
+          >
+            {activeTasks.map(task => {
+              const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
+              const needsRevision = task.status === 'REVISION_REQUIRED';
+
+              return (
+                <Link
+                  key={task._id}
+                  to={`/employee/tasks?taskId=${task._id}`}
+                  className={`min-w-[280px] sm:min-w-[330px] md:min-w-[350px] max-w-[370px] flex-shrink-0 snap-start rounded-2xl p-4.5 bg-gradient-to-b from-white to-slate-50/60 hover:to-emerald-50/20 border transition-all duration-200 flex flex-col justify-between group cursor-pointer relative shadow-2xs hover:shadow-md hover:-translate-y-0.5 ${
+                    needsRevision 
+                      ? 'border-rose-200 hover:border-rose-400 bg-rose-50/10' 
+                      : 'border-slate-200/85 hover:border-emerald-400/90'
+                  }`}
+                >
+                  {/* Card Header: Priority & Status Badges */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                        task.priority === 'URGENT' 
+                          ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                          : task.priority === 'HIGH' 
+                          ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                          : task.priority === 'MEDIUM'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                        {task.priority || 'MEDIUM'}
+                      </span>
+
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
+                        needsRevision
+                          ? 'bg-rose-100 text-rose-800 border-rose-200 animate-pulse'
+                          : task.status === 'IN_PROGRESS'
+                          ? 'bg-sky-50 text-sky-700 border-sky-200'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          needsRevision ? 'bg-rose-500' : task.status === 'IN_PROGRESS' ? 'bg-sky-500' : 'bg-emerald-500'
+                        }`} />
+                        {needsRevision 
+                          ? 'Revision Needed' 
+                          : task.status === 'IN_PROGRESS' 
+                          ? 'In Progress' 
+                          : 'Accepted'}
+                      </span>
+                    </div>
+
+                    {/* Task Title */}
+                    <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-1 leading-snug pt-1">
+                      {task.title}
+                    </h4>
+
+                    {/* Task Description */}
+                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                      {task.description || task.instructions || 'Review assigned deliverable requirements and submit files.'}
+                    </p>
+                  </div>
+
+                  {/* Card Footer: Due Date + Open Arrow */}
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 text-slate-500">
+                      <Calendar className={`w-3.5 h-3.5 ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`} />
+                      <span className={`text-[11px] font-medium ${isOverdue ? 'text-rose-600 font-bold' : ''}`}>
+                        Due: {task.dueDate ? format(new Date(task.dueDate), 'MMM dd') : 'No date'}
+                      </span>
+                      {isOverdue && (
+                        <span className="text-[9px] font-black uppercase bg-rose-100 text-rose-700 px-1.5 py-0.2 rounded">
+                          Overdue
+                        </span>
+                      )}
+                    </div>
+
+                    <span className="font-bold text-xs text-emerald-600 group-hover:text-emerald-700 flex items-center gap-1 transition-colors">
+                      <span>Open</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}
