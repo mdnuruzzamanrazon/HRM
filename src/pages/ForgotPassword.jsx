@@ -396,8 +396,7 @@ export default function ForgotPassword() {
                 <div className="relative">
                   <input
                     {...registerReset('code')}
-                    id="security_verification_code"
-                    name="security_verification_code"
+                    id="code"
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
@@ -438,7 +437,7 @@ export default function ForgotPassword() {
               {/* 2. New Password Field */}
               <div>
                 <label 
-                  htmlFor="new_account_password" 
+                  htmlFor="newPassword" 
                   className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider"
                 >
                   New Password <span className="text-rose-500">*</span>
@@ -449,14 +448,12 @@ export default function ForgotPassword() {
                   </div>
                   <input
                     {...registerReset('newPassword')}
-                    id="new_account_password"
-                    name="new_account_password"
+                    id="newPassword"
                     type={showNewPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     data-lpignore="true"
                     data-1p-ignore="true"
                     placeholder="Minimum 6 characters"
-                    value={watchedNewPassword}
                     className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all ${
                       resetErrors.newPassword 
                         ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' 
@@ -485,7 +482,7 @@ export default function ForgotPassword() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label 
-                    htmlFor="confirm_account_password" 
+                    htmlFor="confirmPassword" 
                     className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
                   >
                     Confirm New Password <span className="text-rose-500">*</span>
@@ -515,14 +512,12 @@ export default function ForgotPassword() {
                   </div>
                   <input
                     {...registerReset('confirmPassword')}
-                    id="confirm_account_password"
-                    name="confirm_account_password"
+                    id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     data-lpignore="true"
                     data-1p-ignore="true"
                     placeholder="Re-enter new password to verify"
-                    value={watchedConfirmPassword}
                     className={`w-full pl-10 pr-10 py-2.5 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all ${
                       resetErrors.confirmPassword 
                         ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' 
