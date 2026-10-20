@@ -88,12 +88,12 @@ export default function ForgotPassword() {
       const res = await api.post('/auth/forgot-password', payload);
       
       setRegisteredEmail(normalizedEmail);
-      setSuccessMsg(res.data?.message || `A 6-digit verification code has been dispatched to ${normalizedEmail}.`);
+      setSuccessMsg(res.data?.message || 'A 6-digit verification code has been sent to your registered email address.');
       setCodeExpiresIn(600); // Reset 10-minute countdown
       setResendCooldown(45); // 45 seconds cooldown before allowing resend
       setStep(2);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Unable to deliver verification code. Please verify your email address or check server configuration.';
+      const msg = err.response?.data?.message || "We couldn't send your verification code right now. Please try again later.";
       setErrorMsg(msg);
       setShowCredentialInput(true);
     } finally {
@@ -107,12 +107,15 @@ export default function ForgotPassword() {
     try {
       setIsResending(true);
       setErrorMsg('');
-      const res = await api.post('/auth/resend-code', { email: registeredEmail });
-      setSuccessMsg(res.data?.message || 'A fresh 6-digit verification code has been sent to your email.');
+      const res = await api.post('/auth/resend-code', { 
+        email: registeredEmail,
+        ...(manualCredential.trim() ? { credential: manualCredential.trim() } : {})
+      });
+      setSuccessMsg(res.data?.message || 'A 6-digit verification code has been sent to your registered email address.');
       setCodeExpiresIn(600);
       setResendCooldown(45);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to resend verification code. Please wait a moment and try again.');
+      setErrorMsg(err.response?.data?.message || "We couldn't send your verification code right now. Please try again later.");
     } finally {
       setIsResending(false);
     }
@@ -131,10 +134,10 @@ export default function ForgotPassword() {
 
       if (res.data?.success) {
         setStep(3);
-        setSuccessMsg(res.data.message || 'Password successfully updated.');
+        setSuccessMsg(res.data.message || 'Password has been successfully updated. You may now log in with your new credentials.');
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Invalid or expired 6-digit verification code.');
+      setErrorMsg(err.response?.data?.message || 'The verification code is incorrect. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

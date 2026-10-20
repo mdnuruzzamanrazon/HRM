@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema({
   lastLoginAt: { type: Date },
   resetPasswordToken: { type: String },
   resetPasswordCode: { type: String },
+  resetPasswordCodeHash: { type: String },
   resetPasswordExpires: { type: Date },
   isDeleted: { type: Boolean, default: false, index: true },
   deletedAt: { type: Date },

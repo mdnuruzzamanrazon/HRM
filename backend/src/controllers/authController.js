@@ -401,8 +401,9 @@ export const forgotPassword = async (req, res) => {
       employeeName = user.firstName || 'Team Member';
     }
 
-    // 3. Generate Cryptographically Secure 6-Digit Code
+    // 3. Generate Cryptographically Secure 6-Digit Code & SHA-256 Hash
     const verificationCode = crypto.randomInt(100000, 1000000).toString();
+    const codeHash = crypto.createHash('sha256').update(verificationCode).digest('hex');
     const resetToken = crypto.randomBytes(32).toString('hex');
     const EXPIRES_IN_MINUTES = 10;
     const expiresAt = now + EXPIRES_IN_MINUTES * 60 * 1000;
@@ -418,9 +419,10 @@ export const forgotPassword = async (req, res) => {
       });
     } catch (emailError) {
       console.error(`[authController] Failed to dispatch verification email to ${normalizedEmail}:`, emailError.message);
-      return res.status(502).json({
+      return res.status(500).json({
         success: false,
-        message: `Failed to deliver verification code email: ${emailError.message}. Please check your email configuration.`
+        message: "We couldn't send your verification code right now. Please try again later.",
+        errorDetail: process.env.NODE_ENV !== 'production' ? emailError.message : undefined
       });
     }
 
@@ -429,21 +431,24 @@ export const forgotPassword = async (req, res) => {
     rateData.lastAttempt = now;
     forgotPasswordRateLimits.set(normalizedEmail, rateData);
 
-    // Save in Cache
+    // Save in Cache with SHA-256 Hash
     resetCodesCache.set(normalizedEmail, {
       code: verificationCode,
+      codeHash,
       token: resetToken,
       expiresAt
     });
 
-    // Save in Database
+    // Save in Database (stores secure hash and verification code)
     if (user && user.save && typeof user.save === 'function') {
       user.resetPasswordCode = verificationCode;
+      user.resetPasswordCodeHash = codeHash;
       user.resetPasswordToken = resetToken;
       user.resetPasswordExpires = new Date(expiresAt);
       await user.save();
     } else if (user) {
       user.resetPasswordCode = verificationCode;
+      user.resetPasswordCodeHash = codeHash;
       user.resetPasswordToken = resetToken;
       user.resetPasswordExpires = new Date(expiresAt);
     }
@@ -453,7 +458,7 @@ export const forgotPassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. The code is valid for 10 minutes.`,
+      message: 'A 6-digit verification code has been sent to your registered email address.',
       email: normalizedEmail,
       expiresInMinutes: EXPIRES_IN_MINUTES,
       deliveryStatus: emailResult?.provider || 'delivered'
@@ -473,6 +478,7 @@ export const verifyResetCode = async (req, res) => {
 
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedCode = code.toString().trim();
+    const incomingHash = crypto.createHash('sha256').update(normalizedCode).digest('hex');
 
     // Rate-limit failed verification attempts to prevent brute-forcing
     const failedAttempts = verifyCodeAttempts.get(normalizedEmail) || 0;
@@ -481,7 +487,7 @@ export const verifyResetCode = async (req, res) => {
       resetCodesCache.delete(normalizedEmail);
       if (!isDemoMode() && mongoose.connection.readyState !== 1) {
         await User.updateOne({ email: normalizedEmail }, {
-          $unset: { resetPasswordCode: 1, resetPasswordToken: 1, resetPasswordExpires: 1 }
+          $unset: { resetPasswordCode: 1, resetPasswordCodeHash: 1, resetPasswordToken: 1, resetPasswordExpires: 1 }
         });
       }
       return res.status(429).json({
@@ -492,16 +498,29 @@ export const verifyResetCode = async (req, res) => {
 
     // Check memory cache first
     const cached = resetCodesCache.get(normalizedEmail);
-    if (cached && cached.code === normalizedCode && cached.expiresAt > Date.now()) {
-      verifyCodeAttempts.delete(normalizedEmail);
-      return res.json({ success: true, message: 'Verification code confirmed.' });
+    if (cached) {
+      if (cached.expiresAt <= Date.now()) {
+        resetCodesCache.delete(normalizedEmail);
+        return res.status(400).json({
+          success: false,
+          message: 'Your verification code has expired. Please request a new code.'
+        });
+      }
+      if (cached.codeHash === incomingHash || cached.code === normalizedCode) {
+        verifyCodeAttempts.delete(normalizedEmail);
+        return res.json({ success: true, message: 'Verification code confirmed.' });
+      }
     }
 
     // Check database
     if (!isDemoMode() && mongoose.connection.readyState === 1) {
       const user = await User.findOne({
         email: normalizedEmail,
-        resetPasswordCode: normalizedCode,
+        $or: [
+          { resetPasswordCodeHash: incomingHash },
+          { resetPasswordCode: incomingHash },
+          { resetPasswordCode: normalizedCode }
+        ],
         resetPasswordExpires: { $gt: new Date() }
       });
 
@@ -513,13 +532,10 @@ export const verifyResetCode = async (req, res) => {
 
     // Increment failed attempt counter
     verifyCodeAttempts.set(normalizedEmail, failedAttempts + 1);
-    const attemptsLeft = 5 - (failedAttempts + 1);
 
     return res.status(400).json({
       success: false,
-      message: attemptsLeft > 0
-        ? `Invalid or expired 6-digit verification code. (${attemptsLeft} attempts remaining)`
-        : 'Invalid or expired 6-digit verification code. Please request a new one.'
+      message: 'The verification code is incorrect. Please try again.'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -541,14 +557,21 @@ export const resetPassword = async (req, res) => {
 
     const normalizedEmail = email ? email.toLowerCase().trim() : '';
     const normalizedCode = code ? code.toString().trim() : '';
+    const incomingHash = normalizedCode ? crypto.createHash('sha256').update(normalizedCode).digest('hex') : '';
 
     let isAuthorized = false;
 
     // Check cache
     if (normalizedEmail) {
       const cached = resetCodesCache.get(normalizedEmail);
-      if (cached && (cached.code === normalizedCode || (token && cached.token === token)) && cached.expiresAt > Date.now()) {
-        isAuthorized = true;
+      if (cached) {
+        if (cached.expiresAt <= Date.now()) {
+          resetCodesCache.delete(normalizedEmail);
+          return res.status(400).json({ success: false, message: 'Your verification code has expired. Please request a new code.' });
+        }
+        if (cached.codeHash === incomingHash || cached.code === normalizedCode || (token && cached.token === token)) {
+          isAuthorized = true;
+        }
       }
     }
 
@@ -556,7 +579,7 @@ export const resetPassword = async (req, res) => {
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       if (!isAuthorized && !token) {
-        return res.status(400).json({ success: false, message: 'Invalid or expired 6-digit verification code' });
+        return res.status(400).json({ success: false, message: 'The verification code is incorrect or has expired. Please request a new code.' });
       }
 
       // Enforce single-use: purge cache immediately
@@ -581,7 +604,11 @@ export const resetPassword = async (req, res) => {
     // Database lookup
     const query = {
       $or: [
-        ...(normalizedEmail && normalizedCode ? [{ email: normalizedEmail, resetPasswordCode: normalizedCode }] : []),
+        ...(normalizedEmail && normalizedCode ? [
+          { email: normalizedEmail, resetPasswordCodeHash: incomingHash },
+          { email: normalizedEmail, resetPasswordCode: incomingHash },
+          { email: normalizedEmail, resetPasswordCode: normalizedCode }
+        ] : []),
         ...(token ? [{ resetPasswordToken: token }] : [])
       ],
       resetPasswordExpires: { $gt: new Date() }
@@ -607,6 +634,7 @@ export const resetPassword = async (req, res) => {
 
     user.passwordHash = newHash;
     user.resetPasswordCode = undefined;
+    user.resetPasswordCodeHash = undefined;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     user.mustChangePassword = false;
