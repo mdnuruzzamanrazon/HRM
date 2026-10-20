@@ -36,8 +36,6 @@ export default function ForgotPassword() {
   const [codeExpiresIn, setCodeExpiresIn] = useState(600); // 10 minutes in seconds
   const [showCredentialInput, setShowCredentialInput] = useState(false);
   const [manualCredential, setManualCredential] = useState('');
-  const [sandboxCode, setSandboxCode] = useState('');
-  const [previewUrl, setPreviewUrl] = useState('');
   const [resetSessionToken, setResetSessionToken] = useState('');
 
   // Form 1: Email
@@ -92,22 +90,15 @@ export default function ForgotPassword() {
       const res = await api.post('/auth/forgot-password', payload);
       
       setRegisteredEmail(normalizedEmail);
-      setSuccessMsg(res.data?.message || 'A 6-digit verification code has been sent to your registered email address.');
+      setSuccessMsg(res.data?.message || `A 6-digit verification code has been sent directly to ${normalizedEmail}.`);
       if (res.data?.resetSessionToken) {
         setResetSessionToken(res.data.resetSessionToken);
-      }
-      if (res.data?.sandboxCode) {
-        setSandboxCode(res.data.sandboxCode);
-        setResetValue('code', res.data.sandboxCode);
-      }
-      if (res.data?.previewUrl) {
-        setPreviewUrl(res.data.previewUrl);
       }
       setCodeExpiresIn(600); // Reset 10-minute countdown
       setResendCooldown(45); // 45 seconds cooldown before allowing resend
       setStep(2);
     } catch (err) {
-      const msg = err.response?.data?.message || "We couldn't send your verification code right now. Please try again later.";
+      const msg = err.response?.data?.message || "Failed to dispatch verification code. Please check that email delivery credentials are configured.";
       setErrorMsg(msg);
       setShowCredentialInput(true);
     } finally {
@@ -125,21 +116,14 @@ export default function ForgotPassword() {
         email: registeredEmail,
         ...(manualCredential.trim() ? { credential: manualCredential.trim() } : {})
       });
-      setSuccessMsg(res.data?.message || 'A 6-digit verification code has been sent to your registered email address.');
+      setSuccessMsg(res.data?.message || `A fresh verification code has been dispatched to ${registeredEmail}.`);
       if (res.data?.resetSessionToken) {
         setResetSessionToken(res.data.resetSessionToken);
-      }
-      if (res.data?.sandboxCode) {
-        setSandboxCode(res.data.sandboxCode);
-        setResetValue('code', res.data.sandboxCode);
-      }
-      if (res.data?.previewUrl) {
-        setPreviewUrl(res.data.previewUrl);
       }
       setCodeExpiresIn(600);
       setResendCooldown(45);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || "We couldn't send your verification code right now. Please try again later.");
+      setErrorMsg(err.response?.data?.message || "Failed to dispatch verification code. Please check that email delivery credentials are configured.");
     } finally {
       setIsResending(false);
     }
@@ -329,34 +313,6 @@ export default function ForgotPassword() {
                   {formatTimer(codeExpiresIn)}
                 </span>
               </div>
-
-              {/* Sandbox / Demo Code Notice */}
-              {sandboxCode && (
-                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2 animate-in fade-in">
-                  <div className="flex items-center justify-between font-bold">
-                    <span className="flex items-center gap-1.5 text-amber-800">
-                      <Sparkles className="w-4 h-4 text-amber-600" />
-                      Sandbox / Demo Mode Code:
-                    </span>
-                    <span className="font-mono text-base font-black tracking-widest text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-lg border border-emerald-300">
-                      {sandboxCode}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Live SMTP credentials are not configured on the server, so this test code was generated. It has been auto-filled for you below.
-                    {previewUrl && (
-                      <a 
-                        href={previewUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="ml-1 text-emerald-700 font-bold hover:underline inline-flex items-center gap-0.5"
-                      >
-                        Preview Generated Email &rarr;
-                      </a>
-                    )}
-                  </p>
-                </div>
-              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">

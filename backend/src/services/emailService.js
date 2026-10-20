@@ -61,12 +61,14 @@ export const getTransporter = async () => {
   const user = runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
   const rawPass = runtimeEmailConfig.smtpPass || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
 
-  // 1. Dedicated Gmail Transport
+  // 1. Dedicated Gmail Transport (SSL port 465 for optimal reliability)
   if (isGmail && user && rawPass) {
     // Strip any accidental spaces from 16-character Google App Passwords (e.g. "abcd efgh ijkl mnop" -> "abcdefghijklmnop")
     const pass = rawPass.replace(/\s+/g, '');
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: user.trim(),
         pass,
@@ -95,27 +97,31 @@ export const getTransporter = async () => {
     });
   }
 
-  // 3. Fallback for Local Development, Testing, and Demo Mode: Ethereal Sandbox
-  // Always active if credentials are not configured, so password reset never fails with 500 error
-  if (!etherealTransporter) {
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      console.log(`[Email Service] Initialized Ethereal sandbox test account: ${testAccount.user}`);
-      etherealTransporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-    } catch (err) {
-      console.warn('[Email Service] Failed to initialize Ethereal sandbox:', err.message);
-      return null;
+  // 3. Sandbox Fallback: STRICTLY FOR LOCAL DEV/TESTING (DISABLED IN PRODUCTION)
+  if (process.env.NODE_ENV !== 'production' && process.env.ALLOW_ETHEREAL_SANDBOX === 'true') {
+    if (!etherealTransporter) {
+      try {
+        const testAccount = await nodemailer.createTestAccount();
+        console.log(`[Email Service] Initialized Ethereal sandbox test account: ${testAccount.user}`);
+        etherealTransporter = nodemailer.createTransport({
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+      } catch (err) {
+        console.warn('[Email Service] Failed to initialize Ethereal sandbox:', err.message);
+        return null;
+      }
     }
+    return etherealTransporter;
   }
-  return etherealTransporter;
+
+  // In production with no credentials, return null so a genuine error is raised
+  return null;
 };
 
 /**
@@ -355,22 +361,12 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
       html,
     });
 
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`[Email Service] Verification email dispatched to sandbox:`);
-      console.log(`[Email Service] Recipient: ${to}`);
-      console.log(`[Email Service] Preview URL: ${previewUrl}`);
-    } else {
-      console.log(`[Email Service] Email sent successfully to ${to} (MessageId: ${info.messageId})`);
-    }
+    console.log(`[Email Service] Verification email successfully dispatched to ${to} (MessageId: ${info.messageId})`);
 
-    const isSandbox = Boolean(previewUrl || (transporter.options && transporter.options.host?.includes('ethereal')));
     return {
       success: true,
       messageId: info.messageId,
-      previewUrl: previewUrl || null,
-      provider: isSandbox ? 'ethereal' : (isGmailConfigured() ? 'gmail' : 'smtp'),
-      isSandbox,
+      provider: isGmailConfigured() ? 'gmail' : 'smtp',
     };
   } catch (error) {
     console.error(`[Email Service] SMTP delivery failed to ${to}:`, error.message);

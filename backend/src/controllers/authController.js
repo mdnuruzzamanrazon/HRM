@@ -489,16 +489,15 @@ export const forgotPassword = async (req, res) => {
       const isUnconfigured = emailError.message.includes('not configured') || emailError.message.includes('SMTP_USER');
       const isAuthError = emailError.message.includes('Username and Password') || emailError.message.includes('535') || emailError.message.includes('BadCredentials');
       
-      return res.status(isUnconfigured ? 422 : (isAuthError ? 401 : 500)).json({
+      return res.status(isUnconfigured ? 503 : (isAuthError ? 401 : 500)).json({
         success: false,
-        code: isUnconfigured ? 'EMAIL_NOT_CONFIGURED' : (isAuthError ? 'INVALID_GOOGLE_APP_PASSWORD' : 'EMAIL_DISPATCH_FAILED'),
+        code: isUnconfigured ? 'EMAIL_SERVICE_NOT_CONFIGURED' : (isAuthError ? 'INVALID_GOOGLE_APP_PASSWORD' : 'EMAIL_DISPATCH_FAILED'),
         message: isUnconfigured 
-          ? 'Email delivery service is not configured. Please supply a 16-character Google App Password or configure SMTP credentials to dispatch your verification code.'
+          ? 'Email delivery service is currently not configured on this server. Please set SMTP_USER and SMTP_PASS (16-character Google App Password) or RESEND_API_KEY in the hosting platform environment variables.'
           : (isAuthError 
-              ? 'Google rejected the password. For automated delivery, Google requires a 16-character Google App Password (not your standard Gmail password).'
-              : emailError.message),
-        errorDetail: emailError.message,
-        requiresCredential: true
+              ? 'Google SMTP authentication rejected your credentials. For automated delivery, Google requires a 16-character Google App Password (not your normal Gmail password).'
+              : `Failed to deliver verification code: ${emailError.message}`),
+        errorDetail: emailError.message
       });
     }
 
@@ -533,8 +532,6 @@ export const forgotPassword = async (req, res) => {
     // Invalidate failed attempt counter for fresh code
     verifyCodeAttempts.delete(normalizedEmail);
 
-    const isSandboxDelivery = Boolean(emailResult?.isSandbox || emailResult?.provider === 'ethereal');
-
     // Cryptographically signed stateless resetSessionToken for serverless resilience
     const resetSessionToken = jwt.sign(
       { email: normalizedEmail, codeHash, purpose: 'PASSWORD_RESET' },
@@ -551,17 +548,12 @@ export const forgotPassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: isSandboxDelivery
-        ? `Verification code generated for ${normalizedEmail}. (Demo Mode: Code is ${verificationCode} - enter below or provide a Google App Password for live Gmail delivery)`
-        : `A 6-digit verification code has been sent directly to your registered email address (${normalizedEmail}).`,
+      message: `A 6-digit verification code has been dispatched to your registered email address (${normalizedEmail}). Please check your inbox and spam folder.`,
       email: normalizedEmail,
       resetSessionToken,
       resetToken: resetSessionToken,
       expiresInMinutes: EXPIRES_IN_MINUTES,
-      deliveryStatus: emailResult?.provider || 'delivered',
-      isSandbox: isSandboxDelivery,
-      sandboxCode: isSandboxDelivery ? verificationCode : undefined,
-      previewUrl: emailResult?.previewUrl || undefined
+      deliveryStatus: emailResult?.provider || 'delivered'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
