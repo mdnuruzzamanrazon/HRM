@@ -95,9 +95,7 @@ export default function ForgotPassword() {
     } catch (err) {
       const msg = err.response?.data?.message || 'Unable to deliver verification code. Please verify your email address or check server configuration.';
       setErrorMsg(msg);
-      if (msg.includes('not configured')) {
-        setShowCredentialInput(true);
-      }
+      setShowCredentialInput(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -212,23 +210,25 @@ export default function ForgotPassword() {
               </div>
 
               {/* Optional / Fallback Provider Connector */}
-              {(showCredentialInput || (errorMsg && errorMsg.includes('not configured'))) && (
+              {(showCredentialInput || Boolean(errorMsg)) && (
                 <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-slate-800 space-y-2.5 animate-in fade-in">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      Live Email Delivery Setup
+                      {errorMsg && errorMsg.includes('Username and Password') ? 'Google App Password Required' : 'Live Email Delivery Setup'}
                     </span>
                     <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Required</span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Paste your <strong>16-letter Google App Password</strong> or <strong>Resend API Key</strong> below to dispatch the code to your Gmail inbox:
+                    {errorMsg && errorMsg.includes('Username and Password')
+                      ? 'Google blocked your standard account password. Google requires a 16-letter App Password for security. Click below to generate one, paste it here, and dispatch again:'
+                      : 'Paste your 16-letter Google App Password or Resend API Key below to dispatch the code to your Gmail inbox:'}
                   </p>
                   <input
                     type="text"
                     value={manualCredential}
                     onChange={(e) => setManualCredential(e.target.value)}
-                    placeholder="e.g. abcd efgh ijkl mnop  OR  re_xxxxxxxxxxxx"
+                    placeholder="Paste 16-letter App Password (e.g. abcd efgh ijkl mnop)"
                     className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-amber-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                   />
                   <div className="flex items-center justify-between text-[11px] pt-0.5">
@@ -238,7 +238,7 @@ export default function ForgotPassword() {
                       rel="noopener noreferrer"
                       className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
                     >
-                      &rarr; Get 16-Letter App Password
+                      &rarr; 1. Click to Generate 16-Letter Password
                     </a>
                     <a 
                       href="https://resend.com/api-keys" 
@@ -246,7 +246,7 @@ export default function ForgotPassword() {
                       rel="noopener noreferrer"
                       className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
                     >
-                      &rarr; Get Free Resend Key
+                      &rarr; Or Get Free Resend Key
                     </a>
                   </div>
                 </div>
