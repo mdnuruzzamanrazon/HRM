@@ -60,10 +60,20 @@ export default function EmployeeForm() {
       setSuccessMsg('');
       const res = await api.post('/employees', data);
       if (res.data?.success) {
+        // Cache in resilient workforce storage
+        const savedEmp = res.data.data;
+        if (savedEmp) {
+          try {
+            const cached = JSON.parse(localStorage.getItem('cbdp_persisted_workforce') || '[]');
+            const code = (savedEmp.employeeCode || savedEmp.employeeId || '').toUpperCase();
+            const filtered = cached.filter(e => (e.employeeCode || e.employeeId || '').toUpperCase() !== code);
+            localStorage.setItem('cbdp_persisted_workforce', JSON.stringify([savedEmp, ...filtered]));
+          } catch (e) {}
+        }
         setSuccessMsg(`Employee ${data.firstName} ${data.lastName} successfully registered in MongoDB! Redirecting...`);
         setTimeout(() => {
           navigate('/employees');
-        }, 1200);
+        }, 1000);
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to register employee. Please check for duplicate email or employee ID.');

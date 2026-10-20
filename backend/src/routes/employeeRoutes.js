@@ -9,7 +9,8 @@ import {
   toggleEmployeeAccount, 
   deleteEmployee, 
   uploadEmployeeDocument, 
-  deleteEmployeeDocument 
+  deleteEmployeeDocument,
+  syncEmployees 
 } from '../controllers/employeeController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 
@@ -19,6 +20,7 @@ const hrRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER'];
 const adminRoles = ['SUPER_ADMIN', 'HR_ADMIN'];
 
 router.get('/', authenticate, getEmployees);
+router.post('/sync', authenticate, authorize(adminRoles), syncEmployees);
 router.get('/:id', authenticate, getEmployeeById);
 router.post('/', authenticate, authorize(adminRoles), createEmployee);
 router.put('/:id', authenticate, authorize(hrRoles), updateEmployee);

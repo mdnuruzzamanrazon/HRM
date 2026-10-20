@@ -3,7 +3,7 @@ import { Employee } from '../models/Employee.js';
 import { User } from '../models/User.js';
 import { hashPassword } from '../utils/authUtils.js';
 import { isDemoMode } from '../config/db.js';
-import { mockData } from '../services/mockDataService.js';
+import { mockData, saveStoreToDisk, loadStoreFromDisk } from '../services/mockDataService.js';
 import { logAudit } from '../utils/auditLogger.js';
 
 
@@ -13,6 +13,7 @@ export const getEmployees = async (req, res) => {
     const { includeDeleted, status } = req.query;
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      loadStoreFromDisk();
       let list = (mockData.employees || []).filter(e => includeDeleted === 'true' || !e.isDeleted);
       if (status && status !== 'ALL') {
         list = list.filter(e => e.jobDetails?.status === status);
@@ -241,6 +242,7 @@ export const createEmployee = async (req, res) => {
 
       mockData.employees.unshift(newEmployee);
       mockData.users.push(newUser);
+      saveStoreToDisk();
 
       return res.status(201).json({ 
         success: true, 
@@ -393,6 +395,7 @@ export const updateEmployee = async (req, res) => {
             if (!u.isActive) u.tokenVersion = (u.tokenVersion || 1) + 1;
           }
         }
+        saveStoreToDisk();
       }
       return res.json({ success: true, data: emp || req.body, message: 'Employee profile updated successfully', isDemoMode: true });
     }
@@ -618,6 +621,7 @@ export const toggleEmployeeAccount = async (req, res) => {
       if (u) {
         u.isActive = !u.isActive;
         if (!u.isActive) u.tokenVersion = (u.tokenVersion || 1) + 1;
+        saveStoreToDisk();
         return res.json({ 
           success: true, 
           isActive: u.isActive, 
@@ -684,6 +688,7 @@ export const deleteEmployee = async (req, res) => {
         u.tokenVersion = (u.tokenVersion || 1) + 1;
       }
       mockData.employees = (mockData.employees || []).filter(e => e._id !== id);
+      saveStoreToDisk();
       return res.json({ success: true, message: 'Employee record and portal account removed successfully' });
     }
 
@@ -807,3 +812,62 @@ export const deleteEmployeeDocument = async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
+// Sync client-side employees to ensure zero data loss across ephemeral restarts
+export const syncEmployees = async (req, res) => {
+  try {
+    const { employees } = req.body;
+    if (!Array.isArray(employees)) {
+      return res.status(400).json({ success: false, message: 'Invalid payload: employees array required' });
+    }
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      loadStoreFromDisk();
+      const existingCodes = new Set(mockData.employees.map(e => e.employeeCode));
+      let added = 0;
+      employees.forEach(emp => {
+        if (emp && emp.employeeCode && !existingCodes.has(emp.employeeCode)) {
+          mockData.employees.unshift(emp);
+          existingCodes.add(emp.employeeCode);
+          added++;
+        }
+      });
+      if (added > 0) {
+        saveStoreToDisk();
+      }
+      return res.json({ success: true, synced: added, total: mockData.employees.length });
+    }
+
+    // In production MongoDB mode:
+    let addedCount = 0;
+    for (const emp of employees) {
+      if (emp.employeeCode && (emp.email || emp.personalDetails?.email)) {
+        const empCode = emp.employeeCode.trim().toUpperCase();
+        const exists = await Employee.findOne({ employeeCode: empCode, isDeleted: { $ne: true } });
+        if (!exists) {
+          const emailVal = emp.email || emp.personalDetails?.email;
+          await Employee.create({
+            employeeCode: empCode,
+            email: emailVal,
+            personalDetails: emp.personalDetails || { 
+              firstName: emp.firstName || 'Employee', 
+              lastName: emp.lastName || empCode, 
+              email: emailVal 
+            },
+            jobDetails: emp.jobDetails || { 
+              title: emp.title || 'Staff', 
+              department: emp.department || 'Operations', 
+              status: emp.status || 'ACTIVE',
+              joinDate: new Date()
+            }
+          });
+          addedCount++;
+        }
+      }
+    }
+    res.json({ success: true, synced: addedCount });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+

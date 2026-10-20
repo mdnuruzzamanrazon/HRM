@@ -91,7 +91,7 @@ export default function EmployeeDetail() {
     e.preventDefault();
     setActionLoading(true);
     try {
-      await api.put(`/employees/${id}`, {
+      const updateRes = await api.put(`/employees/${id}`, {
         email: editForm.email,
         personalDetails: {
           firstName: editForm.firstName,
@@ -111,6 +111,16 @@ export default function EmployeeDetail() {
           taxId: editForm.taxId
         }
       });
+      if (updateRes.data?.data) {
+        try {
+          const cached = JSON.parse(localStorage.getItem('cbdp_persisted_workforce') || '[]');
+          const idx = cached.findIndex(e => e._id === id);
+          if (idx !== -1) {
+            cached[idx] = { ...cached[idx], ...updateRes.data.data };
+            localStorage.setItem('cbdp_persisted_workforce', JSON.stringify(cached));
+          }
+        } catch (e) {}
+      }
       notify('success', 'Employee profile and credentials synchronized successfully');
       setIsEditModalOpen(false);
       await fetchEmployee();
@@ -215,6 +225,11 @@ export default function EmployeeDetail() {
     setActionLoading(true);
     try {
       await api.delete(`/employees/${id}`);
+      try {
+        const cached = JSON.parse(localStorage.getItem('cbdp_persisted_workforce') || '[]');
+        const updated = cached.filter(e => e._id !== id);
+        localStorage.setItem('cbdp_persisted_workforce', JSON.stringify(updated));
+      } catch (e) {}
       notify('success', 'Employee record removed');
       navigate('/employees');
     } catch (err) {

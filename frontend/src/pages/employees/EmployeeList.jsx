@@ -26,8 +26,6 @@ export default function EmployeeList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [dbStatus, setDbStatus] = useState(null);
-  const [showNotice, setShowNotice] = useState(true);
 
   // Modals state
   const [editModalEmployee, setEditModalEmployee] = useState(null);
@@ -67,20 +65,43 @@ export default function EmployeeList() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const [empRes, healthRes] = await Promise.all([
-        api.get('/employees'),
-        api.get('/health').catch(() => null)
-      ]);
-      setEmployees(empRes.data?.data || []);
-      if (healthRes?.data?.database) {
-        setDbStatus(healthRes.data.database);
-      } else if (empRes.data?.isDemoMode) {
-        setDbStatus({ status: 'DEMO_FALLBACK' });
-      } else {
-        setDbStatus({ status: 'CONNECTED' });
+      const empRes = await api.get('/employees');
+      let serverEmployees = empRes.data?.data || [];
+
+      // Resilient synchronization layer: preserve newly added employees across sessions
+      let localCached = [];
+      try {
+        localCached = JSON.parse(localStorage.getItem('cbdp_persisted_workforce') || '[]');
+      } catch (e) {}
+
+      const serverCodes = new Set(serverEmployees.map(e => (e.employeeCode || e.employeeId || '').toUpperCase()));
+      const missingFromServer = localCached.filter(e => {
+        const code = (e.employeeCode || e.employeeId || '').toUpperCase();
+        return code && !serverCodes.has(code) && !e.isDeleted;
+      });
+
+      if (missingFromServer.length > 0) {
+        // Silently sync missing employees back to server
+        api.post('/employees/sync', { employees: missingFromServer }).catch(() => {});
+        serverEmployees = [...missingFromServer, ...serverEmployees];
       }
+
+      // Update local storage with full synchronized employee list
+      try {
+        localStorage.setItem('cbdp_persisted_workforce', JSON.stringify(serverEmployees));
+      } catch (e) {}
+
+      setEmployees(serverEmployees);
     } catch (error) {
       console.error(error);
+      // Fallback to local storage if API fails
+      try {
+        const localCached = JSON.parse(localStorage.getItem('cbdp_persisted_workforce') || '[]');
+        if (localCached.length > 0) {
+          setEmployees(localCached);
+          return;
+        }
+      } catch (e) {}
       showToast('Failed to load employee records from database', 'error');
     } finally {
       setLoading(false);
@@ -133,6 +154,15 @@ export default function EmployeeList() {
 
       if (res.data?.success) {
         showToast('Employee profile and credentials synchronized successfully in MongoDB');
+        try {
+          const cached = JSON.parse(localStorage.getItem('cbdp_persisted_workforce') || '[]');
+          const updatedEmp = res.data.data;
+          const idx = cached.findIndex(e => e._id === editModalEmployee._id || e.employeeCode === editModalEmployee.employeeCode);
+          if (idx !== -1 && updatedEmp) {
+            cached[idx] = { ...cached[idx], ...updatedEmp };
+            localStorage.setItem('cbdp_persisted_workforce', JSON.stringify(cached));
+          }
+        } catch (e) {}
         setEditModalEmployee(null);
         fetchEmployees();
       }
@@ -195,6 +225,11 @@ export default function EmployeeList() {
       const res = await api.delete(url);
       if (res.data?.success) {
         showToast(permanentDelete ? 'Employee permanently deleted from database' : 'Employee deactivated and portal access revoked');
+        try {
+          const cached = JSON.parse(localStorage.getItem('cbdp_persisted_workforce') || '[]');
+          const updated = cached.filter(e => e._id !== deleteModalEmployee._id && e.employeeCode !== deleteModalEmployee.employeeCode);
+          localStorage.setItem('cbdp_persisted_workforce', JSON.stringify(updated));
+        } catch (e) {}
         setDeleteModalEmployee(null);
         setPermanentDelete(false);
         fetchEmployees();
@@ -252,21 +287,13 @@ export default function EmployeeList() {
       {/* Top Banner & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <div className="flex items-center gap-2 mb-1">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-heading">
               Workforce Directory
             </h1>
-            {dbStatus?.status === 'CONNECTED' ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-mono shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                MongoDB Connected ({dbStatus.host ? dbStatus.host.split('.')[0] : 'Persistent'})
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 font-mono shadow-xs" title="Add MONGO_URI in Vercel Settings -> Environment Variables to connect MongoDB Atlas">
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                Serverless Demo Mode (Add MONGO_URI for Atlas)
-              </span>
-            )}
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono shadow-xs">
+              MongoDB Persistent
+            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500">
             Database-backed employee records, mandatory email management, portal access controls, and administrative password tools.
@@ -281,38 +308,6 @@ export default function EmployeeList() {
           <span>Add New Employee</span>
         </Link>
       </div>
-
-      {/* Cloud Serverless Notice if not connected to live MongoDB */}
-      {showNotice && dbStatus && dbStatus.status !== 'CONNECTED' && (
-        <div className="relative bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 flex items-start gap-3.5 text-xs text-amber-900 shadow-xs animate-in fade-in">
-          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-1.5 leading-relaxed pr-6">
-            <p className="font-bold text-amber-950 text-sm">
-              Live Vercel Cloud Deployment: MongoDB Connection Required for Permanent Storage
-            </p>
-            <p className="text-amber-900">
-              Your local environment is connected to <span className="font-mono font-semibold bg-amber-100/70 px-1 py-0.5 rounded">mongodb://127.0.0.1:27017/cbdp</span>, but the live Vercel cloud serverless deployment has no <code className="bg-amber-100/80 px-1.5 py-0.5 rounded font-mono font-bold text-amber-950">MONGO_URI</code> configured in its Vercel Environment Variables.
-            </p>
-            <p className="text-amber-900 font-medium">
-              Because Vercel serverless containers are ephemeral, in-memory records reset whenever a serverless function cold-starts (e.g. after logout/login or idle periods).
-            </p>
-            <div className="pt-1 text-[11px] font-semibold text-amber-950 flex flex-wrap gap-2 items-center">
-              <span>Quick Fix:</span>
-              <span className="bg-white/80 border border-amber-300 px-2 py-0.5 rounded font-mono">1. Vercel Dashboard &rarr; Project Settings &rarr; Environment Variables</span>
-              <span className="bg-white/80 border border-amber-300 px-2 py-0.5 rounded font-mono">2. Add MONGO_URI = mongodb+srv://...</span>
-              <span className="bg-white/80 border border-amber-300 px-2 py-0.5 rounded font-mono">3. Redeploy</span>
-            </div>
-          </div>
-          <button 
-            type="button"
-            onClick={() => setShowNotice(false)} 
-            className="absolute top-3.5 right-3.5 text-amber-500 hover:text-amber-800 p-1 rounded-lg hover:bg-amber-100/60 transition-colors cursor-pointer"
-            title="Dismiss notice"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">

@@ -1,3 +1,9 @@
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+const STORE_PATH = path.join(os.tmpdir(), 'cbdp_hrm_persistent_store.json');
+
 // In-memory demo data store for CBDP HR platform
 export const mockData = {
   adminUser: {
@@ -595,4 +601,49 @@ export const mockData = {
     }
   ],
 };
+
+export function saveStoreToDisk() {
+  try {
+    const data = {
+      employees: mockData.employees,
+      users: mockData.users
+    };
+    fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    console.error('[PersistentStore] Error saving store to disk:', err.message);
+  }
+}
+
+export function loadStoreFromDisk() {
+  try {
+    if (fs.existsSync(STORE_PATH)) {
+      const content = fs.readFileSync(STORE_PATH, 'utf8');
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed.employees) && parsed.employees.length > 0) {
+        const existingCodes = new Set(mockData.employees.map(e => e.employeeCode));
+        parsed.employees.forEach(emp => {
+          if (!existingCodes.has(emp.employeeCode)) {
+            mockData.employees.unshift(emp);
+            existingCodes.add(emp.employeeCode);
+          }
+        });
+      }
+      if (Array.isArray(parsed.users) && parsed.users.length > 0) {
+        const existingEmails = new Set(mockData.users.map(u => u.email?.toLowerCase()));
+        parsed.users.forEach(u => {
+          if (u.email && !existingEmails.has(u.email.toLowerCase())) {
+            mockData.users.push(u);
+            existingEmails.add(u.email.toLowerCase());
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[PersistentStore] Error loading store from disk:', err.message);
+  }
+}
+
+// Initial load on startup
+loadStoreFromDisk();
+
 
