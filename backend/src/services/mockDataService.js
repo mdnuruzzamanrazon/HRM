@@ -11,6 +11,7 @@ export const mockData = {
     email: 'mdnuruzzamanrazon@gmail.com',
     role: 'SUPER_ADMIN',
     employeeProfileId: '6618d0987f83b1001a123457',
+    passwordHash: '$2b$10$Khcc612IHWz6bt6Wi9TFZO7VTuhwoktGFVYtQuDOK2hkJLkrTc49u',
     isTwoFactorEnabled: false,
     isActive: true,
     mustChangePassword: false,
@@ -22,6 +23,7 @@ export const mockData = {
     email: 'employee@cbdp.org',
     role: 'EMPLOYEE',
     employeeProfileId: '6618d0987f83b1001a123458',
+    passwordHash: '$2b$10$dta73wMrd4AYO4rVUkzrG.nETZDoOsdchUIJj33z3GKky8MCcCQn2',
     isTwoFactorEnabled: false,
     isActive: true,
     mustChangePassword: false,
@@ -34,6 +36,7 @@ export const mockData = {
       email: 'mdnuruzzamanrazon@gmail.com',
       role: 'SUPER_ADMIN',
       employeeProfileId: '6618d0987f83b1001a123457',
+      passwordHash: '$2b$10$Khcc612IHWz6bt6Wi9TFZO7VTuhwoktGFVYtQuDOK2hkJLkrTc49u',
       isTwoFactorEnabled: false,
       isActive: true,
       mustChangePassword: false,
@@ -44,6 +47,7 @@ export const mockData = {
       email: 'employee@cbdp.org',
       role: 'EMPLOYEE',
       employeeProfileId: '6618d0987f83b1001a123458',
+      passwordHash: '$2b$10$dta73wMrd4AYO4rVUkzrG.nETZDoOsdchUIJj33z3GKky8MCcCQn2',
       isTwoFactorEnabled: false,
       isActive: true,
       mustChangePassword: false,
@@ -54,6 +58,7 @@ export const mockData = {
       email: 'robert.chen@cbdp.org',
       role: 'EMPLOYEE',
       employeeProfileId: '6ad55c85756ca88a01f6bb5f',
+      passwordHash: '$2b$10$dta73wMrd4AYO4rVUkzrG.nETZDoOsdchUIJj33z3GKky8MCcCQn2',
       isTwoFactorEnabled: false,
       isActive: true,
       mustChangePassword: false,
@@ -64,6 +69,7 @@ export const mockData = {
       email: 'nuruzzamanrazon62@gmail.com',
       role: 'EMPLOYEE',
       employeeProfileId: 'emp-emp-007',
+      passwordHash: '$2b$10$dta73wMrd4AYO4rVUkzrG.nETZDoOsdchUIJj33z3GKky8MCcCQn2',
       isTwoFactorEnabled: false,
       isActive: true,
       mustChangePassword: false,
@@ -103,6 +109,8 @@ export const mockData = {
       _id: '6618d0987f83b1001a123457',
       employeeCode: 'CBDP-ADMIN-001',
       email: 'mdnuruzzamanrazon@gmail.com',
+      workEmail: 'mdnuruzzamanrazon@gmail.com',
+      officialEmail: 'mdnuruzzamanrazon@gmail.com',
       userId: '6618d0987f83b1001a123456',
       isDeleted: false,
       personalDetails: { firstName: 'System', lastName: 'Admin', email: 'mdnuruzzamanrazon@gmail.com' },
@@ -121,6 +129,8 @@ export const mockData = {
       _id: '6618d0987f83b1001a123458',
       employeeCode: 'CBDP-EMP-001',
       email: 'employee@cbdp.org',
+      workEmail: 'employee@cbdp.org',
+      officialEmail: 'employee@cbdp.org',
       userId: '6618d0987f83b1001a123458',
       isDeleted: false,
       personalDetails: { firstName: 'Sarah', lastName: 'Jenkins', email: 'employee@cbdp.org' },
@@ -139,6 +149,8 @@ export const mockData = {
       _id: '6ad55c85756ca88a01f6bb5f',
       employeeCode: 'CBDP-EMP-002',
       email: 'robert.chen@cbdp.org',
+      workEmail: 'robert.chen@cbdp.org',
+      officialEmail: 'robert.chen@cbdp.org',
       userId: 'user-emp-002',
       isDeleted: false,
       personalDetails: { firstName: 'Robert', lastName: 'Chen', email: 'robert.chen@cbdp.org' },
@@ -157,6 +169,8 @@ export const mockData = {
       _id: 'emp-emp-007',
       employeeCode: 'CBDP-EMP-007',
       email: 'nuruzzamanrazon62@gmail.com',
+      workEmail: 'nuruzzamanrazon62@gmail.com',
+      officialEmail: 'nuruzzamanrazon62@gmail.com',
       userId: 'user-emp-007',
       isDeleted: false,
       personalDetails: { firstName: 'Nuruzzaman', lastName: 'Razon', email: 'nuruzzamanrazon62@gmail.com' },
@@ -647,21 +661,69 @@ export function loadStoreFromDisk() {
     if (fs.existsSync(STORE_PATH)) {
       const content = fs.readFileSync(STORE_PATH, 'utf8');
       const parsed = JSON.parse(content);
+      
       if (Array.isArray(parsed.employees) && parsed.employees.length > 0) {
-        const existingCodes = new Set(mockData.employees.map(e => e.employeeCode));
-        parsed.employees.forEach(emp => {
-          if (!existingCodes.has(emp.employeeCode)) {
-            mockData.employees.unshift(emp);
-            existingCodes.add(emp.employeeCode);
+        parsed.employees.forEach(diskEmp => {
+          if (!diskEmp) return;
+          const diskEmail = (diskEmp.email || diskEmp.workEmail || diskEmp.officialEmail || diskEmp.personalDetails?.email || '').toLowerCase().trim();
+          const diskCode = (diskEmp.employeeCode || diskEmp.employeeId || '').toUpperCase().trim();
+          
+          // Find if employee already exists by email or employeeCode
+          const existingIdx = mockData.employees.findIndex(e => {
+            const eEmail = (e.email || e.workEmail || e.officialEmail || e.personalDetails?.email || '').toLowerCase().trim();
+            const eCode = (e.employeeCode || e.employeeId || '').toUpperCase().trim();
+            return (diskEmail && eEmail === diskEmail) || (diskCode && eCode === diskCode);
+          });
+
+          if (existingIdx !== -1) {
+            // Update existing employee without creating duplicate
+            mockData.employees[existingIdx] = {
+              ...mockData.employees[existingIdx],
+              ...diskEmp,
+              workEmail: diskEmail || mockData.employees[existingIdx].workEmail,
+              officialEmail: diskEmail || mockData.employees[existingIdx].officialEmail,
+              email: diskEmail || mockData.employees[existingIdx].email,
+            };
+          } else {
+            mockData.employees.unshift({
+              ...diskEmp,
+              workEmail: diskEmail,
+              officialEmail: diskEmail,
+              email: diskEmail,
+            });
           }
         });
+
+        // Deduplicate employees by normalized email so that duplicate employee records never exist
+        const seenEmails = new Set();
+        mockData.employees = mockData.employees.filter(emp => {
+          const empEmail = (emp.email || emp.workEmail || emp.officialEmail || emp.personalDetails?.email || '').toLowerCase().trim();
+          if (!empEmail) return true;
+          if (seenEmails.has(empEmail)) {
+            return false; // drop duplicate record with same email
+          }
+          seenEmails.add(empEmail);
+          return true;
+        });
       }
+
       if (Array.isArray(parsed.users) && parsed.users.length > 0) {
-        const existingEmails = new Set(mockData.users.map(u => u.email?.toLowerCase()));
-        parsed.users.forEach(u => {
-          if (u.email && !existingEmails.has(u.email.toLowerCase())) {
-            mockData.users.push(u);
-            existingEmails.add(u.email.toLowerCase());
+        parsed.users.forEach(diskUser => {
+          if (!diskUser || !diskUser.email) return;
+          const diskEmail = diskUser.email.toLowerCase().trim();
+          const existingIdx = mockData.users.findIndex(u => u.email?.toLowerCase().trim() === diskEmail || u._id === diskUser._id);
+          if (existingIdx !== -1) {
+            // Merge & update existing user with disk state (crucial for password changes and hashes)
+            mockData.users[existingIdx] = {
+              ...mockData.users[existingIdx],
+              ...diskUser,
+              email: diskEmail
+            };
+          } else {
+            mockData.users.push({
+              ...diskUser,
+              email: diskEmail
+            });
           }
         });
       }

@@ -318,7 +318,7 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
   const from = getSenderAddress();
 
   // 1. Try Resend API if configured
-  if (process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY) {
+  if (runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY) {
     try {
       const res = await sendViaResend({ to, subject, html, text, from });
       console.log(`[Email Service] Code successfully dispatched via Resend to ${to} (ID: ${res.messageId})`);

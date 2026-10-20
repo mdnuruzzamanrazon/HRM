@@ -74,10 +74,14 @@ export default function EmployeeList() {
         localCached = JSON.parse(localStorage.getItem('cbdp_persisted_workforce') || '[]');
       } catch (e) {}
 
-      const serverCodes = new Set(serverEmployees.map(e => (e.employeeCode || e.employeeId || '').toUpperCase()));
+      const serverCodes = new Set(serverEmployees.map(e => (e.employeeCode || e.employeeId || '').toUpperCase().trim()));
+      const serverEmails = new Set(serverEmployees.map(e => (e.email || e.workEmail || e.officialEmail || e.personalDetails?.email || '').toLowerCase().trim()));
+
       const missingFromServer = localCached.filter(e => {
-        const code = (e.employeeCode || e.employeeId || '').toUpperCase();
-        return code && !serverCodes.has(code) && !e.isDeleted;
+        const code = (e.employeeCode || e.employeeId || '').toUpperCase().trim();
+        const email = (e.email || e.workEmail || e.officialEmail || e.personalDetails?.email || '').toLowerCase().trim();
+        // Do not re-add if either the code OR the email already exists in server records
+        return code && !serverCodes.has(code) && (!email || !serverEmails.has(email)) && !e.isDeleted;
       });
 
       if (missingFromServer.length > 0) {
@@ -86,7 +90,17 @@ export default function EmployeeList() {
         serverEmployees = [...missingFromServer, ...serverEmployees];
       }
 
-      // Update local storage with full synchronized employee list
+      // Final deduplication pass to guarantee zero duplicate records by email
+      const seenEmails = new Set();
+      serverEmployees = serverEmployees.filter(e => {
+        const email = (e.email || e.workEmail || e.officialEmail || e.personalDetails?.email || '').toLowerCase().trim();
+        if (!email) return true;
+        if (seenEmails.has(email)) return false;
+        seenEmails.add(email);
+        return true;
+      });
+
+      // Update local storage with full deduplicated employee list
       try {
         localStorage.setItem('cbdp_persisted_workforce', JSON.stringify(serverEmployees));
       } catch (e) {}

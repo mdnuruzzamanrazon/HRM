@@ -15,6 +15,17 @@ export const getEmployees = async (req, res) => {
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       loadStoreFromDisk();
       let list = (mockData.employees || []).filter(e => includeDeleted === 'true' || !e.isDeleted);
+      
+      // Deduplicate by normalized email
+      const seenEmails = new Set();
+      list = list.filter(e => {
+        const eEmail = (e.email || e.workEmail || e.officialEmail || e.personalDetails?.email || '').toLowerCase().trim();
+        if (!eEmail) return true;
+        if (seenEmails.has(eEmail)) return false;
+        seenEmails.add(eEmail);
+        return true;
+      });
+
       if (status && status !== 'ALL') {
         list = list.filter(e => e.jobDetails?.status === status);
       }
@@ -56,8 +67,19 @@ export const getEmployees = async (req, res) => {
       };
     });
 
-    const enrichedEmployees = employees.map(emp => {
+    const enrichedEmployees = [];
+    const seenEmails = new Set();
+
+    for (const emp of employees) {
       const plain = emp.toObject();
+      const normEmail = (plain.email || plain.workEmail || plain.officialEmail || plain.personalDetails?.email || plain.userId?.email || '').toLowerCase().trim();
+      
+      // Deduplicate by email
+      if (normEmail && seenEmails.has(normEmail)) {
+        continue;
+      }
+      if (normEmail) seenEmails.add(normEmail);
+
       plain.userAccount = userMap[emp._id.toString()] || (plain.userId ? {
         _id: plain.userId._id,
         email: plain.userId.email,
@@ -66,15 +88,21 @@ export const getEmployees = async (req, res) => {
         mustChangePassword: plain.userId.mustChangePassword,
         lastLoginAt: plain.userId.lastLoginAt
       } : null);
-      // Guarantee both top-level and nested fields are always fully populated
+
+      // Guarantee top-level and nested fields are always fully populated
       plain.firstName = plain.firstName || plain.personalDetails?.firstName || '';
       plain.lastName = plain.lastName || plain.personalDetails?.lastName || '';
-      plain.email = plain.email || plain.personalDetails?.email || plain.userAccount?.email;
+      plain.email = normEmail || plain.email;
+      plain.workEmail = normEmail || plain.workEmail || plain.email;
+      plain.officialEmail = normEmail || plain.officialEmail || plain.email;
+      if (plain.personalDetails) {
+        plain.personalDetails.email = normEmail || plain.personalDetails.email;
+      }
       plain.title = plain.title || plain.jobDetails?.title || '';
       plain.department = plain.department || plain.jobDetails?.department || '';
       plain.status = plain.status || plain.jobDetails?.status || 'ACTIVE';
-      return plain;
-    });
+      enrichedEmployees.push(plain);
+    }
 
     res.json({ success: true, data: enrichedEmployees, count: enrichedEmployees.length });
   } catch (error) {
@@ -174,9 +202,11 @@ export const createEmployee = async (req, res) => {
         return res.status(400).json({ success: false, message: `Employee ID '${normalizedCode}' is already registered.` });
       }
 
-      // Check duplicate email
-      if (mockData.employees.some(e => (e.email === normalizedEmail || e.personalDetails?.email === normalizedEmail) && !e.isDeleted) ||
-          mockData.users.some(u => u.email === normalizedEmail && !u.isDeleted)) {
+      // Check duplicate email across all fields
+      if (mockData.employees.some(e => {
+        const eEmail = (e.email || e.workEmail || e.officialEmail || e.personalDetails?.email || '').toLowerCase().trim();
+        return eEmail === normalizedEmail && !e.isDeleted;
+      }) || mockData.users.some(u => u.email?.toLowerCase().trim() === normalizedEmail && !u.isDeleted)) {
         return res.status(400).json({ success: false, message: `Official email address '${normalizedEmail}' is already registered.` });
       }
 
@@ -192,6 +222,8 @@ export const createEmployee = async (req, res) => {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: normalizedEmail,
+        workEmail: normalizedEmail,
+        officialEmail: normalizedEmail,
         title: effectiveTitle,
         department: effectiveDepartment,
         status: effectiveStatus,
@@ -200,7 +232,7 @@ export const createEmployee = async (req, res) => {
         isDeleted: false,
         personalDetails: { 
           firstName: firstName.trim(), 
-          lastName: lastName.trim(),
+          lastName: lastName.trim(), 
           email: normalizedEmail,
           phone: phone ? phone.trim() : '',
           dob: dob || '1995-01-01',
@@ -267,8 +299,17 @@ export const createEmployee = async (req, res) => {
       });
     }
 
-    const existingEmpByEmail = await Employee.findOne({ email: normalizedEmail, isDeleted: { $ne: true } });
-    const existingUserByEmail = await User.findOne({ email: normalizedEmail, isDeleted: { $ne: true } });
+    const emailQueryRegex = new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+    const existingEmpByEmail = await Employee.findOne({
+      $or: [
+        { email: emailQueryRegex },
+        { workEmail: emailQueryRegex },
+        { officialEmail: emailQueryRegex },
+        { 'personalDetails.email': emailQueryRegex }
+      ],
+      isDeleted: { $ne: true }
+    });
+    const existingUserByEmail = await User.findOne({ email: emailQueryRegex, isDeleted: { $ne: true } });
     if (existingEmpByEmail || existingUserByEmail) {
       return res.status(400).json({ 
         success: false, 
@@ -287,6 +328,8 @@ export const createEmployee = async (req, res) => {
     const employee = new Employee({
       employeeCode: normalizedCode,
       email: normalizedEmail,
+      workEmail: normalizedEmail,
+      officialEmail: normalizedEmail,
       personalDetails: { 
         firstName: firstName.trim(), 
         lastName: lastName.trim(), 
@@ -383,6 +426,8 @@ export const updateEmployee = async (req, res) => {
         if (employeeCode) emp.employeeCode = employeeCode.trim().toUpperCase();
         if (normalizedEmail) {
           emp.email = normalizedEmail;
+          emp.workEmail = normalizedEmail;
+          emp.officialEmail = normalizedEmail;
           if (emp.personalDetails) emp.personalDetails.email = normalizedEmail;
           // Synchronize mock user account
           const u = (mockData.users || []).find(user => user.employeeProfileId === id || user._id === emp.userId);
@@ -419,11 +464,17 @@ export const updateEmployee = async (req, res) => {
 
     // Check email uniqueness and synchronize with User if changed
     if (normalizedEmail && normalizedEmail !== employee.email) {
-      const emailConflict = await User.findOne({ email: normalizedEmail, employeeProfileId: { $ne: id }, isDeleted: { $ne: true } });
+      const emailConflict = await User.findOne({ 
+        email: new RegExp(`^${normalizedEmail}$`, 'i'), 
+        employeeProfileId: { $ne: id }, 
+        isDeleted: { $ne: true } 
+      });
       if (emailConflict) {
         return res.status(400).json({ success: false, message: `Email address '${normalizedEmail}' is already registered to another account.` });
       }
       employee.email = normalizedEmail;
+      employee.workEmail = normalizedEmail;
+      employee.officialEmail = normalizedEmail;
       await User.updateMany({ employeeProfileId: employee._id }, { email: normalizedEmail });
     }
 
@@ -554,12 +605,14 @@ export const resetEmployeePassword = async (req, res) => {
     }
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      loadStoreFromDisk();
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
       let u = allMockUsers.find(user => user.employeeProfileId === id || user._id === id);
       if (!u) {
-        const emp = (mockData.employees || []).find(e => e._id === id);
+        const emp = (mockData.employees || []).find(e => e._id === id || e.employeeCode === id);
         if (emp) {
-          u = allMockUsers.find(user => user.email === emp.email || user.employeeProfileId === emp._id);
+          const empEmail = (emp.email || emp.workEmail || emp.officialEmail || emp.personalDetails?.email || '').toLowerCase().trim();
+          u = allMockUsers.find(user => user.email?.toLowerCase().trim() === empEmail || user.employeeProfileId === emp._id);
         }
       }
       if (u) {
@@ -567,6 +620,7 @@ export const resetEmployeePassword = async (req, res) => {
         u.tempPassword = isTemporary ? newPassword : null;
         u.mustChangePassword = Boolean(isTemporary);
         u.tokenVersion = (u.tokenVersion || 1) + 1;
+        saveStoreToDisk();
         return res.json({ 
           success: true, 
           message: `Password for ${u.email} reset successfully.${isTemporary ? ' Employee must set a new password upon first login.' : ''}` 
@@ -588,12 +642,15 @@ export const resetEmployeePassword = async (req, res) => {
     // 2. Locate User account across all linkage points
     let user = null;
     if (employee) {
+      const emailList = [employee.email, employee.workEmail, employee.officialEmail, employee.personalDetails?.email]
+        .filter(Boolean)
+        .map(e => e.toLowerCase().trim());
+
       user = await User.findOne({
         $or: [
           { employeeProfileId: employee._id },
           ...(employee.userId ? [{ _id: employee.userId }] : []),
-          ...(employee.email ? [{ email: employee.email.toLowerCase().trim() }] : []),
-          ...(employee.personalDetails?.email ? [{ email: employee.personalDetails.email.toLowerCase().trim() }] : [])
+          ...emailList.map(e => ({ email: new RegExp(`^${e}$`, 'i') }))
         ]
       });
     } else {
@@ -903,46 +960,128 @@ export const syncEmployees = async (req, res) => {
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       loadStoreFromDisk();
-      const existingCodes = new Set(mockData.employees.map(e => e.employeeCode));
-      let added = 0;
+      let updatedOrAdded = 0;
       employees.forEach(emp => {
-        if (emp && emp.employeeCode && !existingCodes.has(emp.employeeCode)) {
-          mockData.employees.unshift(emp);
-          existingCodes.add(emp.employeeCode);
-          added++;
+        if (!emp) return;
+        const empCode = (emp.employeeCode || emp.employeeId || '').toUpperCase().trim();
+        const empEmail = (emp.email || emp.workEmail || emp.officialEmail || emp.personalDetails?.email || '').toLowerCase().trim();
+        if (!empCode && !empEmail) return;
+
+        // Check if employee already exists by email or employeeCode
+        const existingIdx = mockData.employees.findIndex(e => {
+          const eEmail = (e.email || e.workEmail || e.officialEmail || e.personalDetails?.email || '').toLowerCase().trim();
+          const eCode = (e.employeeCode || e.employeeId || '').toUpperCase().trim();
+          return (empEmail && eEmail === empEmail) || (empCode && eCode === empCode);
+        });
+
+        if (existingIdx !== -1) {
+          // Update existing employee without duplicating
+          mockData.employees[existingIdx] = {
+            ...mockData.employees[existingIdx],
+            ...emp,
+            email: empEmail || mockData.employees[existingIdx].email,
+            workEmail: empEmail || mockData.employees[existingIdx].workEmail,
+            officialEmail: empEmail || mockData.employees[existingIdx].officialEmail,
+          };
+          updatedOrAdded++;
+        } else {
+          mockData.employees.unshift({
+            ...emp,
+            email: empEmail,
+            workEmail: empEmail,
+            officialEmail: empEmail,
+          });
+          updatedOrAdded++;
         }
       });
-      if (added > 0) {
+
+      // Deduplicate employees by email so duplicate email records never coexist
+      const seenEmails = new Set();
+      mockData.employees = mockData.employees.filter(e => {
+        const email = (e.email || e.workEmail || e.officialEmail || e.personalDetails?.email || '').toLowerCase().trim();
+        if (!email) return true;
+        if (seenEmails.has(email)) return false;
+        seenEmails.add(email);
+        return true;
+      });
+
+      if (updatedOrAdded > 0) {
         saveStoreToDisk();
       }
-      return res.json({ success: true, synced: added, total: mockData.employees.length });
+      return res.json({ success: true, synced: updatedOrAdded, total: mockData.employees.length });
     }
 
     // In production MongoDB mode:
     let addedCount = 0;
     for (const emp of employees) {
-      if (emp.employeeCode && (emp.email || emp.personalDetails?.email)) {
-        const empCode = emp.employeeCode.trim().toUpperCase();
-        const exists = await Employee.findOne({ employeeCode: empCode, isDeleted: { $ne: true } });
-        if (!exists) {
-          const emailVal = emp.email || emp.personalDetails?.email;
-          await Employee.create({
-            employeeCode: empCode,
-            email: emailVal,
-            personalDetails: emp.personalDetails || { 
-              firstName: emp.firstName || 'Employee', 
-              lastName: emp.lastName || empCode, 
-              email: emailVal 
-            },
-            jobDetails: emp.jobDetails || { 
-              title: emp.title || 'Staff', 
-              department: emp.department || 'Operations', 
-              status: emp.status || 'ACTIVE',
-              joinDate: new Date()
-            }
-          });
-          addedCount++;
+      if (!emp) continue;
+      const empCode = (emp.employeeCode || emp.employeeId || '').trim().toUpperCase();
+      const emailVal = (emp.email || emp.workEmail || emp.officialEmail || emp.personalDetails?.email || '').trim().toLowerCase();
+      if (!empCode && !emailVal) continue;
+
+      const emailRegex = emailVal ? new RegExp(`^${emailVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') : null;
+      const exists = await Employee.findOne({
+        $or: [
+          ...(empCode ? [{ employeeCode: empCode }] : []),
+          ...(emailRegex ? [
+            { email: emailRegex },
+            { workEmail: emailRegex },
+            { officialEmail: emailRegex },
+            { 'personalDetails.email': emailRegex }
+          ] : [])
+        ],
+        isDeleted: { $ne: true }
+      });
+
+      if (exists) {
+        // Update existing record
+        if (emailVal) {
+          exists.email = emailVal;
+          exists.workEmail = emailVal;
+          exists.officialEmail = emailVal;
         }
+        await exists.save();
+        addedCount++;
+      } else {
+        const newEmp = await Employee.create({
+          employeeCode: empCode,
+          email: emailVal,
+          workEmail: emailVal,
+          officialEmail: emailVal,
+          personalDetails: emp.personalDetails || { 
+            firstName: emp.firstName || 'Employee', 
+            lastName: emp.lastName || empCode, 
+            email: emailVal 
+          },
+          jobDetails: emp.jobDetails || { 
+            title: emp.title || 'Staff', 
+            department: emp.department || 'Operations', 
+            status: emp.status || 'ACTIVE',
+            joinDate: new Date()
+          }
+        });
+
+        // Ensure user exists or is linked without duplicate key crashes
+        if (emailRegex) {
+          let user = await User.findOne({ email: emailRegex, isDeleted: { $ne: true } });
+          if (!user) {
+            const defaultPassword = 'CBDP@123';
+            const passwordHash = await hashPassword(defaultPassword);
+            user = new User({
+              email: emailVal,
+              passwordHash,
+              role: 'EMPLOYEE',
+              employeeProfileId: newEmp._id,
+              isActive: true,
+              mustChangePassword: false,
+              tokenVersion: 1
+            });
+            await user.save();
+          }
+          newEmp.userId = user._id;
+          await newEmp.save();
+        }
+        addedCount++;
       }
     }
     res.json({ success: true, synced: addedCount });

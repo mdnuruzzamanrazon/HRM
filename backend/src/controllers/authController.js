@@ -5,7 +5,7 @@ import { User } from '../models/User.js';
 import { Employee } from '../models/Employee.js';
 import { hashPassword, verifyPassword } from '../utils/authUtils.js';
 import { isDemoMode } from '../config/db.js';
-import { mockData } from '../services/mockDataService.js';
+import { mockData, loadStoreFromDisk, saveStoreToDisk } from '../services/mockDataService.js';
 import { logAudit } from '../utils/auditLogger.js';
 
 import { sendVerificationCodeEmail, diagnoseEmailConfiguration, setRuntimeEmailConfig } from '../services/emailService.js';
@@ -75,13 +75,28 @@ export const loginUser = async (req, res) => {
 
     // 1. Fallback for Demo Mode / Unconnected DB
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      loadStoreFromDisk();
       const allMockUsers = [
         mockData.adminUser,
         mockData.employeeUser,
         ...(mockData.users || [])
       ];
 
-      const foundUser = allMockUsers.find(u => u.email.toLowerCase() === normalizedEmail);
+      let foundUser = allMockUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
+      if (!foundUser) {
+        const emp = (mockData.employees || []).find(e => {
+          const emails = [e.email, e.workEmail, e.officialEmail, e.personalDetails?.email].filter(Boolean).map(x => x.toLowerCase().trim());
+          return emails.includes(normalizedEmail) && !e.isDeleted;
+        });
+        if (emp) {
+          foundUser = allMockUsers.find(u => 
+            u._id === emp.userId || 
+            u.employeeProfileId === emp._id ||
+            u.email?.toLowerCase().trim() === (emp.email || emp.personalDetails?.email)?.toLowerCase().trim()
+          );
+        }
+      }
+
       if (!foundUser || foundUser.isDeleted) {
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
@@ -120,12 +135,17 @@ export const loginUser = async (req, res) => {
       if (!isMatch && foundUser.role === 'SUPER_ADMIN' && password === 'ABCabc@123') {
         isMatch = true;
       }
+      // Allow standard seed employee fallback for employee accounts
+      if (!isMatch && (foundUser.role === 'EMPLOYEE' || !foundUser.passwordHash) && password === 'CBDP@123') {
+        isMatch = true;
+      }
 
       if (!isMatch) {
         return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
 
       foundUser.lastLoginAt = new Date().toISOString();
+      saveStoreToDisk();
       const token = generateToken(res, foundUser, rememberMe);
 
       return res.json({
@@ -145,8 +165,9 @@ export const loginUser = async (req, res) => {
     }
 
     // 2. Production Database Verification
+    const emailRegex = new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
     let user = await User.findOne({ 
-      email: normalizedEmail,
+      email: emailRegex,
       isDeleted: { $ne: true }
     }).populate('employeeProfileId');
 
@@ -154,16 +175,26 @@ export const loginUser = async (req, res) => {
     if (!user) {
       const emp = await Employee.findOne({
         $or: [
-          { email: normalizedEmail },
-          { 'personalDetails.email': normalizedEmail }
+          { email: emailRegex },
+          { workEmail: emailRegex },
+          { officialEmail: emailRegex },
+          { 'personalDetails.email': emailRegex }
         ],
         isDeleted: { $ne: true }
       });
 
-      if (emp && emp.userId) {
-        user = await User.findById(emp.userId).populate('employeeProfileId');
+      if (emp) {
+        if (emp.userId) {
+          user = await User.findById(emp.userId).populate('employeeProfileId');
+        }
+        if (!user) {
+          user = await User.findOne({ employeeProfileId: emp._id, isDeleted: { $ne: true } });
+        }
+        if (!user) {
+          user = await User.findOne({ email: emailRegex, isDeleted: { $ne: true } });
+        }
         if (user) {
-          // Normalize user email to match the official employee email
+          // Normalize user email to match official employee email
           user.email = normalizedEmail;
           user.employeeProfileId = emp._id;
           await user.save();
@@ -327,24 +358,51 @@ export const forgotPassword = async (req, res) => {
     let employeeName = '';
 
     if (!isDemoMode() && mongoose.connection.readyState === 1) {
-      user = await User.findOne({ email: normalizedEmail, isDeleted: { $ne: true } }).populate('employeeProfileId');
+      const emailRegex = new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      user = await User.findOne({ email: emailRegex, isDeleted: { $ne: true } }).populate('employeeProfileId');
 
       if (!user) {
-        // Search Employee collection to see if registered
+        // Search Employee collection across email, workEmail, officialEmail, and personalDetails.email
         const employee = await Employee.findOne({
           $or: [
-            { email: normalizedEmail },
-            { 'personalDetails.email': normalizedEmail }
+            { email: emailRegex },
+            { workEmail: emailRegex },
+            { officialEmail: emailRegex },
+            { 'personalDetails.email': emailRegex }
           ],
           isDeleted: { $ne: true }
         });
 
         if (employee) {
+          // Resolve linked user without duplicate user account creation
           if (employee.userId) {
             user = await User.findById(employee.userId).populate('employeeProfileId');
           }
           if (!user) {
-            // Provision User account for this employee if missing
+            user = await User.findOne({ employeeProfileId: employee._id, isDeleted: { $ne: true } });
+          }
+          if (!user) {
+            const emailList = [employee.email, employee.workEmail, employee.officialEmail, employee.personalDetails?.email]
+              .filter(Boolean)
+              .map(e => e.toLowerCase().trim());
+            user = await User.findOne({
+              email: { $in: emailList.map(e => new RegExp(`^${e}$`, 'i')) },
+              isDeleted: { $ne: true }
+            });
+          }
+
+          if (user) {
+            // Establish bidirectional linkage
+            if (!employee.userId || employee.userId.toString() !== user._id.toString()) {
+              employee.userId = user._id;
+              await employee.save();
+            }
+            if (!user.employeeProfileId || user.employeeProfileId.toString() !== employee._id.toString()) {
+              user.employeeProfileId = employee._id;
+              await user.save();
+            }
+          } else {
+            // Only create user if none exists
             user = new User({
               email: normalizedEmail,
               passwordHash: await hashPassword(crypto.randomBytes(16).toString('hex')),
@@ -378,12 +436,20 @@ export const forgotPassword = async (req, res) => {
       employeeName = user.employeeProfileId?.personalDetails?.firstName || '';
     } else {
       // Demo Mode
+      loadStoreFromDisk();
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
-      user = allMockUsers.find(u => u.email.toLowerCase() === normalizedEmail && !u.isDeleted);
+      user = allMockUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail && !u.isDeleted);
       if (!user) {
-        const emp = (mockData.employees || []).find(e => (e.email === normalizedEmail || e.personalDetails?.email === normalizedEmail) && !e.isDeleted);
+        const emp = (mockData.employees || []).find(e => {
+          const emails = [e.email, e.workEmail, e.officialEmail, e.personalDetails?.email].filter(Boolean).map(x => x.toLowerCase().trim());
+          return emails.includes(normalizedEmail) && !e.isDeleted;
+        });
         if (emp) {
-          user = allMockUsers.find(u => u._id === emp.userId || u.employeeProfileId === emp._id);
+          user = allMockUsers.find(u => 
+            u._id === emp.userId || 
+            u.employeeProfileId === emp._id ||
+            u.email?.toLowerCase().trim() === (emp.email || emp.personalDetails?.email)?.toLowerCase().trim()
+          );
         }
       }
       if (!user) {
@@ -451,6 +517,7 @@ export const forgotPassword = async (req, res) => {
       user.resetPasswordCodeHash = codeHash;
       user.resetPasswordToken = resetToken;
       user.resetPasswordExpires = new Date(expiresAt);
+      saveStoreToDisk();
     }
 
     // Invalidate failed attempt counter for fresh code
@@ -486,7 +553,8 @@ export const verifyResetCode = async (req, res) => {
       // Invalidate the code
       resetCodesCache.delete(normalizedEmail);
       if (!isDemoMode() && mongoose.connection.readyState !== 1) {
-        await User.updateOne({ email: normalizedEmail }, {
+        const emailRegex = new RegExp(`^${normalizedEmail}$`, 'i');
+        await User.updateOne({ email: emailRegex }, {
           $unset: { resetPasswordCode: 1, resetPasswordCodeHash: 1, resetPasswordToken: 1, resetPasswordExpires: 1 }
         });
       }
@@ -514,8 +582,9 @@ export const verifyResetCode = async (req, res) => {
 
     // Check database
     if (!isDemoMode() && mongoose.connection.readyState === 1) {
+      const emailRegex = new RegExp(`^${normalizedEmail}$`, 'i');
       const user = await User.findOne({
-        email: normalizedEmail,
+        email: emailRegex,
         $or: [
           { resetPasswordCodeHash: incomingHash },
           { resetPasswordCode: incomingHash },
@@ -578,6 +647,7 @@ export const resetPassword = async (req, res) => {
     const newHash = await hashPassword(password);
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      loadStoreFromDisk();
       if (!isAuthorized && !token) {
         return res.status(400).json({ success: false, message: 'The verification code is incorrect or has expired. Please request a new code.' });
       }
@@ -587,12 +657,13 @@ export const resetPassword = async (req, res) => {
       verifyCodeAttempts.delete(normalizedEmail);
 
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
-      const mockUser = allMockUsers.find(u => u.email.toLowerCase() === normalizedEmail);
+      const mockUser = allMockUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
       if (mockUser) {
         mockUser.passwordHash = newHash;
         mockUser.tempPassword = null;
         mockUser.mustChangePassword = false;
         mockUser.tokenVersion = (mockUser.tokenVersion || 1) + 1;
+        saveStoreToDisk();
       }
 
       return res.json({
@@ -602,12 +673,13 @@ export const resetPassword = async (req, res) => {
     }
 
     // Database lookup
+    const emailRegex = new RegExp(`^${normalizedEmail}$`, 'i');
     const query = {
       $or: [
         ...(normalizedEmail && normalizedCode ? [
-          { email: normalizedEmail, resetPasswordCodeHash: incomingHash },
-          { email: normalizedEmail, resetPasswordCode: incomingHash },
-          { email: normalizedEmail, resetPasswordCode: normalizedCode }
+          { email: emailRegex, resetPasswordCodeHash: incomingHash },
+          { email: emailRegex, resetPasswordCode: incomingHash },
+          { email: emailRegex, resetPasswordCode: normalizedCode }
         ] : []),
         ...(token ? [{ resetPasswordToken: token }] : [])
       ],
@@ -618,7 +690,7 @@ export const resetPassword = async (req, res) => {
 
     // If verified through in-memory cache, find directly by email
     if (!user && isAuthorized && normalizedEmail) {
-      user = await User.findOne({ email: normalizedEmail, isDeleted: { $ne: true } });
+      user = await User.findOne({ email: emailRegex, isDeleted: { $ne: true } });
     }
 
     if (!user) {
