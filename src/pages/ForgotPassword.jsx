@@ -36,6 +36,8 @@ export default function ForgotPassword() {
   const [codeExpiresIn, setCodeExpiresIn] = useState(600); // 10 minutes in seconds
   const [showCredentialInput, setShowCredentialInput] = useState(false);
   const [manualCredential, setManualCredential] = useState('');
+  const [sandboxCode, setSandboxCode] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
 
   // Form 1: Email
   const { 
@@ -51,6 +53,7 @@ export default function ForgotPassword() {
   const { 
     register: registerReset, 
     handleSubmit: handleResetSubmit, 
+    setValue: setResetValue,
     formState: { errors: resetErrors } 
   } = useForm({
     resolver: zodResolver(resetStepSchema),
@@ -89,6 +92,13 @@ export default function ForgotPassword() {
       
       setRegisteredEmail(normalizedEmail);
       setSuccessMsg(res.data?.message || 'A 6-digit verification code has been sent to your registered email address.');
+      if (res.data?.sandboxCode) {
+        setSandboxCode(res.data.sandboxCode);
+        setResetValue('code', res.data.sandboxCode);
+      }
+      if (res.data?.previewUrl) {
+        setPreviewUrl(res.data.previewUrl);
+      }
       setCodeExpiresIn(600); // Reset 10-minute countdown
       setResendCooldown(45); // 45 seconds cooldown before allowing resend
       setStep(2);
@@ -112,6 +122,13 @@ export default function ForgotPassword() {
         ...(manualCredential.trim() ? { credential: manualCredential.trim() } : {})
       });
       setSuccessMsg(res.data?.message || 'A 6-digit verification code has been sent to your registered email address.');
+      if (res.data?.sandboxCode) {
+        setSandboxCode(res.data.sandboxCode);
+        setResetValue('code', res.data.sandboxCode);
+      }
+      if (res.data?.previewUrl) {
+        setPreviewUrl(res.data.previewUrl);
+      }
       setCodeExpiresIn(600);
       setResendCooldown(45);
     } catch (err) {
@@ -213,25 +230,29 @@ export default function ForgotPassword() {
               </div>
 
               {/* Optional / Fallback Provider Connector */}
-              {(showCredentialInput || Boolean(errorMsg)) && (
+              {(showCredentialInput || Boolean(errorMsg)) ? (
                 <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-slate-800 space-y-2.5 animate-in fade-in">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      {errorMsg && errorMsg.includes('Username and Password') ? 'Google App Password Required' : 'Live Email Delivery Setup'}
+                      Live Gmail Delivery Setup
                     </span>
-                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Required</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCredentialInput(false)}
+                      className="text-[10px] font-bold text-slate-500 hover:text-slate-700 underline"
+                    >
+                      Hide
+                    </button>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    {errorMsg && errorMsg.includes('Username and Password')
-                      ? 'Google blocked your standard account password. Google requires a 16-letter App Password for security. Click below to generate one, paste it here, and dispatch again:'
-                      : 'Paste your 16-letter Google App Password or Resend API Key below to dispatch the code to your Gmail inbox:'}
+                    Enter your 16-character Google App Password or Resend API key to deliver the code directly to your Gmail inbox:
                   </p>
                   <input
                     type="text"
                     value={manualCredential}
                     onChange={(e) => setManualCredential(e.target.value)}
-                    placeholder="Paste 16-letter App Password (e.g. abcd efgh ijkl mnop)"
+                    placeholder="16-character Google App Password (e.g. abcd efgh ijkl mnop)"
                     className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-amber-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
                   />
                   <div className="flex items-center justify-between text-[11px] pt-0.5">
@@ -241,7 +262,7 @@ export default function ForgotPassword() {
                       rel="noopener noreferrer"
                       className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
                     >
-                      &rarr; 1. Click to Generate 16-Letter Password
+                      &rarr; Generate Google App Password
                     </a>
                     <a 
                       href="https://resend.com/api-keys" 
@@ -249,9 +270,20 @@ export default function ForgotPassword() {
                       rel="noopener noreferrer"
                       className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
                     >
-                      &rarr; Or Get Free Resend Key
+                      &rarr; Or Get Resend Key
                     </a>
                   </div>
+                </div>
+              ) : (
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowCredentialInput(true)}
+                    className="text-[11px] text-slate-500 hover:text-emerald-600 font-medium inline-flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <span>Have a Google App Password? Click here to configure direct Gmail delivery</span>
+                  </button>
                 </div>
               )}
 
@@ -289,6 +321,34 @@ export default function ForgotPassword() {
                   {formatTimer(codeExpiresIn)}
                 </span>
               </div>
+
+              {/* Sandbox / Demo Code Notice */}
+              {sandboxCode && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2 animate-in fade-in">
+                  <div className="flex items-center justify-between font-bold">
+                    <span className="flex items-center gap-1.5 text-amber-800">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
+                      Sandbox / Demo Mode Code:
+                    </span>
+                    <span className="font-mono text-base font-black tracking-widest text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-lg border border-emerald-300">
+                      {sandboxCode}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Live SMTP credentials are not configured on the server, so this test code was generated. It has been auto-filled for you below.
+                    {previewUrl && (
+                      <a 
+                        href={previewUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="ml-1 text-emerald-700 font-bold hover:underline inline-flex items-center gap-0.5"
+                      >
+                        Preview Generated Email &rarr;
+                      </a>
+                    )}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">

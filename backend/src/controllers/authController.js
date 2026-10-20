@@ -485,10 +485,20 @@ export const forgotPassword = async (req, res) => {
       });
     } catch (emailError) {
       console.error(`[authController] Failed to dispatch verification email to ${normalizedEmail}:`, emailError.message);
-      return res.status(500).json({
+      
+      const isUnconfigured = emailError.message.includes('not configured') || emailError.message.includes('SMTP_USER');
+      const isAuthError = emailError.message.includes('Username and Password') || emailError.message.includes('535') || emailError.message.includes('BadCredentials');
+      
+      return res.status(isUnconfigured ? 422 : (isAuthError ? 401 : 500)).json({
         success: false,
-        message: "We couldn't send your verification code right now. Please try again later.",
-        errorDetail: process.env.NODE_ENV !== 'production' ? emailError.message : undefined
+        code: isUnconfigured ? 'EMAIL_NOT_CONFIGURED' : (isAuthError ? 'INVALID_GOOGLE_APP_PASSWORD' : 'EMAIL_DISPATCH_FAILED'),
+        message: isUnconfigured 
+          ? 'Email delivery service is not configured. Please supply a 16-character Google App Password or configure SMTP credentials to dispatch your verification code.'
+          : (isAuthError 
+              ? 'Google rejected the password. For automated delivery, Google requires a 16-character Google App Password (not your standard Gmail password).'
+              : emailError.message),
+        errorDetail: emailError.message,
+        requiresCredential: true
       });
     }
 
@@ -523,12 +533,19 @@ export const forgotPassword = async (req, res) => {
     // Invalidate failed attempt counter for fresh code
     verifyCodeAttempts.delete(normalizedEmail);
 
+    const isSandboxDelivery = Boolean(emailResult?.isSandbox || emailResult?.provider === 'ethereal');
+
     res.json({
       success: true,
-      message: 'A 6-digit verification code has been sent to your registered email address.',
+      message: isSandboxDelivery
+        ? `Verification code generated for ${normalizedEmail}. (Demo Mode: Code is ${verificationCode} - enter below or provide a Google App Password for live Gmail delivery)`
+        : `A 6-digit verification code has been sent directly to your registered email address (${normalizedEmail}).`,
       email: normalizedEmail,
       expiresInMinutes: EXPIRES_IN_MINUTES,
-      deliveryStatus: emailResult?.provider || 'delivered'
+      deliveryStatus: emailResult?.provider || 'delivered',
+      isSandbox: isSandboxDelivery,
+      sandboxCode: isSandboxDelivery ? verificationCode : undefined,
+      previewUrl: emailResult?.previewUrl || undefined
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -95,30 +95,27 @@ export const getTransporter = async () => {
     });
   }
 
-  // 3. Fallback for Local Development & Testing: Ethereal Sandbox
-  if (process.env.NODE_ENV !== 'production' || process.env.ALLOW_ETHEREAL_SANDBOX === 'true') {
-    if (!etherealTransporter) {
-      try {
-        const testAccount = await nodemailer.createTestAccount();
-        console.log(`[Email Service] Initialized Ethereal sandbox test account: ${testAccount.user}`);
-        etherealTransporter = nodemailer.createTransport({
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass,
-          },
-        });
-      } catch (err) {
-        console.warn('[Email Service] Failed to initialize Ethereal sandbox:', err.message);
-        return null;
-      }
+  // 3. Fallback for Local Development, Testing, and Demo Mode: Ethereal Sandbox
+  // Always active if credentials are not configured, so password reset never fails with 500 error
+  if (!etherealTransporter) {
+    try {
+      const testAccount = await nodemailer.createTestAccount();
+      console.log(`[Email Service] Initialized Ethereal sandbox test account: ${testAccount.user}`);
+      etherealTransporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass,
+        },
+      });
+    } catch (err) {
+      console.warn('[Email Service] Failed to initialize Ethereal sandbox:', err.message);
+      return null;
     }
-    return etherealTransporter;
   }
-
-  return null;
+  return etherealTransporter;
 };
 
 /**
@@ -367,11 +364,13 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
       console.log(`[Email Service] Email sent successfully to ${to} (MessageId: ${info.messageId})`);
     }
 
+    const isSandbox = Boolean(previewUrl || (transporter.options && transporter.options.host?.includes('ethereal')));
     return {
       success: true,
       messageId: info.messageId,
       previewUrl: previewUrl || null,
-      provider: previewUrl ? 'ethereal' : (isGmailConfigured() ? 'gmail' : 'smtp'),
+      provider: isSandbox ? 'ethereal' : (isGmailConfigured() ? 'gmail' : 'smtp'),
+      isSandbox,
     };
   } catch (error) {
     console.error(`[Email Service] SMTP delivery failed to ${to}:`, error.message);
