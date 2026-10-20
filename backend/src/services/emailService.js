@@ -69,9 +69,16 @@ export const getTransporter = async (customCredentials = null) => {
   }
 
   // 2. Custom Standard SMTP Transport (Brevo, AWS SES, Mailgun, SendGrid SMTP, etc.)
-  const host = process.env.SMTP_HOST || process.env.EMAIL_HOST;
-  const port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
-  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+  let host = process.env.SMTP_HOST || process.env.EMAIL_HOST;
+  let port = parseInt(process.env.SMTP_PORT || process.env.EMAIL_PORT || '587', 10);
+  let secure = process.env.SMTP_SECURE === 'true' || port === 465;
+
+  // Auto-detect Brevo (Sendinblue) master keys
+  if (rawPass && rawPass.startsWith('xsmtpsib-')) {
+    host = 'smtp-relay.brevo.com';
+    port = 587;
+    secure = false;
+  }
 
   if (host && user && rawPass) {
     const pass = rawPass.trim();
