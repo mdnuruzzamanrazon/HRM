@@ -24,31 +24,23 @@ export const getRuntimeEmailConfig = () => ({ ...runtimeEmailConfig });
 /**
  * Check if Gmail is the target email service
  */
-export const isGmailConfigured = () => {
+export const isGmailConfigured = (customCredentials = null) => {
   const host = (process.env.SMTP_HOST || process.env.EMAIL_HOST || '').toLowerCase();
   const service = (process.env.EMAIL_SERVICE || '').toLowerCase();
-  const hasGmailUser = !!(process.env.GMAIL_USER || runtimeEmailConfig.smtpUser?.includes('gmail'));
-  return host.includes('gmail') || service === 'gmail' || hasGmailUser;
+  const user = (customCredentials?.smtpUser || runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER || '').toLowerCase();
+  return host.includes('gmail') || service === 'gmail' || user.includes('gmail.com');
 };
 
 /**
  * Determine sender address
  */
-export const getSenderAddress = () => {
-  if (runtimeEmailConfig.smtpUser) {
-    return `"CBDP Human Resources" <${runtimeEmailConfig.smtpUser}>`;
+export const getSenderAddress = (customUser = null) => {
+  const activeUser = customUser || runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
+  if (activeUser) {
+    return `"CBDP Human Resources" <${activeUser.trim()}>`;
   }
   if (process.env.RESEND_FROM) {
     return process.env.RESEND_FROM.trim();
-  }
-  if ((runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY) && !process.env.SMTP_FROM && !process.env.EMAIL_FROM && !isGmailConfigured()) {
-    return 'CBDP Human Resources <onboarding@resend.dev>';
-  }
-  if (isGmailConfigured()) {
-    const gmailUser = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
-    if (gmailUser) {
-      return `"CBDP Human Resources" <${gmailUser.trim()}>`;
-    }
   }
   return process.env.SMTP_FROM || process.env.EMAIL_FROM || '"CBDP Human Resources" <no-reply@cbdp.org>';
 };
@@ -56,10 +48,10 @@ export const getSenderAddress = () => {
 /**
  * Creates or retrieves a configured nodemailer transporter
  */
-export const getTransporter = async () => {
-  const isGmail = isGmailConfigured();
-  const user = runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
-  const rawPass = runtimeEmailConfig.smtpPass || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+export const getTransporter = async (customCredentials = null) => {
+  const isGmail = isGmailConfigured(customCredentials);
+  const user = customCredentials?.smtpUser || runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
+  const rawPass = customCredentials?.smtpPass || runtimeEmailConfig.smtpPass || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
 
   // 1. Dedicated Gmail Transport (SSL port 465 for optimal reliability)
   if (isGmail && user && rawPass) {
@@ -307,7 +299,7 @@ Automated System Notification
 /**
  * Send the 6-digit verification code to the employee's email address
  */
-export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 10, employeeName }) => {
+export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 10, employeeName, credentials = null }) => {
   if (!to || !to.includes('@')) {
     throw new Error('A valid destination email address is required.');
   }
@@ -318,10 +310,11 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
 
   const subject = `Your CBDP Password Reset Verification Code: ${code}`;
   const { html, text } = buildVerificationEmailContent({ code, expiresInMinutes, employeeName });
-  const from = getSenderAddress();
+  const from = getSenderAddress(credentials?.smtpUser);
 
   // 1. Try Resend API if configured
-  if (runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY) {
+  const resendKey = credentials?.resendApiKey || runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY;
+  if (resendKey) {
     try {
       const res = await sendViaResend({ to, subject, html, text, from });
       console.log(`[Email Service] Code successfully dispatched via Resend to ${to} (ID: ${res.messageId})`);
@@ -343,7 +336,7 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
   }
 
   // 3. Nodemailer SMTP transport (Gmail or Custom SMTP)
-  const transporter = await getTransporter();
+  const transporter = await getTransporter(credentials);
   if (!transporter) {
     throw new Error(
       'Email delivery service is not configured. ' +

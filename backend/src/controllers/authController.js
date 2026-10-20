@@ -313,18 +313,13 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide a valid official email address format (e.g. employee@cbdp.org)' });
     }
 
-    // Auto-configure runtime credentials if provided in request
+    // Parse runtime credentials if provided for this specific request
     const providedCredential = (credential || resendApiKey || appPassword || '').trim();
-    if (providedCredential) {
-      if (providedCredential.startsWith('re_')) {
-        setRuntimeEmailConfig({ resendApiKey: providedCredential });
-      } else {
-        setRuntimeEmailConfig({ 
-          smtpUser: normalizedEmail, 
-          smtpPass: providedCredential.replace(/\s+/g, '') 
-        });
-      }
-    }
+    const reqCredentials = providedCredential ? {
+      resendApiKey: providedCredential.startsWith('re_') ? providedCredential : null,
+      smtpUser: normalizedEmail,
+      smtpPass: !providedCredential.startsWith('re_') ? providedCredential.replace(/\s+/g, '') : null
+    } : null;
 
     // 1. Rate Limiting & Cooldown Protection
     const now = Date.now();
@@ -481,7 +476,8 @@ export const forgotPassword = async (req, res) => {
         to: normalizedEmail,
         code: verificationCode,
         expiresInMinutes: EXPIRES_IN_MINUTES,
-        employeeName
+        employeeName,
+        credentials: reqCredentials
       });
     } catch (emailError) {
       console.error(`[authController] Failed to dispatch verification email to ${normalizedEmail}:`, emailError.message);
