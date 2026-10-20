@@ -58,6 +58,16 @@ export const mockData = {
       isActive: true,
       mustChangePassword: false,
       tokenVersion: 1,
+    },
+    {
+      _id: 'user-emp-007',
+      email: 'nuruzzamanrazon62@gmail.com',
+      role: 'EMPLOYEE',
+      employeeProfileId: 'emp-emp-007',
+      isTwoFactorEnabled: false,
+      isActive: true,
+      mustChangePassword: false,
+      tokenVersion: 1,
     }
   ],
 
@@ -137,6 +147,24 @@ export const mockData = {
       userAccount: {
         _id: 'user-emp-002',
         email: 'robert.chen@cbdp.org',
+        role: 'EMPLOYEE',
+        isActive: true,
+        mustChangePassword: false,
+        lastLoginAt: null
+      }
+    },
+    {
+      _id: 'emp-emp-007',
+      employeeCode: 'CBDP-EMP-007',
+      email: 'nuruzzamanrazon62@gmail.com',
+      userId: 'user-emp-007',
+      isDeleted: false,
+      personalDetails: { firstName: 'Nuruzzaman', lastName: 'Razon', email: 'nuruzzamanrazon62@gmail.com' },
+      jobDetails: { title: 'Senior Operations Director', department: 'Executive Operations', status: 'ACTIVE', joinDate: '2024-01-01', employmentType: 'FULL_TIME' },
+      compensation: { baseSalary: 110000, currency: 'USD' },
+      userAccount: {
+        _id: 'user-emp-007',
+        email: 'nuruzzamanrazon62@gmail.com',
         role: 'EMPLOYEE',
         isActive: true,
         mustChangePassword: false,

@@ -8,8 +8,24 @@ import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 import { logAudit } from '../utils/auditLogger.js';
 
+import { sendVerificationCodeEmail, diagnoseEmailConfiguration } from '../services/emailService.js';
+
+// GET /api/v1/auth/email-diagnostics
+export const getEmailDiagnostics = async (req, res) => {
+  try {
+    const diagnostic = await diagnoseEmailConfiguration();
+    res.json({ success: true, diagnostic });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // In-memory reset code cache for resilient operation
 const resetCodesCache = new Map();
+
+// Rate limiting & security maps
+const forgotPasswordRateLimits = new Map(); // email -> { count, firstAttempt, lastAttempt }
+const verifyCodeAttempts = new Map(); // email -> failedAttempts count
 
 const generateToken = (res, user, rememberMe = false) => {
   const token = jwt.sign(
@@ -117,13 +133,43 @@ export const loginUser = async (req, res) => {
     }
 
     // 2. Production Database Verification
-    const user = await User.findOne({ 
+    let user = await User.findOne({ 
       email: normalizedEmail,
       isDeleted: { $ne: true }
     }).populate('employeeProfileId');
 
+    // Self-healing: If user not found directly by email, check if an employee has this email
+    if (!user) {
+      const emp = await Employee.findOne({
+        $or: [
+          { email: normalizedEmail },
+          { 'personalDetails.email': normalizedEmail }
+        ],
+        isDeleted: { $ne: true }
+      });
+
+      if (emp && emp.userId) {
+        user = await User.findById(emp.userId).populate('employeeProfileId');
+        if (user) {
+          // Normalize user email to match the official employee email
+          user.email = normalizedEmail;
+          user.employeeProfileId = emp._id;
+          await user.save();
+        }
+      }
+    }
+
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    // Check account lockout
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const minutesRemaining = Math.ceil((user.lockUntil.getTime() - Date.now()) / (60 * 1000));
+      return res.status(423).json({
+        success: false,
+        message: `Account is temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minutes or reset your password.`
+      });
     }
 
     // Check account status
@@ -149,9 +195,15 @@ export const loginUser = async (req, res) => {
     const isPasswordValid = await verifyPassword(user.passwordHash, password);
     if (!isPasswordValid) {
       user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      if (user.failedLoginAttempts >= 5) {
+        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // 15-minute lock
+      }
       await user.save();
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
+
+    // Reset failed attempts & unlock
+    user.lockUntil = undefined;
 
     // Portal-specific role enforcement
     if (portal === 'HR' && user.role === 'EMPLOYEE') {
@@ -204,8 +256,7 @@ export const logoutUser = async (req, res) => {
   res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
 
-// POST /api/v1/auth/forgot-password
-// Generates a secure 6-digit verification code and dispatch link
+// POST /api/v1/auth/forgot-password and POST /api/v1/auth/resend-code
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -214,37 +265,173 @@ export const forgotPassword = async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid official email address format (e.g. employee@cbdp.org)' });
+    }
 
-    // Always store in memory cache
+    // 1. Rate Limiting & Cooldown Protection
+    const now = Date.now();
+    const rateData = forgotPasswordRateLimits.get(normalizedEmail) || { count: 0, firstAttempt: now, lastAttempt: 0 };
+
+    // Reset window after 15 minutes
+    if (now - rateData.firstAttempt > 15 * 60 * 1000) {
+      rateData.count = 0;
+      rateData.firstAttempt = now;
+    }
+
+    // Cooldown: enforce at least 30 seconds between requests
+    if (rateData.lastAttempt && now - rateData.lastAttempt < 30 * 1000) {
+      const waitSec = Math.ceil((30 * 1000 - (now - rateData.lastAttempt)) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${waitSec} seconds before requesting another verification code.`
+      });
+    }
+
+    // Maximum 5 requests per 15 minutes
+    if (rateData.count >= 5) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many password reset requests for this account. Please wait 15 minutes before requesting again.'
+      });
+    }
+
+    // 2. Locate User / Employee Account
+    let user = null;
+    let employeeName = '';
+
+    if (!isDemoMode() && mongoose.connection.readyState === 1) {
+      user = await User.findOne({ email: normalizedEmail, isDeleted: { $ne: true } }).populate('employeeProfileId');
+
+      if (!user) {
+        // Search Employee collection to see if registered
+        const employee = await Employee.findOne({
+          $or: [
+            { email: normalizedEmail },
+            { 'personalDetails.email': normalizedEmail }
+          ],
+          isDeleted: { $ne: true }
+        });
+
+        if (employee) {
+          if (employee.userId) {
+            user = await User.findById(employee.userId).populate('employeeProfileId');
+          }
+          if (!user) {
+            // Provision User account for this employee if missing
+            user = new User({
+              email: normalizedEmail,
+              passwordHash: await hashPassword(crypto.randomBytes(16).toString('hex')),
+              role: 'EMPLOYEE',
+              employeeProfileId: employee._id,
+              isActive: employee.jobDetails?.status !== 'TERMINATED' && employee.jobDetails?.status !== 'INACTIVE',
+              mustChangePassword: false,
+              tokenVersion: 1
+            });
+            await user.save();
+            employee.userId = user._id;
+            await employee.save();
+          }
+        }
+      }
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'No registered employee account found with this email address. Please check your email or contact HR.'
+        });
+      }
+
+      if (!user.isActive) {
+        return res.status(403).json({
+          success: false,
+          message: 'This employee account is deactivated or suspended. Please contact HR administration.'
+        });
+      }
+
+      employeeName = user.employeeProfileId?.personalDetails?.firstName || '';
+    } else {
+      // Demo Mode
+      const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
+      user = allMockUsers.find(u => u.email.toLowerCase() === normalizedEmail && !u.isDeleted);
+      if (!user) {
+        const emp = (mockData.employees || []).find(e => (e.email === normalizedEmail || e.personalDetails?.email === normalizedEmail) && !e.isDeleted);
+        if (emp) {
+          user = allMockUsers.find(u => u._id === emp.userId || u.employeeProfileId === emp._id);
+        }
+      }
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'No registered employee account found with this email address. Please check your email or contact HR.'
+        });
+      }
+      if (!user.isActive) {
+        return res.status(403).json({
+          success: false,
+          message: 'This employee account is deactivated. Please contact HR administration.'
+        });
+      }
+      employeeName = user.firstName || 'Team Member';
+    }
+
+    // 3. Generate Cryptographically Secure 6-Digit Code
+    const verificationCode = crypto.randomInt(100000, 1000000).toString();
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const EXPIRES_IN_MINUTES = 10;
+    const expiresAt = now + EXPIRES_IN_MINUTES * 60 * 1000;
+
+    // 4. Dispatch Email Directly via Email Service
+    let emailResult;
+    try {
+      emailResult = await sendVerificationCodeEmail({
+        to: normalizedEmail,
+        code: verificationCode,
+        expiresInMinutes: EXPIRES_IN_MINUTES,
+        employeeName
+      });
+    } catch (emailError) {
+      console.error(`[authController] Failed to dispatch verification email to ${normalizedEmail}:`, emailError.message);
+      return res.status(502).json({
+        success: false,
+        message: `Failed to deliver verification code email: ${emailError.message}. Please check your email configuration.`
+      });
+    }
+
+    // 5. Update State only AFTER Successful Email Dispatch
+    rateData.count += 1;
+    rateData.lastAttempt = now;
+    forgotPasswordRateLimits.set(normalizedEmail, rateData);
+
+    // Save in Cache
     resetCodesCache.set(normalizedEmail, {
       code: verificationCode,
       token: resetToken,
       expiresAt
     });
 
-    if (!isDemoMode() && mongoose.connection.readyState === 1) {
-      const user = await User.findOne({ email: normalizedEmail, isDeleted: { $ne: true } });
-      if (user) {
-        user.resetPasswordCode = verificationCode;
-        user.resetPasswordToken = resetToken;
-        user.resetPasswordExpires = new Date(expiresAt);
-        await user.save();
-      }
+    // Save in Database
+    if (user && user.save && typeof user.save === 'function') {
+      user.resetPasswordCode = verificationCode;
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = new Date(expiresAt);
+      await user.save();
+    } else if (user) {
+      user.resetPasswordCode = verificationCode;
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = new Date(expiresAt);
     }
 
-    // Log the reset code to server console for development and verification testing
-    console.log(`[CBDP Security] Password Reset Code for ${normalizedEmail}: ${verificationCode} (Expires in 15 mins)`);
+    // Invalidate failed attempt counter for fresh code
+    verifyCodeAttempts.delete(normalizedEmail);
 
-    // Generic safe confirmation message
     res.json({
       success: true,
-      message: 'If this email belongs to an authorized employee account, a 6-digit verification code has been dispatched.',
+      message: `A 6-digit verification code has been dispatched to ${normalizedEmail}. The code is valid for 10 minutes.`,
       email: normalizedEmail,
-      // Include debug code in development/demo environments for seamless testing
-      verificationCode: process.env.NODE_ENV !== 'production' ? verificationCode : undefined
+      expiresInMinutes: EXPIRES_IN_MINUTES,
+      deliveryStatus: emailResult?.provider || 'delivered'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -262,9 +449,26 @@ export const verifyResetCode = async (req, res) => {
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedCode = code.toString().trim();
 
+    // Rate-limit failed verification attempts to prevent brute-forcing
+    const failedAttempts = verifyCodeAttempts.get(normalizedEmail) || 0;
+    if (failedAttempts >= 5) {
+      // Invalidate the code
+      resetCodesCache.delete(normalizedEmail);
+      if (!isDemoMode() && mongoose.connection.readyState !== 1) {
+        await User.updateOne({ email: normalizedEmail }, {
+          $unset: { resetPasswordCode: 1, resetPasswordToken: 1, resetPasswordExpires: 1 }
+        });
+      }
+      return res.status(429).json({
+        success: false,
+        message: 'Too many invalid verification attempts. For security reasons, this code has been revoked. Please request a new code.'
+      });
+    }
+
     // Check memory cache first
     const cached = resetCodesCache.get(normalizedEmail);
     if (cached && cached.code === normalizedCode && cached.expiresAt > Date.now()) {
+      verifyCodeAttempts.delete(normalizedEmail);
       return res.json({ success: true, message: 'Verification code confirmed.' });
     }
 
@@ -277,13 +481,20 @@ export const verifyResetCode = async (req, res) => {
       });
 
       if (user) {
+        verifyCodeAttempts.delete(normalizedEmail);
         return res.json({ success: true, message: 'Verification code confirmed.' });
       }
     }
 
+    // Increment failed attempt counter
+    verifyCodeAttempts.set(normalizedEmail, failedAttempts + 1);
+    const attemptsLeft = 5 - (failedAttempts + 1);
+
     return res.status(400).json({
       success: false,
-      message: 'Invalid or expired 6-digit verification code. Please request a new one.'
+      message: attemptsLeft > 0
+        ? `Invalid or expired 6-digit verification code. (${attemptsLeft} attempts remaining)`
+        : 'Invalid or expired 6-digit verification code. Please request a new one.'
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -313,7 +524,6 @@ export const resetPassword = async (req, res) => {
       const cached = resetCodesCache.get(normalizedEmail);
       if (cached && (cached.code === normalizedCode || (token && cached.token === token)) && cached.expiresAt > Date.now()) {
         isAuthorized = true;
-        resetCodesCache.delete(normalizedEmail);
       }
     }
 
@@ -321,8 +531,12 @@ export const resetPassword = async (req, res) => {
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       if (!isAuthorized && !token) {
-        return res.status(400).json({ success: false, message: 'Invalid or expired reset code' });
+        return res.status(400).json({ success: false, message: 'Invalid or expired 6-digit verification code' });
       }
+
+      // Enforce single-use: purge cache immediately
+      resetCodesCache.delete(normalizedEmail);
+      verifyCodeAttempts.delete(normalizedEmail);
 
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
       const mockUser = allMockUsers.find(u => u.email.toLowerCase() === normalizedEmail);
@@ -339,7 +553,7 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    // Database update
+    // Database lookup
     const query = {
       $or: [
         ...(normalizedEmail && normalizedCode ? [{ email: normalizedEmail, resetPasswordCode: normalizedCode }] : []),
@@ -358,9 +572,13 @@ export const resetPassword = async (req, res) => {
     if (!user) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Invalid or expired password reset verification code' 
+        message: 'Invalid, expired, or previously used verification code. Please request a new code.' 
       });
     }
+
+    // SINGLE-USE ENFORCEMENT: Clear code and token so it can NEVER be reused
+    resetCodesCache.delete(normalizedEmail);
+    verifyCodeAttempts.delete(normalizedEmail);
 
     user.passwordHash = newHash;
     user.resetPasswordCode = undefined;
@@ -390,7 +608,6 @@ export const resetPassword = async (req, res) => {
 };
 
 // POST /api/v1/auth/change-first-login-password
-// Allows employee to complete initial password change on first login
 export const changeFirstLoginPassword = async (req, res) => {
   try {
     const { newPassword } = req.body;
@@ -416,25 +633,9 @@ export const changeFirstLoginPassword = async (req, res) => {
         targetUser.tempPassword = null;
         targetUser.mustChangePassword = false;
         targetUser.tokenVersion = (targetUser.tokenVersion || 1) + 1;
-      } else {
-        mockData.users = mockData.users || [];
-        mockData.users.push({
-          _id: userId,
-          email: req.user?.email,
-          passwordHash: newHash,
-          tempPassword: null,
-          mustChangePassword: false,
-          tokenVersion: 2,
-          role: req.user?.role || 'EMPLOYEE',
-          isActive: true
-        });
       }
-      if (req.user) {
-        req.user.passwordHash = newHash;
-        req.user.tempPassword = null;
-        req.user.mustChangePassword = false;
-      }
-      return res.json({ success: true, message: 'Password set successfully.' });
+      const token = generateToken(res, targetUser || req.user);
+      return res.json({ success: true, token, message: 'Password configured successfully. Welcome to CBDP HRM!' });
     }
 
     const user = await User.findById(userId);
@@ -447,7 +648,20 @@ export const changeFirstLoginPassword = async (req, res) => {
     user.tokenVersion = (user.tokenVersion || 1) + 1;
     await user.save();
 
-    res.json({ success: true, message: 'Password configured successfully. Welcome to CBDP HRM!' });
+    // Re-issue fresh token with updated tokenVersion so active session continues seamlessly
+    const token = generateToken(res, user);
+
+    res.json({ 
+      success: true, 
+      token,
+      user: {
+        _id: user._id,
+        email: user.email,
+        role: user.role,
+        mustChangePassword: false
+      },
+      message: 'Password configured successfully. Welcome to CBDP HRM!' 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

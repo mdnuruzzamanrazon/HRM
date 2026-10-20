@@ -25,7 +25,7 @@ router.get('/:id', authenticate, getEmployeeById);
 router.post('/', authenticate, authorize(adminRoles), createEmployee);
 router.put('/:id', authenticate, authorize(hrRoles), updateEmployee);
 router.put('/:id/status', authenticate, authorize(hrRoles), updateEmployeeStatus);
-router.post('/:id/reset-password', authenticate, authorize(adminRoles), resetEmployeePassword);
+router.post('/:id/reset-password', authenticate, authorize(hrRoles), resetEmployeePassword);
 router.put('/:id/toggle-account', authenticate, authorize(adminRoles), toggleEmployeeAccount);
 router.delete('/:id', authenticate, authorize(adminRoles), deleteEmployee);
 router.post('/:id/documents', authenticate, authorize(hrRoles), uploadEmployeeDocument);

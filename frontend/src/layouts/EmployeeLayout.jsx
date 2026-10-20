@@ -52,6 +52,9 @@ export default function EmployeeLayout() {
         newPassword: firstLoginPassword
       });
       if (res.data?.success) {
+        if (res.data?.token) {
+          localStorage.setItem('auth_token', res.data.token);
+        }
         setIsFirstLoginModalOpen(false);
         if (user) user.mustChangePassword = false;
       }

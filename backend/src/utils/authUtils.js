@@ -10,16 +10,10 @@ try {
 }
 
 /**
- * Robust password hashing utility supporting both Argon2 and bcrypt fallback
+ * Robust password hashing utility using portable bcryptjs with 10 salt rounds.
+ * Guarantees 100% cross-platform compatibility across Windows, Linux, and Vercel serverless.
  */
 export const hashPassword = async (password) => {
-  if (argon2) {
-    try {
-      return await argon2.hash(password);
-    } catch (err) {
-      console.warn('[authUtils] Argon2 hashing failed, falling back to bcryptjs:', err.message);
-    }
-  }
   return await bcrypt.hash(password, 10);
 };
 

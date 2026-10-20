@@ -6,15 +6,18 @@ import {
   verifyResetCode, 
   resetPassword, 
   changeFirstLoginPassword, 
-  updatePassword 
+  updatePassword,
+  getEmailDiagnostics
 } from '../controllers/authController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 
 const router = express.Router();
 
+router.get('/email-diagnostics', getEmailDiagnostics);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
 router.post('/forgot-password', forgotPassword);
+router.post('/resend-code', forgotPassword);
 router.post('/verify-reset-code', verifyResetCode);
 router.post('/reset-password', resetPassword);
 router.post('/reset-password/:token', resetPassword);

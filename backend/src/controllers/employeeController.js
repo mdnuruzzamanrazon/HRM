@@ -543,10 +543,10 @@ export const updateEmployeeStatus = async (req, res) => {
   }
 };
 
-// Admin: Reset employee portal password
+// Admin & HR: Reset employee portal password
 export const resetEmployeePassword = async (req, res) => {
   try {
-    const { id } = req.params; // employeeId
+    const { id } = req.params; // employeeId or userId
     const { newPassword, isTemporary } = req.body;
 
     if (!newPassword || newPassword.length < 6) {
@@ -555,7 +555,13 @@ export const resetEmployeePassword = async (req, res) => {
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
-      const u = allMockUsers.find(user => user.employeeProfileId === id || user._id === id);
+      let u = allMockUsers.find(user => user.employeeProfileId === id || user._id === id);
+      if (!u) {
+        const emp = (mockData.employees || []).find(e => e._id === id);
+        if (emp) {
+          u = allMockUsers.find(user => user.email === emp.email || user.employeeProfileId === emp._id);
+        }
+      }
       if (u) {
         u.passwordHash = await hashPassword(newPassword);
         u.tempPassword = isTemporary ? newPassword : null;
@@ -569,19 +575,90 @@ export const resetEmployeePassword = async (req, res) => {
       return res.json({ success: true, message: 'Password updated successfully (Demo Mode)' });
     }
 
-    const user = await User.findOne({ 
-      $or: [{ employeeProfileId: id }, { _id: mongoose.isValidObjectId(id) ? id : null }] 
-    });
+    // 1. Locate Employee record first
+    let employee = await Employee.findById(id);
+    if (!employee && mongoose.isValidObjectId(id)) {
+      // id might be a User ID
+      const userDirect = await User.findById(id);
+      if (userDirect && userDirect.employeeProfileId) {
+        employee = await Employee.findById(userDirect.employeeProfileId);
+      }
+    }
+
+    // 2. Locate User account across all linkage points
+    let user = null;
+    if (employee) {
+      user = await User.findOne({
+        $or: [
+          { employeeProfileId: employee._id },
+          ...(employee.userId ? [{ _id: employee.userId }] : []),
+          ...(employee.email ? [{ email: employee.email.toLowerCase().trim() }] : []),
+          ...(employee.personalDetails?.email ? [{ email: employee.personalDetails.email.toLowerCase().trim() }] : [])
+        ]
+      });
+    } else {
+      user = await User.findOne({
+        $or: [{ employeeProfileId: id }, { _id: mongoose.isValidObjectId(id) ? id : null }]
+      });
+      if (user && user.employeeProfileId) {
+        employee = await Employee.findById(user.employeeProfileId);
+      }
+    }
+
+    // 3. If Employee exists but User does not, automatically provision the User account
+    if (!user && employee) {
+      const empEmail = (employee.email || employee.personalDetails?.email || '').toLowerCase().trim();
+      if (!empEmail) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Employee record does not have a registered email address to create a portal account.' 
+        });
+      }
+
+      user = new User({
+        email: empEmail,
+        passwordHash: await hashPassword(newPassword),
+        role: 'EMPLOYEE',
+        employeeProfileId: employee._id,
+        isActive: employee.jobDetails?.status !== 'TERMINATED' && employee.jobDetails?.status !== 'INACTIVE',
+        mustChangePassword: Boolean(isTemporary),
+        tokenVersion: 1
+      });
+      await user.save();
+
+      employee.userId = user._id;
+      employee.email = empEmail;
+      await employee.save();
+    }
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'No portal user account found for this employee' });
     }
 
+    // 4. Update credentials and synchronize bidirectional links
     user.passwordHash = await hashPassword(newPassword);
     user.mustChangePassword = Boolean(isTemporary);
     user.lockUntil = undefined;
     user.failedLoginAttempts = 0;
-    user.tokenVersion = (user.tokenVersion || 1) + 1; // Immediately revoke previous employee sessions
+    user.isDeleted = false;
+    user.tokenVersion = (user.tokenVersion || 1) + 1; // Invalidate previous employee sessions
+
+    if (employee) {
+      user.employeeProfileId = employee._id;
+      // Sync email
+      const canonicalEmail = (employee.email || employee.personalDetails?.email || user.email).toLowerCase().trim();
+      user.email = canonicalEmail;
+      employee.email = canonicalEmail;
+      if (!employee.userId || employee.userId.toString() !== user._id.toString()) {
+        employee.userId = user._id;
+      }
+      // Ensure user isActive reflects employee status
+      if (employee.jobDetails?.status === 'ACTIVE' || !employee.jobDetails?.status) {
+        user.isActive = true;
+      }
+      await employee.save();
+    }
+
     await user.save();
 
     await logAudit({
@@ -591,14 +668,17 @@ export const resetEmployeePassword = async (req, res) => {
       resourceId: user._id,
       newState: {
         isTemporary: Boolean(isTemporary),
-        accountEmail: user.email
+        accountEmail: user.email,
+        employeeCode: employee?.employeeCode
       },
       req
     });
 
     res.json({ 
       success: true, 
-      message: `Password for ${user.email} reset successfully.${isTemporary ? ' Employee must set a new password upon first login.' : ''}` 
+      message: `Password for ${user.email} updated successfully.${isTemporary ? ' The employee will be required to set a new password on first login.' : ''}`,
+      accountEmail: user.email,
+      mustChangePassword: Boolean(isTemporary)
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

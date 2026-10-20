@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,15 +6,16 @@ import { z } from 'zod';
 import api from '../services/api';
 import { 
   Loader2, ArrowLeft, MailCheck, KeyRound, Lock, 
-  ShieldCheck, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff 
+  ShieldCheck, AlertCircle, CheckCircle2, ArrowRight, Eye, EyeOff,
+  RotateCw, Timer, Sparkles
 } from 'lucide-react';
 
 const emailStepSchema = z.object({
-  email: z.string().trim().email('Please enter a valid official email address'),
+  email: z.string().trim().min(1, 'Email is required').email('Please enter a valid official email address'),
 });
 
 const resetStepSchema = z.object({
-  code: z.string().trim().length(6, 'Verification code must be exactly 6 digits'),
+  code: z.string().trim().length(6, 'Verification code must be exactly 6 digits').regex(/^\d{6}$/, 'Code must contain only digits'),
   newPassword: z.string().min(6, 'New password must be at least 6 characters long'),
   confirmPassword: z.string().min(6, 'Please confirm your new password'),
 }).refine((data) => data.newPassword === data.confirmPassword, {
@@ -26,11 +27,13 @@ export default function ForgotPassword() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1); // 1: Email entry, 2: Code & New Password, 3: Success
   const [registeredEmail, setRegisteredEmail] = useState('');
-  const [devCode, setDevCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [codeExpiresIn, setCodeExpiresIn] = useState(600); // 10 minutes in seconds
 
   // Form 1: Email
   const { 
@@ -39,17 +42,36 @@ export default function ForgotPassword() {
     formState: { errors: emailErrors } 
   } = useForm({
     resolver: zodResolver(emailStepSchema),
+    defaultValues: { email: '' }
   });
 
   // Form 2: Code + Password
   const { 
     register: registerReset, 
     handleSubmit: handleResetSubmit, 
-    setValue: setResetValue,
     formState: { errors: resetErrors } 
   } = useForm({
     resolver: zodResolver(resetStepSchema),
+    defaultValues: { code: '', newPassword: '', confirmPassword: '' }
   });
+
+  // Countdown timer for 10-minute code expiry and resend cooldown
+  useEffect(() => {
+    let timer;
+    if (step === 2) {
+      timer = setInterval(() => {
+        setCodeExpiresIn((prev) => (prev > 0 ? prev - 1 : 0));
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step]);
+
+  const formatTimer = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   // Step 1: Submit email to request code
   const onEmailSubmit = async (data) => {
@@ -60,16 +82,31 @@ export default function ForgotPassword() {
       const res = await api.post('/auth/forgot-password', { email: normalizedEmail });
       
       setRegisteredEmail(normalizedEmail);
-      if (res.data?.verificationCode) {
-        setDevCode(res.data.verificationCode);
-        setResetValue('code', res.data.verificationCode);
-      }
-      setSuccessMsg(res.data?.message || 'Verification code dispatched to your registered email.');
+      setSuccessMsg(res.data?.message || `A 6-digit verification code has been dispatched to ${normalizedEmail}.`);
+      setCodeExpiresIn(600); // Reset 10-minute countdown
+      setResendCooldown(45); // 45 seconds cooldown before allowing resend
       setStep(2);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Unable to initiate password reset. Please try again.');
+      setErrorMsg(err.response?.data?.message || 'Unable to deliver verification code. Please verify your email address or check server configuration.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Resend code action
+  const handleResendCode = async () => {
+    if (resendCooldown > 0 || isResending) return;
+    try {
+      setIsResending(true);
+      setErrorMsg('');
+      const res = await api.post('/auth/resend-code', { email: registeredEmail });
+      setSuccessMsg(res.data?.message || 'A fresh 6-digit verification code has been sent to your email.');
+      setCodeExpiresIn(600);
+      setResendCooldown(45);
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Failed to resend verification code. Please wait a moment and try again.');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -80,16 +117,13 @@ export default function ForgotPassword() {
       setErrorMsg('');
       const res = await api.post('/auth/reset-password', {
         email: registeredEmail,
-        code: data.code,
+        code: data.code.trim(),
         newPassword: data.newPassword,
       });
 
       if (res.data?.success) {
         setStep(3);
         setSuccessMsg(res.data.message || 'Password successfully updated.');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2200);
       }
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Invalid or expired 6-digit verification code.');
@@ -99,15 +133,16 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50/80 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900/95 py-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden text-slate-800">
       {/* Ambient background decoration */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-600/20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-1/2 -right-32 w-96 h-96 bg-teal-500/20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -bottom-32 left-1/3 w-80 h-80 bg-indigo-500/15 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-md w-full relative z-10">
         
         {/* Card Container */}
-        <div className="bg-white p-7 sm:p-10 rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-200/80">
+        <div className="bg-white p-7 sm:p-10 rounded-3xl shadow-2xl shadow-black/40 border border-slate-200/80">
           
           {/* Header Branding */}
           <div className="text-center mb-6">
@@ -124,35 +159,24 @@ export default function ForgotPassword() {
               {step === 3 && 'Password Reset Complete!'}
             </h2>
             <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-              {step === 1 && 'Enter your registered official email address to receive a secure 6-digit recovery code.'}
-              {step === 2 && `Enter the 6-digit verification code issued for ${registeredEmail}.`}
-              {step === 3 && 'Your credentials have been securely updated in the database.'}
+              {step === 1 && 'Enter your registered work email to receive a secure 6-digit verification code.'}
+              {step === 2 && `Enter the 6-digit code sent to ${registeredEmail} and choose a new password.`}
+              {step === 3 && 'Your credentials have been securely updated. You can now sign in.'}
             </p>
           </div>
 
           {/* Feedback Messages */}
           {errorMsg && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
-              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
-              <span>{errorMsg}</span>
+            <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-start gap-2.5 animate-in fade-in duration-150">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <div className="flex-1 leading-relaxed">{errorMsg}</div>
             </div>
           )}
 
           {successMsg && step !== 3 && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
-          {/* Development / Demo helper alert */}
-          {devCode && step === 2 && (
-            <div className="mb-5 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs flex items-center justify-between">
-              <div>
-                <span className="font-bold">Active Verification Code:</span>{' '}
-                <span className="font-mono font-black text-sm text-indigo-700 tracking-widest">{devCode}</span>
-              </div>
-              <span className="text-[10px] text-indigo-600 bg-indigo-100/80 px-2 py-0.5 rounded-full font-semibold">Valid 15m</span>
+            <div className="mb-5 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-start gap-2.5 animate-in fade-in duration-150">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="flex-1 leading-relaxed">{successMsg}</div>
             </div>
           )}
 
@@ -161,14 +185,15 @@ export default function ForgotPassword() {
             <form onSubmit={handleEmailSubmit(onEmailSubmit)} className="space-y-5">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
-                  Registered Work Email <span className="text-rose-500">*</span>
+                  Registered Staff Email <span className="text-rose-500">*</span>
                 </label>
                 <input
                   {...registerEmail('email')}
                   type="email"
+                  autoComplete="email"
                   placeholder="e.g. employee@cbdp.org"
-                  className={`w-full px-3.5 py-3 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 font-mono ${
-                    emailErrors.email ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-100'
+                  className={`w-full px-3.5 py-3 text-sm rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 ${
+                    emailErrors.email ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-emerald-600 focus:ring-emerald-100'
                   }`}
                 />
                 {emailErrors.email && (
@@ -179,16 +204,16 @@ export default function ForgotPassword() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-75 active:scale-[0.99]"
+                className="w-full py-3.5 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-75 active:scale-[0.99]"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Validating Account &amp; Sending Code...</span>
+                    <span>Verifying Account &amp; Sending Email...</span>
                   </>
                 ) : (
                   <>
-                    <span>Dispatch Recovery Code</span>
+                    <span>Send Verification Code</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -199,6 +224,18 @@ export default function ForgotPassword() {
           {/* STEP 2: Code & New Password Form */}
           {step === 2 && (
             <form onSubmit={handleResetSubmit(onResetSubmit)} className="space-y-4">
+              
+              {/* Timer Bar */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs text-slate-600">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Timer className="w-4 h-4 text-emerald-600" />
+                  <span>Code Validity:</span>
+                </div>
+                <span className={`font-mono font-bold ${codeExpiresIn < 120 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                  {formatTimer(codeExpiresIn)}
+                </span>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">
                   6-Digit Verification Code <span className="text-rose-500">*</span>
@@ -208,8 +245,9 @@ export default function ForgotPassword() {
                   type="text"
                   maxLength={6}
                   placeholder="123456"
-                  className={`w-full px-3.5 py-2.5 text-center text-lg tracking-widest font-mono font-bold rounded-xl border bg-white text-slate-900 focus:outline-none focus:ring-2 ${
-                    resetErrors.code ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-100'
+                  autoComplete="one-time-code"
+                  className={`w-full px-3.5 py-2.5 text-center text-xl tracking-[8px] font-mono font-black rounded-xl border bg-white text-slate-900 focus:outline-none focus:ring-2 ${
+                    resetErrors.code ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-emerald-600 focus:ring-emerald-100'
                   }`}
                 />
                 {resetErrors.code && (
@@ -225,9 +263,9 @@ export default function ForgotPassword() {
                   <input
                     {...registerReset('newPassword')}
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter at least 6 characters"
+                    placeholder="At least 6 characters"
                     className={`w-full px-3.5 pr-10 py-2.5 text-sm rounded-xl border bg-white text-slate-900 focus:outline-none focus:ring-2 ${
-                      resetErrors.newPassword ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-100'
+                      resetErrors.newPassword ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-emerald-600 focus:ring-emerald-100'
                     }`}
                   />
                   <button
@@ -252,7 +290,7 @@ export default function ForgotPassword() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Re-enter new password"
                   className={`w-full px-3.5 py-2.5 text-sm rounded-xl border bg-white text-slate-900 focus:outline-none focus:ring-2 ${
-                    resetErrors.confirmPassword ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-100'
+                    resetErrors.confirmPassword ? 'border-rose-300 focus:ring-rose-200 bg-rose-50/20' : 'border-slate-300 focus:border-emerald-600 focus:ring-emerald-100'
                   }`}
                 />
                 {resetErrors.confirmPassword && (
@@ -263,30 +301,43 @@ export default function ForgotPassword() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-75 active:scale-[0.99]"
+                  disabled={isSubmitting || codeExpiresIn === 0}
+                  className="w-full py-3 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer disabled:opacity-75 active:scale-[0.99]"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Hashing &amp; Updating Password...</span>
+                      <span>Verifying &amp; Updating Password...</span>
                     </>
                   ) : (
                     <>
-                      <span>Save New Password &amp; Sign In</span>
+                      <span>Save New Password &amp; Finish</span>
                       <ShieldCheck className="w-4 h-4" />
                     </>
                   )}
                 </button>
               </div>
 
-              <div className="text-center pt-2">
+              {/* Resend Code Section */}
+              <div className="pt-2 flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendCooldown > 0 || isResending}
+                  className="text-emerald-600 hover:text-emerald-700 font-semibold inline-flex items-center gap-1 cursor-pointer disabled:text-slate-400 disabled:cursor-not-allowed"
+                >
+                  <RotateCw className={`w-3.5 h-3.5 ${isResending ? 'animate-spin' : ''}`} />
+                  <span>
+                    {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : 'Resend Verification Code'}
+                  </span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => { setStep(1); setErrorMsg(''); }}
-                  className="text-xs text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                  className="text-slate-500 hover:text-slate-800 underline cursor-pointer"
                 >
-                  Change email address
+                  Change email
                 </button>
               </div>
             </form>
@@ -300,26 +351,42 @@ export default function ForgotPassword() {
               </div>
               <h3 className="text-lg font-bold text-slate-900">Your Password Has Been Updated</h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Previous sessions have been invalidated and your new password is now active in the database. Redirecting to sign in...
+                Your new password is now active in the system, and any previously active sessions have been invalidated for security.
               </p>
-              <Link
-                to="/login"
-                className="inline-flex justify-center w-full py-2.5 px-4 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors"
-              >
-                Sign In Immediately
-              </Link>
+              
+              <div className="pt-2 grid gap-2">
+                <Link
+                  to="/employee/login"
+                  className="inline-flex justify-center w-full py-2.5 px-4 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl hover:from-emerald-700 hover:to-teal-700 shadow-sm transition-all"
+                >
+                  Sign In to Employee Portal
+                </Link>
+                <Link
+                  to="/login"
+                  className="inline-flex justify-center w-full py-2.5 px-4 text-xs font-semibold text-slate-700 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+                >
+                  Sign In to HR Management Portal
+                </Link>
+              </div>
             </div>
           )}
 
           {/* Back to Login Link */}
           {step !== 3 && (
-            <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+            <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs font-bold">
               <Link 
-                to="/login" 
-                className="inline-flex items-center text-xs font-bold text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer"
+                to="/employee/login" 
+                className="inline-flex items-center text-slate-600 hover:text-emerald-600 transition-colors cursor-pointer"
               >
                 <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-                <span>Return to Sign-In Gateway</span>
+                <span>Employee Portal</span>
+              </Link>
+              <Link 
+                to="/login" 
+                className="inline-flex items-center text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer"
+              >
+                <span>HR Portal</span>
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
               </Link>
             </div>
           )}
