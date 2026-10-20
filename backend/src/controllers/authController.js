@@ -551,10 +551,15 @@ export const forgotPassword = async (req, res) => {
       maxAge: EXPIRES_IN_MINUTES * 60 * 1000,
     });
 
+    const targetNotice = emailResult?.deliveredTo && emailResult.deliveredTo !== normalizedEmail
+      ? `A 6-digit verification code has been dispatched to your email address (${emailResult.deliveredTo}). Please check your inbox and spam folder.`
+      : `A 6-digit verification code has been dispatched to your registered email address (${normalizedEmail}). Please check your inbox and spam folder.`;
+
     res.json({
       success: true,
-      message: `A 6-digit verification code has been dispatched to your registered email address (${normalizedEmail}). Please check your inbox and spam folder.`,
+      message: targetNotice,
       email: normalizedEmail,
+      deliveredTo: emailResult?.deliveredTo || normalizedEmail,
       resetSessionToken,
       resetToken: resetSessionToken,
       expiresInMinutes: EXPIRES_IN_MINUTES,
