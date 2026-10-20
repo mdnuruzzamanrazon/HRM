@@ -535,12 +535,28 @@ export const forgotPassword = async (req, res) => {
 
     const isSandboxDelivery = Boolean(emailResult?.isSandbox || emailResult?.provider === 'ethereal');
 
+    // Cryptographically signed stateless resetSessionToken for serverless resilience
+    const resetSessionToken = jwt.sign(
+      { email: normalizedEmail, codeHash, purpose: 'PASSWORD_RESET' },
+      process.env.JWT_SECRET || 'super_secret_jwt_key_cbdp_2026',
+      { expiresIn: `${EXPIRES_IN_MINUTES}m` }
+    );
+
+    res.cookie('reset_session', resetSessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: EXPIRES_IN_MINUTES * 60 * 1000,
+    });
+
     res.json({
       success: true,
       message: isSandboxDelivery
         ? `Verification code generated for ${normalizedEmail}. (Demo Mode: Code is ${verificationCode} - enter below or provide a Google App Password for live Gmail delivery)`
         : `A 6-digit verification code has been sent directly to your registered email address (${normalizedEmail}).`,
       email: normalizedEmail,
+      resetSessionToken,
+      resetToken: resetSessionToken,
       expiresInMinutes: EXPIRES_IN_MINUTES,
       deliveryStatus: emailResult?.provider || 'delivered',
       isSandbox: isSandboxDelivery,
@@ -555,7 +571,7 @@ export const forgotPassword = async (req, res) => {
 // POST /api/v1/auth/verify-reset-code
 export const verifyResetCode = async (req, res) => {
   try {
-    const { email, code } = req.body;
+    const { email, code, token, resetSessionToken } = req.body;
     if (!email || !code) {
       return res.status(400).json({ success: false, message: 'Email and verification code are required' });
     }
@@ -581,7 +597,21 @@ export const verifyResetCode = async (req, res) => {
       });
     }
 
-    // Check memory cache first
+    // 1. Verify stateless cryptographic resetSessionToken (resilient across serverless microVMs)
+    const tokenToVerify = resetSessionToken || token || req.cookies?.reset_session;
+    if (tokenToVerify) {
+      try {
+        const decoded = jwt.verify(tokenToVerify, process.env.JWT_SECRET || 'super_secret_jwt_key_cbdp_2026');
+        if (decoded.email === normalizedEmail && (decoded.codeHash === incomingHash || decoded.code === normalizedCode)) {
+          verifyCodeAttempts.delete(normalizedEmail);
+          return res.json({ success: true, message: 'Verification code confirmed.' });
+        }
+      } catch (tokenErr) {
+        // Continue to other checks if token expired or invalid
+      }
+    }
+
+    // 2. Check memory cache
     const cached = resetCodesCache.get(normalizedEmail);
     if (cached) {
       if (cached.expiresAt <= Date.now()) {
@@ -597,7 +627,7 @@ export const verifyResetCode = async (req, res) => {
       }
     }
 
-    // Check database
+    // 3. Check database (production)
     if (!isDemoMode() && mongoose.connection.readyState === 1) {
       const emailRegex = new RegExp(`^${normalizedEmail}$`, 'i');
       const user = await User.findOne({
@@ -613,6 +643,17 @@ export const verifyResetCode = async (req, res) => {
       if (user) {
         verifyCodeAttempts.delete(normalizedEmail);
         return res.json({ success: true, message: 'Verification code confirmed.' });
+      }
+    } else {
+      // 4. Check persistent demo store
+      loadStoreFromDisk();
+      const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
+      const user = allMockUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
+      if (user && (user.resetPasswordCodeHash === incomingHash || user.resetPasswordCode === normalizedCode)) {
+        if (!user.resetPasswordExpires || new Date(user.resetPasswordExpires) > new Date()) {
+          verifyCodeAttempts.delete(normalizedEmail);
+          return res.json({ success: true, message: 'Verification code confirmed.' });
+        }
       }
     }
 
@@ -631,7 +672,7 @@ export const verifyResetCode = async (req, res) => {
 // POST /api/v1/auth/reset-password
 export const resetPassword = async (req, res) => {
   try {
-    const { email, code, token, newPassword } = req.body;
+    const { email, code, token, resetSessionToken, newPassword } = req.body;
     const password = newPassword || req.body.password;
 
     if (!password || password.length < 6) {
@@ -647,8 +688,23 @@ export const resetPassword = async (req, res) => {
 
     let isAuthorized = false;
 
-    // Check cache
-    if (normalizedEmail) {
+    // 1. Verify stateless cryptographic resetSessionToken
+    const tokenToVerify = resetSessionToken || token || req.cookies?.reset_session;
+    if (tokenToVerify) {
+      try {
+        const decoded = jwt.verify(tokenToVerify, process.env.JWT_SECRET || 'super_secret_jwt_key_cbdp_2026');
+        if (decoded.email === normalizedEmail) {
+          if (!normalizedCode || decoded.codeHash === incomingHash || decoded.code === normalizedCode) {
+            isAuthorized = true;
+          }
+        }
+      } catch (tokenErr) {
+        // Token invalid/expired
+      }
+    }
+
+    // 2. Check memory cache
+    if (normalizedEmail && !isAuthorized) {
       const cached = resetCodesCache.get(normalizedEmail);
       if (cached) {
         if (cached.expiresAt <= Date.now()) {
@@ -665,6 +721,16 @@ export const resetPassword = async (req, res) => {
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       loadStoreFromDisk();
+      if (!isAuthorized) {
+        const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
+        const mockUser = allMockUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
+        if (mockUser && (mockUser.resetPasswordCodeHash === incomingHash || mockUser.resetPasswordCode === normalizedCode)) {
+          if (!mockUser.resetPasswordExpires || new Date(mockUser.resetPasswordExpires) > new Date()) {
+            isAuthorized = true;
+          }
+        }
+      }
+
       if (!isAuthorized && !token) {
         return res.status(400).json({ success: false, message: 'The verification code is incorrect or has expired. Please request a new code.' });
       }
@@ -672,6 +738,7 @@ export const resetPassword = async (req, res) => {
       // Enforce single-use: purge cache immediately
       resetCodesCache.delete(normalizedEmail);
       verifyCodeAttempts.delete(normalizedEmail);
+      res.clearCookie('reset_session');
 
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
       const mockUser = allMockUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail);

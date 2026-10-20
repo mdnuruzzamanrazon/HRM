@@ -38,6 +38,7 @@ export default function ForgotPassword() {
   const [manualCredential, setManualCredential] = useState('');
   const [sandboxCode, setSandboxCode] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [resetSessionToken, setResetSessionToken] = useState('');
 
   // Form 1: Email
   const { 
@@ -92,6 +93,9 @@ export default function ForgotPassword() {
       
       setRegisteredEmail(normalizedEmail);
       setSuccessMsg(res.data?.message || 'A 6-digit verification code has been sent to your registered email address.');
+      if (res.data?.resetSessionToken) {
+        setResetSessionToken(res.data.resetSessionToken);
+      }
       if (res.data?.sandboxCode) {
         setSandboxCode(res.data.sandboxCode);
         setResetValue('code', res.data.sandboxCode);
@@ -122,6 +126,9 @@ export default function ForgotPassword() {
         ...(manualCredential.trim() ? { credential: manualCredential.trim() } : {})
       });
       setSuccessMsg(res.data?.message || 'A 6-digit verification code has been sent to your registered email address.');
+      if (res.data?.resetSessionToken) {
+        setResetSessionToken(res.data.resetSessionToken);
+      }
       if (res.data?.sandboxCode) {
         setSandboxCode(res.data.sandboxCode);
         setResetValue('code', res.data.sandboxCode);
@@ -147,6 +154,7 @@ export default function ForgotPassword() {
         email: registeredEmail,
         code: data.code.trim(),
         newPassword: data.newPassword,
+        resetSessionToken: resetSessionToken || undefined,
       });
 
       if (res.data?.success) {
