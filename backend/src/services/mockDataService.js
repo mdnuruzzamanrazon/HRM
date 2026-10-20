@@ -242,6 +242,23 @@ export const mockData = {
     },
   ],
 
+  attendanceCorrections: [
+    {
+      _id: 'corr-001',
+      employeeId: {
+        _id: '6618d0987f83b1001a123458',
+        employeeCode: 'CBDP-ENG-002',
+        personalDetails: { firstName: 'Sarah', lastName: 'Connor' }
+      },
+      date: '2026-10-19',
+      checkInTime: '09:00',
+      checkOutTime: '17:30',
+      reason: 'Biometric reader offline during morning shift',
+      status: 'PENDING',
+      createdAt: new Date().toISOString()
+    }
+  ],
+
   leaves: [
     {
       _id: 'leave-001',

@@ -449,6 +449,22 @@ export const submitAttendanceCorrection = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Date, check-in time, check-out time, and reason are required' });
     }
 
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const correction = {
+        _id: 'corr-' + Date.now(),
+        employeeId: req.user?.employeeProfileId || mockData.adminEmployee,
+        date,
+        checkInTime,
+        checkOutTime,
+        reason,
+        status: 'PENDING',
+        createdAt: new Date().toISOString()
+      };
+      if (!mockData.attendanceCorrections) mockData.attendanceCorrections = [];
+      mockData.attendanceCorrections.unshift(correction);
+      return res.status(201).json({ success: true, data: correction, message: 'Attendance correction request submitted successfully' });
+    }
+
     const correction = new AttendanceCorrection({
       employeeId,
       date,
@@ -468,6 +484,12 @@ export const submitAttendanceCorrection = async (req, res) => {
 export const getMyAttendanceCorrections = async (req, res) => {
   try {
     const employeeId = req.user?.employeeProfileId?._id || req.user?.employeeProfileId || mockData.adminEmployee._id;
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const all = mockData.attendanceCorrections || [];
+      const empIdStr = String(employeeId);
+      const filtered = all.filter(c => String(c.employeeId?._id || c.employeeId) === empIdStr);
+      return res.json({ success: true, data: filtered });
+    }
     const corrections = await AttendanceCorrection.find({ employeeId }).sort({ createdAt: -1 });
     res.json({ success: true, data: corrections });
   } catch (error) {
@@ -478,6 +500,9 @@ export const getMyAttendanceCorrections = async (req, res) => {
 // Admin: Get all attendance correction requests
 export const getAllAttendanceCorrections = async (req, res) => {
   try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      return res.json({ success: true, data: mockData.attendanceCorrections || [] });
+    }
     const corrections = await AttendanceCorrection.find()
       .populate('employeeId', 'personalDetails employeeCode')
       .populate('reviewedBy', 'email')
@@ -496,6 +521,18 @@ export const reviewAttendanceCorrection = async (req, res) => {
 
     if (!['APPROVED', 'REJECTED'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Status must be APPROVED or REJECTED' });
+    }
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      if (!mockData.attendanceCorrections) mockData.attendanceCorrections = [];
+      const corr = mockData.attendanceCorrections.find(c => c._id === id);
+      if (!corr) {
+        return res.status(404).json({ success: false, message: 'Correction request not found' });
+      }
+      corr.status = status;
+      corr.reviewRemarks = reviewRemarks || '';
+      corr.reviewedBy = req.user?._id;
+      return res.json({ success: true, data: corr, message: `Correction request ${status.toLowerCase()} successfully` });
     }
 
     const correction = await AttendanceCorrection.findById(id);
