@@ -7,13 +7,15 @@ import {
   resetPassword, 
   changeFirstLoginPassword, 
   updatePassword,
-  getEmailDiagnostics
+  getEmailDiagnostics,
+  configureEmailService
 } from '../controllers/authController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 
 const router = express.Router();
 
 router.get('/email-diagnostics', getEmailDiagnostics);
+router.post('/configure-email', configureEmailService);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);
 router.post('/forgot-password', forgotPassword);

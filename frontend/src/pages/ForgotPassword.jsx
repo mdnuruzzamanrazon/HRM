@@ -34,6 +34,8 @@ export default function ForgotPassword() {
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [codeExpiresIn, setCodeExpiresIn] = useState(600); // 10 minutes in seconds
+  const [showCredentialInput, setShowCredentialInput] = useState(false);
+  const [manualCredential, setManualCredential] = useState('');
 
   // Form 1: Email
   const { 
@@ -79,7 +81,11 @@ export default function ForgotPassword() {
       setIsSubmitting(true);
       setErrorMsg('');
       const normalizedEmail = data.email.toLowerCase().trim();
-      const res = await api.post('/auth/forgot-password', { email: normalizedEmail });
+      const payload = { 
+        email: normalizedEmail,
+        ...(manualCredential.trim() ? { credential: manualCredential.trim() } : {})
+      };
+      const res = await api.post('/auth/forgot-password', payload);
       
       setRegisteredEmail(normalizedEmail);
       setSuccessMsg(res.data?.message || `A 6-digit verification code has been dispatched to ${normalizedEmail}.`);
@@ -87,7 +93,11 @@ export default function ForgotPassword() {
       setResendCooldown(45); // 45 seconds cooldown before allowing resend
       setStep(2);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Unable to deliver verification code. Please verify your email address or check server configuration.');
+      const msg = err.response?.data?.message || 'Unable to deliver verification code. Please verify your email address or check server configuration.';
+      setErrorMsg(msg);
+      if (msg.includes('not configured')) {
+        setShowCredentialInput(true);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -200,6 +210,47 @@ export default function ForgotPassword() {
                   <p className="mt-1 text-xs text-rose-500 font-medium">{emailErrors.email.message}</p>
                 )}
               </div>
+
+              {/* Optional / Fallback Provider Connector */}
+              {(showCredentialInput || (errorMsg && errorMsg.includes('not configured'))) && (
+                <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-slate-800 space-y-2.5 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      Live Email Delivery Setup
+                    </span>
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Required</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    Paste your <strong>16-letter Google App Password</strong> or <strong>Resend API Key</strong> below to dispatch the code to your Gmail inbox:
+                  </p>
+                  <input
+                    type="text"
+                    value={manualCredential}
+                    onChange={(e) => setManualCredential(e.target.value)}
+                    placeholder="e.g. abcd efgh ijkl mnop  OR  re_xxxxxxxxxxxx"
+                    className="w-full px-3 py-2.5 text-xs font-mono rounded-xl border border-amber-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                  />
+                  <div className="flex items-center justify-between text-[11px] pt-0.5">
+                    <a 
+                      href="https://myaccount.google.com/apppasswords" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
+                    >
+                      &rarr; Get 16-Letter App Password
+                    </a>
+                    <a 
+                      href="https://resend.com/api-keys" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-emerald-700 font-bold hover:underline inline-flex items-center gap-1"
+                    >
+                      &rarr; Get Free Resend Key
+                    </a>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="submit"

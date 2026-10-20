@@ -8,13 +8,25 @@ import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 import { logAudit } from '../utils/auditLogger.js';
 
-import { sendVerificationCodeEmail, diagnoseEmailConfiguration } from '../services/emailService.js';
+import { sendVerificationCodeEmail, diagnoseEmailConfiguration, setRuntimeEmailConfig } from '../services/emailService.js';
 
 // GET /api/v1/auth/email-diagnostics
 export const getEmailDiagnostics = async (req, res) => {
   try {
     const diagnostic = await diagnoseEmailConfiguration();
     res.json({ success: true, diagnostic });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// POST /api/v1/auth/configure-email
+export const configureEmailService = async (req, res) => {
+  try {
+    const { resendApiKey, smtpUser, smtpPass } = req.body;
+    setRuntimeEmailConfig({ resendApiKey, smtpUser, smtpPass });
+    const diagnostic = await diagnoseEmailConfiguration();
+    res.json({ success: true, message: 'Email credentials successfully configured for runtime.', diagnostic });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -259,7 +271,7 @@ export const logoutUser = async (req, res) => {
 // POST /api/v1/auth/forgot-password and POST /api/v1/auth/resend-code
 export const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, credential, resendApiKey, appPassword } = req.body;
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email address is required' });
     }
@@ -268,6 +280,19 @@ export const forgotPassword = async (req, res) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({ success: false, message: 'Please provide a valid official email address format (e.g. employee@cbdp.org)' });
+    }
+
+    // Auto-configure runtime credentials if provided in request
+    const providedCredential = (credential || resendApiKey || appPassword || '').trim();
+    if (providedCredential) {
+      if (providedCredential.startsWith('re_')) {
+        setRuntimeEmailConfig({ resendApiKey: providedCredential });
+      } else {
+        setRuntimeEmailConfig({ 
+          smtpUser: normalizedEmail, 
+          smtpPass: providedCredential.replace(/\s+/g, '') 
+        });
+      }
     }
 
     // 1. Rate Limiting & Cooldown Protection

@@ -6,23 +6,42 @@ import nodemailer from 'nodemailer';
 
 let etherealTransporter = null;
 
+// Dynamic runtime email configuration (allows setting credentials via admin or verification workflow)
+let runtimeEmailConfig = {
+  resendApiKey: null,
+  smtpUser: null,
+  smtpPass: null,
+};
+
+export const setRuntimeEmailConfig = ({ resendApiKey, smtpUser, smtpPass } = {}) => {
+  if (resendApiKey) runtimeEmailConfig.resendApiKey = resendApiKey.trim();
+  if (smtpUser) runtimeEmailConfig.smtpUser = smtpUser.trim();
+  if (smtpPass) runtimeEmailConfig.smtpPass = smtpPass.trim().replace(/\s+/g, '');
+};
+
+export const getRuntimeEmailConfig = () => ({ ...runtimeEmailConfig });
+
 /**
  * Check if Gmail is the target email service
  */
 export const isGmailConfigured = () => {
   const host = (process.env.SMTP_HOST || process.env.EMAIL_HOST || '').toLowerCase();
   const service = (process.env.EMAIL_SERVICE || '').toLowerCase();
-  return host.includes('gmail') || service === 'gmail' || !!process.env.GMAIL_USER;
+  const hasGmailUser = !!(process.env.GMAIL_USER || runtimeEmailConfig.smtpUser?.includes('gmail'));
+  return host.includes('gmail') || service === 'gmail' || hasGmailUser;
 };
 
 /**
  * Determine sender address
  */
 export const getSenderAddress = () => {
+  if (runtimeEmailConfig.smtpUser) {
+    return `"CBDP Human Resources" <${runtimeEmailConfig.smtpUser}>`;
+  }
   if (process.env.RESEND_FROM) {
     return process.env.RESEND_FROM.trim();
   }
-  if (process.env.RESEND_API_KEY && !process.env.SMTP_FROM && !process.env.EMAIL_FROM && !isGmailConfigured()) {
+  if ((runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY) && !process.env.SMTP_FROM && !process.env.EMAIL_FROM && !isGmailConfigured()) {
     return 'CBDP Human Resources <onboarding@resend.dev>';
   }
   if (isGmailConfigured()) {
@@ -39,8 +58,8 @@ export const getSenderAddress = () => {
  */
 export const getTransporter = async () => {
   const isGmail = isGmailConfigured();
-  const user = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
-  const rawPass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+  const user = runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
+  const rawPass = runtimeEmailConfig.smtpPass || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
 
   // 1. Dedicated Gmail Transport
   if (isGmail && user && rawPass) {
@@ -106,7 +125,7 @@ export const getTransporter = async () => {
  * Send email via Resend REST API (ideal for serverless / Vercel where outbound SMTP sockets might be blocked)
  */
 const sendViaResend = async ({ to, subject, html, text, from }) => {
-  const apiKey = process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY;
+  const apiKey = runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY;
   if (!apiKey) return null;
 
   let sender = from || getSenderAddress();
@@ -385,9 +404,9 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
 export const diagnoseEmailConfiguration = async () => {
   const isGmail = isGmailConfigured();
   const host = process.env.SMTP_HOST || process.env.EMAIL_HOST;
-  const user = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
-  const hasResend = !!(process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY);
+  const user = runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
+  const pass = runtimeEmailConfig.smtpPass || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+  const hasResend = !!(runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY);
   const hasSendGrid = !!(process.env.SENDGRID_API_KEY || process.env.sendgrid_api_key);
 
   const detectedEmailKeys = Object.keys(process.env).filter(k => /RESEND|SMTP|EMAIL|GMAIL|SENDGRID/i.test(k));
@@ -399,9 +418,10 @@ export const diagnoseEmailConfiguration = async () => {
     smtpHost: host || (isGmail ? 'smtp.gmail.com' : null),
     smtpUserConfigured: !!user,
     smtpUserMasked: user ? `${user.substring(0, 3)}***@${user.split('@')[1] || ''}` : null,
+    runtimeConfigured: Boolean(runtimeEmailConfig.resendApiKey || (runtimeEmailConfig.smtpUser && runtimeEmailConfig.smtpPass)),
     detectedEmailKeys,
     environment: process.env.NODE_ENV || 'development',
-    deploymentVersion: '2026.10.21.v2',
+    deploymentVersion: '2026.10.21.v3',
   };
 
   if (hasResend || hasSendGrid) {
