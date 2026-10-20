@@ -19,6 +19,12 @@ export const isGmailConfigured = () => {
  * Determine sender address
  */
 export const getSenderAddress = () => {
+  if (process.env.RESEND_FROM) {
+    return process.env.RESEND_FROM.trim();
+  }
+  if (process.env.RESEND_API_KEY && !process.env.SMTP_FROM && !process.env.EMAIL_FROM && !isGmailConfigured()) {
+    return 'CBDP Human Resources <onboarding@resend.dev>';
+  }
   if (isGmailConfigured()) {
     const gmailUser = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
     if (gmailUser) {
@@ -103,14 +109,16 @@ const sendViaResend = async ({ to, subject, html, text, from }) => {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return null;
 
-  const response = await fetch('https://api.resend.com/emails', {
+  let sender = from || getSenderAddress();
+
+  let response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey.trim()}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: from || getSenderAddress(),
+      from: sender,
       to: [to],
       subject,
       html,
@@ -118,7 +126,29 @@ const sendViaResend = async ({ to, subject, html, text, from }) => {
     }),
   });
 
-  const data = await response.json();
+  let data = await response.json();
+
+  // If custom sender domain fails due to unverified domain status, fallback to onboarding@resend.dev
+  if (!response.ok && data.message && (data.message.toLowerCase().includes('domain') || data.message.toLowerCase().includes('verify')) && !sender.includes('resend.dev')) {
+    console.warn(`[Email Service] Sender domain unverified (${sender}). Retrying with onboarding@resend.dev...`);
+    sender = 'CBDP Human Resources <onboarding@resend.dev>';
+    response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: sender,
+        to: [to],
+        subject,
+        html,
+        text,
+      }),
+    });
+    data = await response.json();
+  }
+
   if (!response.ok) {
     throw new Error(data.message || `Resend API failed with status ${response.status}`);
   }
