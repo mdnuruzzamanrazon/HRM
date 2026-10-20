@@ -9,14 +9,21 @@ let etherealTransporter = null;
 // Dynamic runtime email configuration (allows setting credentials via admin or verification workflow)
 let runtimeEmailConfig = {
   resendApiKey: null,
+  brevoApiKey: null,
   smtpUser: null,
   smtpPass: null,
 };
 
-export const setRuntimeEmailConfig = ({ resendApiKey, smtpUser, smtpPass } = {}) => {
+export const setRuntimeEmailConfig = ({ resendApiKey, brevoApiKey, smtpUser, smtpPass } = {}) => {
   if (resendApiKey) runtimeEmailConfig.resendApiKey = resendApiKey.trim();
+  if (brevoApiKey) runtimeEmailConfig.brevoApiKey = brevoApiKey.trim();
   if (smtpUser) runtimeEmailConfig.smtpUser = smtpUser.trim();
-  if (smtpPass) runtimeEmailConfig.smtpPass = smtpPass.trim().replace(/\s+/g, '');
+  if (smtpPass) {
+    runtimeEmailConfig.smtpPass = smtpPass.trim().replace(/\s+/g, '');
+    if (smtpPass.startsWith('xsmtpsib-') || smtpPass.startsWith('xkeysib-')) {
+      runtimeEmailConfig.brevoApiKey = smtpPass.trim();
+    }
+  }
 };
 
 export const getRuntimeEmailConfig = () => ({ ...runtimeEmailConfig });
@@ -25,10 +32,17 @@ export const getRuntimeEmailConfig = () => ({ ...runtimeEmailConfig });
  * Check if Gmail is the target email service
  */
 export const isGmailConfigured = (customCredentials = null) => {
+  const rawPass = (customCredentials?.smtpPass || runtimeEmailConfig.smtpPass || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD || '').trim();
+  if (rawPass.startsWith('xsmtpsib-') || rawPass.startsWith('xkeysib-')) {
+    return false;
+  }
   const host = (process.env.SMTP_HOST || process.env.EMAIL_HOST || '').toLowerCase();
+  if (host.includes('brevo') || host.includes('sendinblue') || host.includes('smtp-relay')) {
+    return false;
+  }
   const service = (process.env.EMAIL_SERVICE || '').toLowerCase();
   const user = (customCredentials?.smtpUser || runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER || '').toLowerCase();
-  return host.includes('gmail') || service === 'gmail' || user.includes('gmail.com');
+  return host.includes('gmail') || service === 'gmail' || (user.includes('gmail.com') && !host);
 };
 
 /**
@@ -249,6 +263,49 @@ const sendViaSendGrid = async ({ to, subject, html, text, from }) => {
 };
 
 /**
+ * Send email via Brevo REST API (HTTPS port 443 - zero socket blocks on Vercel, supports sending to ANY employee email)
+ */
+const sendViaBrevo = async ({ to, subject, html, text, from, credentials = null }) => {
+  const apiKey = credentials?.brevoApiKey || credentials?.smtpPass || runtimeEmailConfig.brevoApiKey || runtimeEmailConfig.smtpPass || process.env.BREVO_API_KEY || process.env.BREVO_KEY || process.env.SIB_API_KEY;
+  if (!apiKey) return null;
+
+  const cleanKey = apiKey.trim();
+  const senderEmail = credentials?.smtpUser || runtimeEmailConfig.smtpUser || process.env.BREVO_SENDER || process.env.SMTP_USER || process.env.GMAIL_USER || 'mdnuruzzamanrazon@gmail.com';
+  const senderName = 'CBDP Human Resources';
+
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': cleanKey,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: {
+        name: senderName,
+        email: senderEmail.trim(),
+      },
+      to: [{ email: to.trim() }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.message || `Brevo API failed with status ${response.status}`);
+  }
+
+  return {
+    success: true,
+    messageId: data.messageId,
+    provider: 'brevo',
+    deliveredTo: to,
+  };
+};
+
+/**
  * Build professional HTML & text templates for 6-digit verification code
  */
 const buildVerificationEmailContent = ({ code, expiresInMinutes = 10, employeeName }) => {
@@ -356,19 +413,46 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
   const { html, text } = buildVerificationEmailContent({ code, expiresInMinutes, employeeName });
   const from = getSenderAddress(credentials?.smtpUser);
 
-  // 1. Try Resend API if configured
-  const resendKey = credentials?.resendApiKey || runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY || DEFAULT_RESEND_KEY;
-  if (resendKey) {
+  // 1. Try Brevo REST API first (HTTPS, supports sending directly to any employee inbox without domain lock)
+  const brevoKey = credentials?.brevoApiKey || credentials?.smtpPass || runtimeEmailConfig.brevoApiKey || (runtimeEmailConfig.smtpPass && (runtimeEmailConfig.smtpPass.startsWith('xsmtpsib-') || runtimeEmailConfig.smtpPass.startsWith('xkeysib-')) ? runtimeEmailConfig.smtpPass : null) || process.env.BREVO_API_KEY || process.env.BREVO_KEY || process.env.SIB_API_KEY;
+  if (brevoKey) {
     try {
-      const res = await sendViaResend({ to, subject, html, text, from });
-      console.log(`[Email Service] Code successfully dispatched via Resend to ${to} (ID: ${res.messageId})`);
+      const res = await sendViaBrevo({ to, subject, html, text, from, credentials });
+      console.log(`[Email Service] Code successfully dispatched via Brevo REST API to ${to} (ID: ${res.messageId})`);
       return res;
     } catch (err) {
-      console.error('[Email Service] Resend API delivery error:', err.message);
+      console.error('[Email Service] Brevo REST API delivery error:', err.message);
     }
   }
 
-  // 2. Try SendGrid API if configured
+  // 2. Try Standard SMTP (Nodemailer - e.g. Brevo SMTP smtp-relay.brevo.com or Gmail App Password)
+  let lastSmtpError = null;
+  const transporter = await getTransporter(credentials);
+  if (transporter) {
+    try {
+      const info = await transporter.sendMail({
+        from,
+        to,
+        subject,
+        text,
+        html,
+      });
+
+      console.log(`[Email Service] Verification email successfully dispatched via SMTP to ${to} (MessageId: ${info.messageId})`);
+
+      return {
+        success: true,
+        messageId: info.messageId,
+        provider: isGmailConfigured(credentials) ? 'gmail' : 'smtp',
+        deliveredTo: to,
+      };
+    } catch (smtpErr) {
+      console.error(`[Email Service] SMTP transport failed for ${to}:`, smtpErr.message);
+      lastSmtpError = smtpErr;
+    }
+  }
+
+  // 3. Try SendGrid API if configured
   if (process.env.SENDGRID_API_KEY) {
     try {
       const res = await sendViaSendGrid({ to, subject, html, text, from });
@@ -379,55 +463,32 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
     }
   }
 
-  // 3. Nodemailer SMTP transport (Gmail or Custom SMTP)
-  const transporter = await getTransporter(credentials);
-  if (!transporter) {
-    throw new Error(
-      'Email delivery service is not configured. ' +
-      'Please configure Gmail credentials (SMTP_USER and SMTP_PASS with a 16-character Google App Password) ' +
-      'or configure RESEND_API_KEY in your environment variables.'
-    );
+  // 4. Try Resend API (delivers to owner or custom domain)
+  const resendKey = credentials?.resendApiKey || runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY || DEFAULT_RESEND_KEY;
+  if (resendKey) {
+    try {
+      const res = await sendViaResend({ to, subject, html, text, from });
+      console.log(`[Email Service] Code successfully dispatched via Resend to ${res.deliveredTo || to} (ID: ${res.messageId})`);
+      return res;
+    } catch (err) {
+      console.error('[Email Service] Resend API delivery error:', err.message);
+    }
   }
 
-  try {
-    const info = await transporter.sendMail({
-      from,
-      to,
-      subject,
-      text,
-      html,
-    });
-
-    console.log(`[Email Service] Verification email successfully dispatched to ${to} (MessageId: ${info.messageId})`);
-
-    return {
-      success: true,
-      messageId: info.messageId,
-      provider: isGmailConfigured() ? 'gmail' : 'smtp',
-    };
-  } catch (error) {
-    console.error(`[Email Service] SMTP delivery failed to ${to}:`, error.message);
-    
-    // Provide explicit troubleshooting for Google App Passwords
-    if (error.message.includes('BadCredentials') || error.message.includes('535') || error.message.includes('Username and Password not accepted')) {
+  if (lastSmtpError) {
+    if (lastSmtpError.message.includes('BadCredentials') || lastSmtpError.message.includes('535') || lastSmtpError.message.includes('Username and Password not accepted')) {
       throw new Error(
-        'Gmail authentication failed: Username and Password not accepted. ' +
-        'Standard Google account passwords cannot be used for SMTP. ' +
-        'Please generate a 16-character Google App Password via: ' +
-        'Google Account -> Security -> 2-Step Verification -> App Passwords, and set it as SMTP_PASS.'
+        'Email authentication failed: Username and Password not accepted. ' +
+        'Please verify your SMTP credentials (or Brevo API/SMTP key).'
       );
     }
-
-    if (error.message.includes('ETIMEDOUT') || error.message.includes('ECONNREFUSED')) {
-      throw new Error(
-        `Connection to mail server timed out (${error.message}). ` +
-        'Serverless platforms like Vercel often restrict outbound SMTP sockets. ' +
-        'Consider using RESEND_API_KEY in Vercel Environment Variables.'
-      );
-    }
-
-    throw new Error(`Failed to deliver verification email to ${to}: ${error.message}`);
+    throw new Error(`Failed to deliver verification email to ${to}: ${lastSmtpError.message}`);
   }
+
+  throw new Error(
+    'Email delivery service is not configured. ' +
+    'Please configure Brevo API key, Brevo SMTP key, or Gmail credentials in your environment variables.'
+  );
 };
 
 /**
@@ -438,27 +499,28 @@ export const diagnoseEmailConfiguration = async () => {
   const host = process.env.SMTP_HOST || process.env.EMAIL_HOST;
   const user = runtimeEmailConfig.smtpUser || process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = runtimeEmailConfig.smtpPass || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
+  const hasBrevo = Boolean(runtimeEmailConfig.brevoApiKey || (pass && (pass.startsWith('xsmtpsib-') || pass.startsWith('xkeysib-'))) || process.env.BREVO_API_KEY || process.env.BREVO_KEY || process.env.SIB_API_KEY);
   const hasResend = !!(runtimeEmailConfig.resendApiKey || process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY || DEFAULT_RESEND_KEY);
   const hasSendGrid = !!(process.env.SENDGRID_API_KEY || process.env.sendgrid_api_key);
 
-  const detectedEmailKeys = Object.keys(process.env).filter(k => /RESEND|SMTP|EMAIL|GMAIL|SENDGRID/i.test(k));
+  const detectedEmailKeys = Object.keys(process.env).filter(k => /BREVO|RESEND|SMTP|EMAIL|GMAIL|SENDGRID/i.test(k));
 
   const info = {
-    provider: hasResend ? 'Resend REST API' : (hasSendGrid ? 'SendGrid REST API' : (isGmail ? 'Gmail SMTP' : (host ? 'Custom SMTP' : 'Sandbox (Ethereal)'))),
-    hasCredentials: Boolean(hasResend || hasSendGrid || (user && pass)),
+    provider: hasBrevo ? 'Brevo REST API / SMTP' : (hasResend ? 'Resend REST API' : (hasSendGrid ? 'SendGrid REST API' : (isGmail ? 'Gmail SMTP' : (host ? 'Custom SMTP' : 'Sandbox (Ethereal)')))),
+    hasCredentials: Boolean(hasBrevo || hasResend || hasSendGrid || (user && pass)),
     sender: getSenderAddress(),
-    smtpHost: host || (isGmail ? 'smtp.gmail.com' : null),
+    smtpHost: (pass && pass.startsWith('xsmtpsib-')) ? 'smtp-relay.brevo.com' : (host || (isGmail ? 'smtp.gmail.com' : null)),
     smtpUserConfigured: !!user,
     smtpUserMasked: user ? `${user.substring(0, 3)}***@${user.split('@')[1] || ''}` : null,
-    runtimeConfigured: Boolean(runtimeEmailConfig.resendApiKey || (runtimeEmailConfig.smtpUser && runtimeEmailConfig.smtpPass)),
+    runtimeConfigured: Boolean(runtimeEmailConfig.brevoApiKey || runtimeEmailConfig.resendApiKey || (runtimeEmailConfig.smtpUser && runtimeEmailConfig.smtpPass)),
     detectedEmailKeys,
     environment: process.env.NODE_ENV || 'development',
-    deploymentVersion: '2026.10.21.v3',
+    deploymentVersion: '2026.10.21.v4',
   };
 
-  if (hasResend || hasSendGrid) {
+  if (hasBrevo || hasResend || hasSendGrid) {
     info.status = 'READY_API';
-    info.message = 'Transactional REST API configured. Optimal for serverless environments like Vercel.';
+    info.message = 'Transactional REST API / Relay configured. Optimal for serverless environments like Vercel and all employee inboxes.';
     return info;
   }
 
