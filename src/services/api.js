@@ -22,9 +22,21 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // If the server returns a 401, we might want to redirect to login
+    // If the server returns a 401, only trigger unauthorized logout if:
+    // 1. The user was actually logged in (had an auth_token in localStorage)
+    // 2. It is not an auth handshake endpoint like /auth/login, /auth/forgot-password, /auth/reset-password, /auth/verify-reset-code
     if (error.response?.status === 401) {
-      window.dispatchEvent(new Event('auth:unauthorized'));
+      const url = error.config?.url || '';
+      const isPublicAuthRoute = 
+        url.includes('/auth/login') || 
+        url.includes('/auth/forgot-password') || 
+        url.includes('/auth/reset-password') ||
+        url.includes('/auth/verify-reset-code');
+
+      if (!isPublicAuthRoute && localStorage.getItem('auth_token')) {
+        localStorage.removeItem('auth_token');
+        window.dispatchEvent(new Event('auth:unauthorized'));
+      }
     }
     return Promise.reject(error);
   }

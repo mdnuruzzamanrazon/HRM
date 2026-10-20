@@ -58,6 +58,7 @@ const generateToken = (res, user, rememberMe = false) => {
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
+    path: '/',
   });
   return token;
 };
@@ -301,9 +302,11 @@ export const loginUser = async (req, res) => {
 
 // POST /api/v1/auth/logout
 export const logoutUser = async (req, res) => {
+  res.clearCookie('jwt', { path: '/' });
   res.cookie('jwt', '', {
     httpOnly: true,
     expires: new Date(0),
+    path: '/',
   });
   res.status(200).json({ success: true, message: 'Logged out successfully' });
 };
@@ -740,7 +743,8 @@ export const resetPassword = async (req, res) => {
       // Enforce single-use: purge cache immediately
       resetCodesCache.delete(normalizedEmail);
       verifyCodeAttempts.delete(normalizedEmail);
-      res.clearCookie('reset_session');
+      res.clearCookie('reset_session', { path: '/' });
+      res.clearCookie('jwt', { path: '/' });
 
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
       const mockUser = allMockUsers.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
@@ -808,6 +812,9 @@ export const resetPassword = async (req, res) => {
       resourceId: user._id,
       req
     });
+
+    res.clearCookie('reset_session', { path: '/' });
+    res.clearCookie('jwt', { path: '/' });
 
     res.json({ 
       success: true, 

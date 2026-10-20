@@ -9,24 +9,46 @@ export const AuthProvider = ({ children }) => {
 
   // Initialize auth state on mount
   useEffect(() => {
+    let isMounted = true;
     const fetchUser = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        if (isMounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
       try {
         const { data } = await api.get('/auth/me');
-        setUser(data.user);
+        if (isMounted) {
+          setUser(data.user);
+        }
       } catch (error) {
-        setUser(null);
+        localStorage.removeItem('auth_token');
+        if (isMounted) {
+          setUser(null);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     fetchUser();
 
     // Listen for unauthorized events from the Axios interceptor
     const handleUnauthorized = () => {
-      setUser(null);
+      localStorage.removeItem('auth_token');
+      if (isMounted) {
+        setUser(null);
+      }
     };
     window.addEventListener('auth:unauthorized', handleUnauthorized);
-    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
   }, []);
 
   const login = async (credentials) => {

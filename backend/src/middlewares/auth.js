@@ -2,16 +2,16 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import { User } from '../models/User.js';
 import { isDemoMode } from '../config/db.js';
-import { mockData } from '../services/mockDataService.js';
+import { mockData, loadStoreFromDisk } from '../services/mockDataService.js';
 
 export const authenticate = async (req, res, next) => {
   try {
     let token;
-    // Check if token exists in cookies or Authorization header
-    if (req.cookies && req.cookies.jwt) {
-      token = req.cookies.jwt;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    // Check Authorization header first (explicit client token takes precedence over ambient cookies)
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies && req.cookies.jwt) {
+      token = req.cookies.jwt;
     }
 
     if (!token) {
@@ -22,6 +22,7 @@ export const authenticate = async (req, res, next) => {
 
     // If Demo Mode or database not connected, authenticate with demo user corresponding to token
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      loadStoreFromDisk();
       const allMockUsers = [mockData.adminUser, mockData.employeeUser, ...(mockData.users || [])];
       let found = allMockUsers.find(u => 
         (decoded.id && u._id === decoded.id) || 
@@ -50,7 +51,8 @@ export const authenticate = async (req, res, next) => {
         return res.status(401).json({ success: false, message: 'Not authorized, account inactive or removed' });
       }
 
-      if (decoded.tokenVersion && found.tokenVersion && decoded.tokenVersion !== found.tokenVersion) {
+      // Invalidate ONLY if the token was issued before the most recent password reset (tokenVersion < current)
+      if (decoded.tokenVersion && found.tokenVersion && decoded.tokenVersion < found.tokenVersion) {
         return res.status(401).json({ 
           success: false, 
           message: 'Session invalidated due to password reset or administrative action. Please log in again.' 
@@ -62,7 +64,16 @@ export const authenticate = async (req, res, next) => {
     }
 
     // Check if user still exists in database
-    const user = await User.findById(decoded.id).select('-passwordHash').populate('employeeProfileId');
+    let user;
+    if (decoded.id && mongoose.Types.ObjectId.isValid(decoded.id)) {
+      user = await User.findById(decoded.id).select('-passwordHash').populate('employeeProfileId');
+    }
+    if (!user && decoded.email) {
+      user = await User.findOne({ email: decoded.email.toLowerCase().trim(), isDeleted: { $ne: true } })
+        .select('-passwordHash')
+        .populate('employeeProfileId');
+    }
+
     if (!user || user.isDeleted) {
       return res.status(401).json({ success: false, message: 'Not authorized, user not found or deleted' });
     }
@@ -72,8 +83,8 @@ export const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Not authorized, account inactive' });
     }
 
-    // Check tokenVersion for immediate session revocation
-    if (decoded.tokenVersion && user.tokenVersion && decoded.tokenVersion !== user.tokenVersion) {
+    // Check tokenVersion for immediate session revocation (invalidate ONLY if older than current tokenVersion)
+    if (decoded.tokenVersion && user.tokenVersion && decoded.tokenVersion < user.tokenVersion) {
       return res.status(401).json({ 
         success: false, 
         message: 'Session invalidated due to password reset or administrative action. Please log in again.' 
