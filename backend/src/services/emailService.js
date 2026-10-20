@@ -106,7 +106,7 @@ export const getTransporter = async () => {
  * Send email via Resend REST API (ideal for serverless / Vercel where outbound SMTP sockets might be blocked)
  */
 const sendViaResend = async ({ to, subject, html, text, from }) => {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY;
   if (!apiKey) return null;
 
   let sender = from || getSenderAddress();
@@ -299,7 +299,7 @@ export const sendVerificationCodeEmail = async ({ to, code, expiresInMinutes = 1
   const from = getSenderAddress();
 
   // 1. Try Resend API if configured
-  if (process.env.RESEND_API_KEY) {
+  if (process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY) {
     try {
       const res = await sendViaResend({ to, subject, html, text, from });
       console.log(`[Email Service] Code successfully dispatched via Resend to ${to} (ID: ${res.messageId})`);
@@ -387,8 +387,10 @@ export const diagnoseEmailConfiguration = async () => {
   const host = process.env.SMTP_HOST || process.env.EMAIL_HOST;
   const user = process.env.GMAIL_USER || process.env.SMTP_USER || process.env.EMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || process.env.SMTP_PASSWORD || process.env.EMAIL_PASS || process.env.EMAIL_PASSWORD;
-  const hasResend = !!process.env.RESEND_API_KEY;
-  const hasSendGrid = !!process.env.SENDGRID_API_KEY;
+  const hasResend = !!(process.env.RESEND_API_KEY || process.env.resend_api_key || process.env.RESEND_KEY || process.env.VITE_RESEND_API_KEY);
+  const hasSendGrid = !!(process.env.SENDGRID_API_KEY || process.env.sendgrid_api_key);
+
+  const detectedEmailKeys = Object.keys(process.env).filter(k => /RESEND|SMTP|EMAIL|GMAIL|SENDGRID/i.test(k));
 
   const info = {
     provider: hasResend ? 'Resend REST API' : (hasSendGrid ? 'SendGrid REST API' : (isGmail ? 'Gmail SMTP' : (host ? 'Custom SMTP' : 'Sandbox (Ethereal)'))),
@@ -397,7 +399,9 @@ export const diagnoseEmailConfiguration = async () => {
     smtpHost: host || (isGmail ? 'smtp.gmail.com' : null),
     smtpUserConfigured: !!user,
     smtpUserMasked: user ? `${user.substring(0, 3)}***@${user.split('@')[1] || ''}` : null,
+    detectedEmailKeys,
     environment: process.env.NODE_ENV || 'development',
+    deploymentVersion: '2026.10.21.v2',
   };
 
   if (hasResend || hasSendGrid) {
