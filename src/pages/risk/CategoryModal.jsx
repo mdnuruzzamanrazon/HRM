@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Layers, Plus, Loader2, Save } from 'lucide-react';
+import { X, Layers, Plus, Loader2 } from 'lucide-react';
 
 export default function CategoryModal({
   isOpen,
@@ -13,7 +13,7 @@ export default function CategoryModal({
     categoryName: '',
     code: '',
     description: '',
-    selectedCategory: '',
+    selectedCategory: categories[0]?.name || '',
     subCategoryName: '',
     subCategoryCode: '',
     note: ''
@@ -37,14 +37,14 @@ export default function CategoryModal({
 
     if (mode === 'newCategory') {
       if (!formData.categoryName.trim()) {
-        newErrors.categoryName = 'Category name is required';
+        newErrors.categoryName = 'Category Name is required';
       }
     } else {
       if (!formData.selectedCategory) {
-        newErrors.selectedCategory = 'Please choose a parent category';
+        newErrors.selectedCategory = 'Parent Category is required';
       }
       if (!formData.subCategoryName.trim()) {
-        newErrors.subCategoryName = 'Sub-category name is required';
+        newErrors.subCategoryName = 'Sub-category Name is required';
       }
     }
 
@@ -72,32 +72,32 @@ export default function CategoryModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+      <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-900 text-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 bg-slate-50/70 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-600/30 rounded-xl border border-indigo-400/30">
-              <Layers className="w-5 h-5 text-indigo-400" />
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+              <Layers className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white leading-tight">
+              <h3 className="text-base font-bold text-slate-900 leading-tight">
                 Add Risk Classification
               </h3>
-              <p className="text-xs text-slate-400">
-                Configure organizational categories and subcategories
+              <p className="text-xs text-slate-500 mt-0.5">
+                Configure organizational categories and sub-categories
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab switch */}
-        <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3">
+        <div className="flex border-b border-slate-200/80 bg-slate-50/40 px-6 pt-3">
           <button
             type="button"
             onClick={() => setMode('newCategory')}
@@ -123,11 +123,11 @@ export default function CategoryModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
           {mode === 'newCategory' ? (
             <>
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Category Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -136,16 +136,16 @@ export default function CategoryModal({
                   value={formData.categoryName}
                   onChange={handleChange}
                   placeholder="e.g. Information Security & Compliance"
-                  className={`w-full px-3.5 py-2 rounded-xl border text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                    errors.categoryName ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300'
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs ${
+                    errors.categoryName ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200'
                   }`}
                 />
-                {errors.categoryName && <p className="mt-1 text-xs text-rose-600">{errors.categoryName}</p>}
+                {errors.categoryName && <p className="mt-1 text-[11px] text-rose-600 font-semibold">{errors.categoryName}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Category Code
                   </label>
                   <input
@@ -153,64 +153,61 @@ export default function CategoryModal({
                     name="code"
                     value={formData.code}
                     onChange={handleChange}
-                    placeholder="e.g. IS"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 uppercase"
+                    placeholder="e.g. CAT_SEC"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Initial Sub-category (Optional)
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Initial Sub-category
                   </label>
                   <input
                     type="text"
                     name="subCategoryName"
                     value={formData.subCategoryName}
                     onChange={handleChange}
-                    placeholder="e.g. Cloud Security"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900"
+                    placeholder="e.g. Data Protection"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Description / Explanatory Note
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Description
                 </label>
                 <textarea
                   name="description"
                   rows="2"
                   value={formData.description}
                   onChange={handleChange}
-                  placeholder="Scope or guidance for this category..."
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 placeholder-slate-400"
+                  placeholder="Define scope for this risk classification..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs"
                 />
               </div>
             </>
           ) : (
             <>
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Select Parent Category <span className="text-rose-500">*</span>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                  Parent Category <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name="selectedCategory"
                   value={formData.selectedCategory}
                   onChange={handleChange}
-                  className={`w-full px-3.5 py-2 rounded-xl border text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                    errors.selectedCategory ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300'
-                  }`}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs cursor-pointer"
                 >
-                  <option value="">-- Choose Category --</option>
                   {categories.map(c => (
                     <option key={c.name} value={c.name}>{c.name}</option>
                   ))}
                 </select>
-                {errors.selectedCategory && <p className="mt-1 text-xs text-rose-600">{errors.selectedCategory}</p>}
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Sub-category Name <span className="text-rose-500">*</span>
                   </label>
                   <input
@@ -218,30 +215,31 @@ export default function CategoryModal({
                     name="subCategoryName"
                     value={formData.subCategoryName}
                     onChange={handleChange}
-                    placeholder="e.g. Remote worker safety"
-                    className={`w-full px-3.5 py-2 rounded-xl border text-xs text-slate-900 ${
-                      errors.subCategoryName ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300'
+                    placeholder="e.g. Incident Response"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs ${
+                      errors.subCategoryName ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200'
                     }`}
                   />
-                  {errors.subCategoryName && <p className="mt-1 text-xs text-rose-600">{errors.subCategoryName}</p>}
+                  {errors.subCategoryName && <p className="mt-1 text-[11px] text-rose-600 font-semibold">{errors.subCategoryName}</p>}
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Code
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Sub-category Code
                   </label>
                   <input
                     type="text"
                     name="subCategoryCode"
                     value={formData.subCategoryCode}
                     onChange={handleChange}
-                    placeholder="e.g. RS"
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 uppercase"
+                    placeholder="e.g. SUB_IR"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                   Guidance Note
                 </label>
                 <input
@@ -249,20 +247,20 @@ export default function CategoryModal({
                   name="note"
                   value={formData.note}
                   onChange={handleChange}
-                  placeholder="e.g. Field travel and lone worker hazards"
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-900"
+                  placeholder="e.g. Specific hazard types or governance guidelines"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs"
                 />
               </div>
             </>
           )}
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-200/80">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
             >
               Cancel
             </button>
@@ -270,7 +268,7 @@ export default function CategoryModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
@@ -279,7 +277,7 @@ export default function CategoryModal({
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 stroke-[2.2]" />
                   <span>Add Classification</span>
                 </>
               )}
