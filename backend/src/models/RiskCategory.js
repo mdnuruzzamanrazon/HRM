@@ -4,6 +4,7 @@ const subCategorySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     code: { type: String, trim: true, default: '' },
+    ukDirector: { type: String, trim: true, default: '' },
     note: { type: String, trim: true, default: '' },
   },
   { _id: true }

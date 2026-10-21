@@ -34,6 +34,29 @@ const riskRecordSchema = new mongoose.Schema(
       default: '',
       index: true,
     },
+    // Category Code & Subcode Classification Metadata
+    categoryCode: {
+      type: String,
+      trim: true,
+      default: '',
+      index: true,
+    },
+    subCode: {
+      type: String,
+      trim: true,
+      default: '',
+      index: true,
+    },
+    ukDirector: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    explanatoryNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     // 5. Description of Risk
     description: {
       type: String,

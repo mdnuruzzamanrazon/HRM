@@ -12,20 +12,19 @@ import {
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 
-// Pre-defined CBDP Standard Categories and Subcategories
+// Pre-defined CBDP Standard Categories and Subcategories matching official Risk Codes manual
 export const DEFAULT_RISK_CATEGORIES = [
   {
     name: 'Strategy & Governance',
     code: 'SG',
     description: 'Governance, strategic alignment, legal & regulatory risk',
     subCategories: [
-      { name: 'Strategy relevance', code: 'SR', note: 'Strategy not adapted to changing societal needs' },
-      { name: 'Registration', code: 'RE', note: 'Right to operate revoked or not renewed' },
-      { name: 'Legal compliance', code: 'LC', note: 'National and international regulatory compliance' },
-      { name: 'Tax compliance', code: 'TC', note: 'Statutory and fiscal tax compliance' },
-      { name: 'Leadership capacity', code: 'MC', note: 'SMT capacity, stability, succession' },
-      { name: 'Crisis management', code: 'CM', note: 'Inability to respond properly to crisis/PR' },
-      { name: 'Other', code: 'OT', note: 'Other governance matters' }
+      { name: 'Strategy relevance', code: 'SR', ukDirector: 'GMT', note: 'Strategy not adapted to changing societal needs' },
+      { name: 'Registration', code: 'RE', ukDirector: 'International', note: 'Right to operate revoked or not renewed' },
+      { name: 'Legal compliance', code: 'LC', ukDirector: 'International', note: 'Particularly national laws' },
+      { name: 'Tax compliance', code: 'TC', ukDirector: 'GMT', note: 'Not specified in the source' },
+      { name: 'Leadership capacity', code: 'MC', ukDirector: 'GMT', note: 'For example, SMT capacity and SMT stability' },
+      { name: 'Crisis management', code: 'CM', ukDirector: 'GMT', note: 'Inability to respond properly to a crisis, including public relations' }
     ]
   },
   {
@@ -33,12 +32,11 @@ export const DEFAULT_RISK_CATEGORIES = [
     code: 'FS',
     description: 'Financial stability, financial controls, IT, systems',
     subCategories: [
-      { name: 'Financial Support', code: 'FS', note: 'Adequate financial support to field offices' },
-      { name: 'Financial model', code: 'FM', note: 'Long-term financial model and cash flow commitments' },
-      { name: 'Finance controls & Fraud', code: 'FF', note: 'Internal control failures or fraud' },
-      { name: 'Data protection & cyber attack', code: 'IT', note: 'IT failure, data breach, cyber threat' },
-      { name: 'Change projects', code: 'CP', note: 'Failure to manage organizational change' },
-      { name: 'Other', code: 'OT', note: 'Other financial risks' }
+      { name: 'Financial Support', code: 'FS', ukDirector: 'Finance', note: 'RCOs do not receive adequate financial support from the UK' },
+      { name: 'Financial model', code: 'FM', ukDirector: 'Finance', note: 'Long-term financial model not suited to cash flows and commitments' },
+      { name: 'Finance controls & Fraud', code: 'FF', ukDirector: 'Finance', note: 'Not specified in the source' },
+      { name: 'Data protection & cyber attack', code: 'IT', ukDirector: 'Finance', note: 'IT failures of any type, including data loss and cyber attacks' },
+      { name: 'Change projects', code: 'CP', ukDirector: 'Finance', note: 'Failure to manage or support organization-wide change projects' }
     ]
   },
   {
@@ -46,15 +44,14 @@ export const DEFAULT_RISK_CATEGORIES = [
     code: 'FR',
     description: 'Donor pool, grant pipeline, fundraising and reputation',
     subCategories: [
-      { name: 'Changing donor pool', code: 'CD', note: 'Fewer donors aligned with target sectors' },
-      { name: 'Funding base', code: 'FB', note: 'Over-reliance on too few donors or funding sources' },
-      { name: 'Results based', code: 'RB', note: 'Payment by results and financial recovery' },
-      { name: 'Proposal quality', code: 'PQ', note: 'Capacity to identify and submit competitive proposals' },
-      { name: 'Cost recovery', code: 'CR', note: 'Under-recovery of overheads and co-funding' },
-      { name: 'Secured income', code: 'SI', note: 'Low secured income and weak future pipeline' },
-      { name: 'Relationships & Profile', code: 'RP', note: 'Reputational risk from partnerships' },
-      { name: 'Brand', code: 'BR', note: 'Brand visibility and internal uptake' },
-      { name: 'Other', code: 'OT', note: 'Other income risks' }
+      { name: 'Changing donor pool', code: 'CD', ukDirector: 'Marketing', note: 'Fewer donors interested in the types of work or locations in which PA operates' },
+      { name: 'Funding base', code: 'FB', ukDirector: 'Marketing', note: 'Funding is overly dependent on too few donors or sources' },
+      { name: 'Results based', code: 'RB', ukDirector: 'Marketing', note: 'A changed funding model increases financial risk to PA' },
+      { name: 'Proposal quality', code: 'PQ', ukDirector: 'Marketing', note: 'Reduced ability to identify opportunities and write good proposals on time' },
+      { name: 'Cost recovery', code: 'CR', ukDirector: 'Marketing', note: 'Reduced ability to cover costs, possibly requiring higher levels of co-funding' },
+      { name: 'Secured income', code: 'SI', ukDirector: 'Marketing', note: 'Overall low levels of secured income and a weak pipeline' },
+      { name: 'Relationships & Profile', code: 'RP', ukDirector: 'Marketing', note: 'Close associations with another organization may cause reputational damage' },
+      { name: 'Brand', code: 'BR', ukDirector: 'Marketing', note: 'Limited return on investment, for example due to low internal take-up' }
     ]
   },
   {
@@ -62,16 +59,15 @@ export const DEFAULT_RISK_CATEGORIES = [
     code: 'PD',
     description: 'Project design, implementation, partners and donor compliance',
     subCategories: [
-      { name: 'Project design', code: 'PD', note: 'Deficiencies in intervention design' },
-      { name: 'Partner capacity', code: 'PC', note: 'Insufficient partner skills or execution capacity' },
-      { name: 'Partner management', code: 'PM', note: 'Weak partner monitoring or oversight' },
-      { name: 'Documentation', code: 'DO', note: 'Failure to maintain proper audit trails and records' },
-      { name: 'Project Implementation', code: 'PI', note: 'Operational bottlenecks in delivery' },
-      { name: 'Project Impact', code: 'IP', note: 'Failure to achieve target development outcomes' },
-      { name: 'Learning', code: 'LE', note: 'Failure to capture and implement lessons learned' },
-      { name: 'Project specific', code: 'PS', note: 'Risks unique to specific local field projects' },
-      { name: 'Donor compliance', code: 'DC', note: 'Breach of grant contract terms' },
-      { name: 'Other', code: 'OT', note: 'Other operational delivery risks' }
+      { name: 'Project design', code: 'PD', ukDirector: 'International', note: 'Failure to design good projects' },
+      { name: 'Partner capacity', code: 'PC', ukDirector: 'International', note: 'Insufficient partners with the necessary skills and capacity' },
+      { name: 'Partner management', code: 'PM', ukDirector: 'International', note: 'Weak partner management, including financial monitoring' },
+      { name: 'Documentation', code: 'DO', ukDirector: 'International', note: 'Failure to create and maintain documentation; the source text is incomplete' },
+      { name: 'Project Implementation', code: 'PI', ukDirector: 'International', note: 'Not specified in the source' },
+      { name: 'Project Impact', code: 'IP', ukDirector: 'Influence', note: 'Projects fail to achieve their intended impact or have negative impacts' },
+      { name: 'Learning', code: 'LE', ukDirector: 'Influence', note: 'Failure to learn from projects and adapt' },
+      { name: 'Project-specific', code: 'PS', ukDirector: 'International', note: 'Some RCOs have one or more risks related to specific projects' },
+      { name: 'Donor compliance', code: 'DC', ukDirector: 'International', note: 'Not specified in the source' }
     ]
   },
   {
@@ -79,10 +75,9 @@ export const DEFAULT_RISK_CATEGORIES = [
     code: 'PE',
     description: 'Human resources, staff capacity, safety and safeguarding',
     subCategories: [
-      { name: 'Staff capacity', code: 'SC', note: 'Inability to recruit & retain key talent' },
-      { name: 'Staff development', code: 'SD', note: 'Workforce motivation, culture, and retention' },
-      { name: 'Safeguarding', code: 'SG', note: 'Protection of beneficiaries, staff, and vulnerable groups' },
-      { name: 'Other', code: 'OT', note: 'Other HR and people risks' }
+      { name: 'Staff capacity', code: 'SC', ukDirector: 'Finance', note: 'Inability to recruit and retain a workforce with sufficient numbers and skills' },
+      { name: 'Staff development', code: 'SD', ukDirector: 'Finance', note: 'Inability to motivate the workforce and develop skills; may include poor organizational culture' },
+      { name: 'Safeguarding', code: 'SG', ukDirector: 'Finance', note: 'Not specified in the source' }
     ]
   },
   {
@@ -90,13 +85,12 @@ export const DEFAULT_RISK_CATEGORIES = [
     code: 'EX',
     description: 'Macro environment, security, climate, and public health',
     subCategories: [
-      { name: 'Natural disasters', code: 'ND', note: 'Floods, cyclones, earthquakes, climate events' },
-      { name: 'Public Health concerns', code: 'PH', note: 'Epidemics, health emergencies' },
-      { name: 'Civil unrest & terrorism', code: 'CT', note: 'Security threats, riots, conflict' },
-      { name: 'Political Unrest', code: 'PU', note: 'Electoral tension, policy shifts' },
-      { name: 'Macroeconomic shocks', code: 'MS', note: 'Inflation, currency devaluation, bank instability' },
-      { name: 'Security Other', code: 'SO', note: 'Field movement, local land/resource disputes' },
-      { name: 'Other', code: 'OT', note: 'Other external threats' }
+      { name: 'Natural disasters', code: 'ND', ukDirector: 'International', note: 'For example, earthquakes and typhoons' },
+      { name: 'Public Health concerns', code: 'PH', ukDirector: 'International', note: 'For example, COVID-19, which may also affect other risks' },
+      { name: 'Civil unrest & terrorism', code: 'CT', ukDirector: 'International', note: 'Not specified in the source' },
+      { name: 'Political Unrest', code: 'PU', ukDirector: 'International', note: 'Not specified in the source' },
+      { name: 'Macroeconomic shocks', code: 'MS', ukDirector: 'International', note: 'For example, economic unrest and failing banking systems' },
+      { name: 'Security Other', code: 'SO', ukDirector: 'International', note: 'For example, land disputes and fuel disputes' }
     ]
   }
 ];
@@ -274,9 +268,25 @@ export const seedRiskDataIfEmpty = async () => {
   }
 
   try {
-    const categoryCount = await RiskCategory.countDocuments();
-    if (categoryCount === 0) {
-      await RiskCategory.insertMany(DEFAULT_RISK_CATEGORIES);
+    for (const defCat of DEFAULT_RISK_CATEGORIES) {
+      const existing = await RiskCategory.findOne({ name: defCat.name });
+      if (!existing) {
+        await RiskCategory.create(defCat);
+      } else {
+        existing.code = defCat.code;
+        existing.description = defCat.description;
+        defCat.subCategories.forEach(defSub => {
+          const matchSub = existing.subCategories.find(s => s.name.toLowerCase() === defSub.name.toLowerCase());
+          if (matchSub) {
+            matchSub.code = defSub.code;
+            matchSub.ukDirector = defSub.ukDirector;
+            matchSub.note = defSub.note;
+          } else {
+            existing.subCategories.push(defSub);
+          }
+        });
+        await existing.save();
+      }
     }
 
     const projectCount = await RiskProject.countDocuments();
@@ -965,6 +975,10 @@ export const createRiskRecord = async (req, res) => {
       dateAdded,
       category,
       subCategory,
+      categoryCode,
+      subCode,
+      ukDirector,
+      explanatoryNote,
       description,
       riskOwner,
       likelihood,
@@ -1035,6 +1049,23 @@ export const createRiskRecord = async (req, res) => {
         assignedRiskNo = maxNo + 1;
       }
 
+      // Resolve Classification Codes & UK Director if not passed explicitly
+      let finalCategoryCode = (categoryCode || '').trim();
+      let finalSubCode = (subCode || '').trim();
+      let finalUkDirector = (ukDirector || '').trim();
+      let finalExplanatoryNote = (explanatoryNote || '').trim();
+
+      const matchedCat = DEFAULT_RISK_CATEGORIES.find(c => c.name.toLowerCase() === category.trim().toLowerCase());
+      if (matchedCat) {
+        if (!finalCategoryCode) finalCategoryCode = matchedCat.code;
+        const matchedSub = matchedCat.subCategories.find(s => s.name.toLowerCase() === (subCategory || '').trim().toLowerCase());
+        if (matchedSub) {
+          if (!finalSubCode) finalSubCode = matchedSub.code;
+          if (!finalUkDirector) finalUkDirector = matchedSub.ukDirector;
+          if (!finalExplanatoryNote) finalExplanatoryNote = matchedSub.note;
+        }
+      }
+
       const newRec = {
         _id: 'risk-rec-' + Date.now(),
         projectId,
@@ -1042,6 +1073,10 @@ export const createRiskRecord = async (req, res) => {
         dateAdded: dateAdded ? new Date(dateAdded).toISOString() : new Date().toISOString(),
         category: category.trim(),
         subCategory: (subCategory || '').trim(),
+        categoryCode: finalCategoryCode,
+        subCode: finalSubCode,
+        ukDirector: finalUkDirector,
+        explanatoryNote: finalExplanatoryNote,
         description: description.trim(),
         riskOwner: (riskOwner || '').trim(),
         likelihood: parsedLikelihood,
@@ -1086,12 +1121,33 @@ export const createRiskRecord = async (req, res) => {
       assessmentRating = getRiskRating(assessmentScore);
     }
 
+    // Resolve Classification Codes & UK Director if not passed explicitly
+    let finalCategoryCode = (categoryCode || '').trim();
+    let finalSubCode = (subCode || '').trim();
+    let finalUkDirector = (ukDirector || '').trim();
+    let finalExplanatoryNote = (explanatoryNote || '').trim();
+
+    const matchedCat = DEFAULT_RISK_CATEGORIES.find(c => c.name.toLowerCase() === category.trim().toLowerCase());
+    if (matchedCat) {
+      if (!finalCategoryCode) finalCategoryCode = matchedCat.code;
+      const matchedSub = matchedCat.subCategories.find(s => s.name.toLowerCase() === (subCategory || '').trim().toLowerCase());
+      if (matchedSub) {
+        if (!finalSubCode) finalSubCode = matchedSub.code;
+        if (!finalUkDirector) finalUkDirector = matchedSub.ukDirector;
+        if (!finalExplanatoryNote) finalExplanatoryNote = matchedSub.note;
+      }
+    }
+
     const newRecord = await RiskRecord.create({
       projectId,
       riskNo: assignedRiskNo,
       dateAdded: dateAdded ? new Date(dateAdded) : new Date(),
       category: category.trim(),
       subCategory: (subCategory || '').trim(),
+      categoryCode: finalCategoryCode,
+      subCode: finalSubCode,
+      ukDirector: finalUkDirector,
+      explanatoryNote: finalExplanatoryNote,
       description: description.trim(),
       riskOwner: (riskOwner || '').trim(),
       likelihood: parsedLikelihood,
@@ -1332,7 +1388,7 @@ export const getCategories = async (req, res) => {
  */
 export const createCategoryOrSub = async (req, res) => {
   try {
-    const { categoryName, code, description, subCategoryName, subCategoryCode, note } = req.body;
+    const { categoryName, code, description, subCategoryName, subCategoryCode, ukDirector, note } = req.body;
 
     if (!categoryName || !categoryName.trim()) {
       return res.status(400).json({ success: false, message: 'Category Name is required' });
@@ -1348,6 +1404,7 @@ export const createCategoryOrSub = async (req, res) => {
           existing.subCategories.push({
             name: subCategoryName.trim(),
             code: (subCategoryCode || '').trim(),
+            ukDirector: (ukDirector || '').trim(),
             note: (note || '').trim()
           });
           return res.status(200).json({ success: true, message: 'Subcategory added successfully', data: existing });
@@ -1361,6 +1418,7 @@ export const createCategoryOrSub = async (req, res) => {
         subCategories: subCategoryName ? [{
           name: subCategoryName.trim(),
           code: (subCategoryCode || '').trim(),
+          ukDirector: (ukDirector || '').trim(),
           note: (note || '').trim()
         }] : [],
         isCustom: true
@@ -1385,6 +1443,7 @@ export const createCategoryOrSub = async (req, res) => {
         existingCat.subCategories.push({
           name: trimmedSub,
           code: (subCategoryCode || '').trim(),
+          ukDirector: (ukDirector || '').trim(),
           note: (note || '').trim()
         });
 
@@ -1406,6 +1465,7 @@ export const createCategoryOrSub = async (req, res) => {
       subCategories: subCategoryName ? [{
         name: subCategoryName.trim(),
         code: (subCategoryCode || '').trim(),
+        ukDirector: (ukDirector || '').trim(),
         note: (note || '').trim()
       }] : [],
       isCustom: true

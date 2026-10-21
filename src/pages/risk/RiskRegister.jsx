@@ -19,6 +19,7 @@ import CategoryModal from './CategoryModal';
 import HeatmapModal from './HeatmapModal';
 import RiskGuidance from './RiskGuidance';
 import RiskSummary from './RiskSummary';
+import RiskCategoriesView from './RiskCategoriesView';
 
 export default function RiskRegister() {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ export default function RiskRegister() {
   const [ownerFilter, setOwnerFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
-  const [activeTab, setActiveTab] = useState('register'); // 'register' | 'summary' | 'guidance'
+  const [activeTab, setActiveTab] = useState('register'); // 'register' | 'summary' | 'classifications' | 'guidance'
 
   // State: Sorting & Pagination
   const [sortBy, setSortBy] = useState('riskNo');
@@ -49,9 +50,10 @@ export default function RiskRegister() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // State: Modals
+  // State: Modals & Classification Prefill
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
   const [selectedRisk, setSelectedRisk] = useState(null);
+  const [prefillClassification, setPrefillClassification] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailRisk, setDetailRisk] = useState(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -80,8 +82,8 @@ export default function RiskRegister() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
-    if (tabParam === 'guidance' || tabParam === 'summary') {
-      setActiveTab(tabParam);
+    if (tabParam === 'guidance' || tabParam === 'summary' || tabParam === 'classifications' || tabParam === 'codes') {
+      setActiveTab(tabParam === 'codes' ? 'classifications' : tabParam);
     }
     fetchInitialData();
   }, []);
@@ -502,6 +504,23 @@ export default function RiskRegister() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('classifications');
+                window.history.replaceState(null, '', '?tab=classifications');
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'classifications' || activeTab === 'codes'
+                  ? 'bg-white shadow-xs text-indigo-600'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Categories &amp; Codes</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-mono font-bold">
+                37
+              </span>
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('guidance');
                 window.history.replaceState(null, '', '?tab=guidance');
               }}
@@ -528,9 +547,12 @@ export default function RiskRegister() {
               </button>
 
               <button
-                onClick={() => setIsCategoryModalOpen(true)}
+                onClick={() => {
+                  setActiveTab('classifications');
+                  window.history.replaceState(null, '', '?tab=classifications');
+                }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs transition-all cursor-pointer"
-                title="Configure Categories and Sub-categories"
+                title="View Risk Categories, Codes, and Notes Classification System"
               >
                 <Layers className="w-4 h-4 text-indigo-600" />
                 <span className="hidden sm:inline">Classifications</span>
@@ -560,6 +582,7 @@ export default function RiskRegister() {
 
           <button
             onClick={() => {
+              setPrefillClassification(null);
               setSelectedRisk(null);
               setIsRiskModalOpen(true);
             }}
@@ -596,6 +619,7 @@ export default function RiskRegister() {
             window.history.replaceState(null, '', '?tab=guidance');
           }}
           onAddRisk={() => {
+            setPrefillClassification(null);
             setSelectedRisk(null);
             setIsRiskModalOpen(true);
           }}
@@ -603,6 +627,28 @@ export default function RiskRegister() {
             setDetailRisk(record);
             setIsDetailModalOpen(true);
           }}
+        />
+      ) : (activeTab === 'classifications' || activeTab === 'codes') ? (
+        <RiskCategoriesView
+          categories={categories}
+          onSwitchToRegister={() => {
+            setActiveTab('register');
+            window.history.replaceState(null, '', window.location.pathname);
+          }}
+          onSwitchToSummary={() => {
+            setActiveTab('summary');
+            window.history.replaceState(null, '', '?tab=summary');
+          }}
+          onSwitchToGuidance={() => {
+            setActiveTab('guidance');
+            window.history.replaceState(null, '', '?tab=guidance');
+          }}
+          onUseClassification={(item) => {
+            setSelectedRisk(null);
+            setPrefillClassification(item);
+            setIsRiskModalOpen(true);
+          }}
+          onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
         />
       ) : (
         <>
@@ -1205,12 +1251,31 @@ export default function RiskRegister() {
 
                       {/* 3. Category */}
                       <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="font-semibold text-slate-900">{risk.category}</span>
+                        <div className="flex items-center gap-1.5">
+                          {risk.categoryCode && (
+                            <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-mono font-bold">
+                              {risk.categoryCode}
+                            </span>
+                          )}
+                          <span className="font-semibold text-slate-900">{risk.category}</span>
+                        </div>
                       </td>
 
                       {/* 4. Sub-category */}
                       <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="text-slate-500 font-medium">{risk.subCategory || '—'}</span>
+                        <div className="flex items-center gap-1.5">
+                          {risk.subCode && (
+                            <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-mono font-bold">
+                              {risk.subCode}
+                            </span>
+                          )}
+                          <span className="text-slate-600 font-medium">{risk.subCategory || '—'}</span>
+                          {risk.ukDirector && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 font-semibold" title={`UK Director: ${risk.ukDirector}`}>
+                              {risk.ukDirector}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* 5. Description of Risk */}
@@ -1468,9 +1533,14 @@ export default function RiskRegister() {
       {/* 1. Add / Edit Risk Modal */}
       <RiskFormModal
         isOpen={isRiskModalOpen}
-        onClose={() => setIsRiskModalOpen(false)}
+        onClose={() => {
+          setIsRiskModalOpen(false);
+          setSelectedRisk(null);
+          setPrefillClassification(null);
+        }}
         onSave={handleSaveRisk}
         riskRecord={selectedRisk}
+        prefillData={prefillClassification}
         projectId={selectedProjectId}
         categories={categories}
         onOpenCategoryModal={() => setIsCategoryModalOpen(true)}

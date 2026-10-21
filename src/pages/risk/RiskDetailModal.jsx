@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   X, ShieldAlert, Calendar, User, Clock, 
-  CheckCircle2, AlertTriangle, Edit3, Trash2, ArrowRight 
+  CheckCircle2, AlertTriangle, Edit3, Trash2, ArrowRight, Info 
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -58,16 +58,20 @@ export default function RiskDetailModal({
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
                   Risk #{riskRecord.riskNo}
                 </span>
                 <span className="text-slate-300">•</span>
-                <span className="text-xs font-semibold text-slate-800">{riskRecord.category}</span>
+                <span className="text-xs font-semibold text-slate-800">
+                  {riskRecord.categoryCode ? `[${riskRecord.categoryCode}] ` : ''}{riskRecord.category}
+                </span>
                 {riskRecord.subCategory && (
                   <>
                     <span className="text-slate-300">/</span>
-                    <span className="text-xs text-slate-500">{riskRecord.subCategory}</span>
+                    <span className="text-xs text-slate-600 font-medium">
+                      {riskRecord.subCode ? `[${riskRecord.subCode}] ` : ''}{riskRecord.subCategory}
+                    </span>
                   </>
                 )}
               </div>
@@ -161,6 +165,39 @@ export default function RiskDetailModal({
                 {riskRecord.status}
               </span>
             </div>
+          </div>
+
+          {/* Dedicated CBDP Classification & Notes Card */}
+          <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 space-y-2 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-100/80 pb-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                  CBDP Classification:
+                </span>
+                <span className="font-mono text-xs font-bold text-indigo-800 bg-white px-2.5 py-0.5 rounded-lg border border-indigo-200 shadow-2xs">
+                  [{riskRecord.categoryCode || 'CAT'}] {riskRecord.category} › [{riskRecord.subCode || 'SUB'}] {riskRecord.subCategory || 'General'}
+                </span>
+              </div>
+              {riskRecord.ukDirector && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-slate-500">Accountable UK Director:</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
+                    {riskRecord.ukDirector}
+                  </span>
+                </div>
+              )}
+            </div>
+            {riskRecord.explanatoryNote && (
+              <div className="text-[11px] text-slate-600 flex items-start gap-2 pt-0.5">
+                <Info className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-slate-700">Official Explanatory Note: </strong>
+                  <span className={riskRecord.explanatoryNote.toLowerCase().includes('not specified') ? 'italic text-slate-400' : 'text-slate-700'}>
+                    {riskRecord.explanatoryNote}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mitigation Plan */}

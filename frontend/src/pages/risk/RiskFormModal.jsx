@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, AlertTriangle, ShieldAlert, CheckCircle2, 
   HelpCircle, Calendar, User, Clock, Loader2, Save, Plus,
-  FileText, Activity, CheckSquare, RefreshCw, AlertCircle, BookOpen
+  FileText, Activity, CheckSquare, RefreshCw, AlertCircle, BookOpen,
+  Info, Tag
 } from 'lucide-react';
 import { 
   calculateRiskScore, 
@@ -11,12 +12,14 @@ import {
   LIKELIHOOD_LEVELS, 
   IMPACT_LEVELS 
 } from '../../utils/riskCalculations.js';
+import { CBDP_STANDARD_CLASSIFICATIONS } from './RiskCategoriesView.jsx';
 
 export default function RiskFormModal({
   isOpen,
   onClose,
   onSave,
   riskRecord = null,
+  prefillData = null,
   projectId,
   categories = [],
   onOpenCategoryModal,
@@ -28,6 +31,10 @@ export default function RiskFormModal({
     dateAdded: new Date().toISOString().split('T')[0],
     category: '',
     subCategory: '',
+    categoryCode: '',
+    subCode: '',
+    ukDirector: '',
+    explanatoryNote: '',
     description: '',
     riskOwner: 'Project Manager',
     likelihood: 3,
@@ -47,13 +54,71 @@ export default function RiskFormModal({
   const [errors, setErrors] = useState({});
   const [availableSubCategories, setAvailableSubCategories] = useState([]);
 
+  // Resolve official CBDP meta (code, subcode, director, note) for category & subcategory
+  const resolveClassificationMeta = (catName, subName) => {
+    let catCode = '';
+    let subCode = '';
+    let ukDirector = '';
+    let note = '';
+
+    if (categories && categories.length > 0) {
+      const matchedCat = categories.find(c => c.name.toLowerCase() === (catName || '').toLowerCase());
+      if (matchedCat) {
+        catCode = matchedCat.code || '';
+        const matchedSub = matchedCat.subCategories?.find(s => s.name.toLowerCase() === (subName || '').toLowerCase());
+        if (matchedSub) {
+          subCode = matchedSub.code || '';
+          ukDirector = matchedSub.ukDirector || '';
+          note = matchedSub.note || '';
+        }
+      }
+    }
+
+    if (!subCode || !ukDirector || !note) {
+      const stdMatch = CBDP_STANDARD_CLASSIFICATIONS.find(
+        item => item.category.toLowerCase() === (catName || '').toLowerCase() &&
+                item.subCategory.toLowerCase() === (subName || '').toLowerCase()
+      );
+      if (stdMatch) {
+        if (!catCode) catCode = stdMatch.categoryCode;
+        if (!subCode) subCode = stdMatch.subCode;
+        if (!ukDirector) ukDirector = stdMatch.ukDirector;
+        if (!note) note = stdMatch.note;
+      }
+    }
+
+    return { catCode, subCode, ukDirector, note };
+  };
+
+  const getDirectorTheme = (director) => {
+    switch (director) {
+      case 'GMT':
+        return { bg: 'bg-purple-50 text-purple-700 border-purple-200', dot: 'bg-purple-500' };
+      case 'International':
+        return { bg: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500' };
+      case 'Finance':
+        return { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' };
+      case 'Marketing':
+        return { bg: 'bg-amber-50 text-amber-800 border-amber-200', dot: 'bg-amber-500' };
+      case 'Influence':
+        return { bg: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' };
+      default:
+        return { bg: 'bg-slate-50 text-slate-700 border-slate-200', dot: 'bg-slate-400' };
+    }
+  };
+
   useEffect(() => {
     if (riskRecord) {
+      const meta = resolveClassificationMeta(riskRecord.category, riskRecord.subCategory);
       setFormData({
         riskNo: riskRecord.riskNo || '',
         dateAdded: riskRecord.dateAdded ? new Date(riskRecord.dateAdded).toISOString().split('T')[0] : '',
         category: riskRecord.category || '',
         subCategory: riskRecord.subCategory || '',
+        categoryCode: riskRecord.categoryCode || meta.catCode || '',
+        subCode: riskRecord.subCode || meta.subCode || '',
+        ukDirector: riskRecord.ukDirector || meta.ukDirector || '',
+        explanatoryNote: riskRecord.explanatoryNote || meta.note || '',
         description: riskRecord.description || '',
         riskOwner: riskRecord.riskOwner || '',
         likelihood: riskRecord.likelihood || 3,
@@ -69,12 +134,45 @@ export default function RiskFormModal({
         assessedImpact: riskRecord.assessedImpact || '',
         status: riskRecord.status || 'OPEN'
       });
-    } else {
+    } else if (prefillData) {
+      const meta = resolveClassificationMeta(prefillData.category, prefillData.subCategory);
       setFormData({
         riskNo: '',
         dateAdded: new Date().toISOString().split('T')[0],
-        category: categories[0]?.name || 'People',
-        subCategory: categories[0]?.subCategories?.[0]?.name || '',
+        category: prefillData.category || '',
+        subCategory: prefillData.subCategory || '',
+        categoryCode: prefillData.categoryCode || meta.catCode || '',
+        subCode: prefillData.subCode || meta.subCode || '',
+        ukDirector: prefillData.ukDirector || meta.ukDirector || '',
+        explanatoryNote: prefillData.note || prefillData.explanatoryNote || meta.note || '',
+        description: '',
+        riskOwner: 'Project Manager',
+        likelihood: 3,
+        impact: 3,
+        targetScore: 6,
+        mitigationAction: '',
+        actionDueDate: '',
+        personMonitoring: '',
+        notes: '',
+        assessmentResult: '',
+        reviewDate: '',
+        assessedLikelihood: '',
+        assessedImpact: '',
+        status: 'OPEN'
+      });
+    } else {
+      const defaultCat = categories[0]?.name || 'People';
+      const defaultSub = categories[0]?.subCategories?.[0]?.name || 'Safeguarding';
+      const meta = resolveClassificationMeta(defaultCat, defaultSub);
+      setFormData({
+        riskNo: '',
+        dateAdded: new Date().toISOString().split('T')[0],
+        category: defaultCat,
+        subCategory: defaultSub,
+        categoryCode: categories[0]?.code || meta.catCode || 'PE',
+        subCode: categories[0]?.subCategories?.[0]?.code || meta.subCode || 'SG',
+        ukDirector: categories[0]?.subCategories?.[0]?.ukDirector || meta.ukDirector || 'Finance',
+        explanatoryNote: categories[0]?.subCategories?.[0]?.note || meta.note || 'Not specified in the source',
         description: '',
         riskOwner: 'Project Manager',
         likelihood: 3,
@@ -92,7 +190,7 @@ export default function RiskFormModal({
       });
     }
     setErrors({});
-  }, [riskRecord, isOpen, categories]);
+  }, [riskRecord, prefillData, isOpen, categories]);
 
   // Update available subcategories when category changes
   useEffect(() => {
@@ -101,12 +199,58 @@ export default function RiskFormModal({
       if (selected && selected.subCategories) {
         setAvailableSubCategories(selected.subCategories);
       } else {
-        setAvailableSubCategories([]);
+        const stdSubs = CBDP_STANDARD_CLASSIFICATIONS
+          .filter(c => c.category.toLowerCase() === formData.category.toLowerCase())
+          .map(c => ({ name: c.subCategory, code: c.subCode, ukDirector: c.ukDirector, note: c.note }));
+        setAvailableSubCategories(stdSubs);
       }
     } else {
       setAvailableSubCategories([]);
     }
   }, [formData.category, categories]);
+
+  const handleCategoryChange = (e) => {
+    const newCatName = e.target.value;
+    const matchedCat = categories.find(c => c.name.toLowerCase() === newCatName.toLowerCase());
+    let subs = matchedCat?.subCategories || [];
+    if (subs.length === 0) {
+      subs = CBDP_STANDARD_CLASSIFICATIONS
+        .filter(c => c.category.toLowerCase() === newCatName.toLowerCase())
+        .map(c => ({ name: c.subCategory, code: c.subCode, ukDirector: c.ukDirector, note: c.note }));
+    }
+    setAvailableSubCategories(subs);
+
+    const firstSub = subs[0] || null;
+    const meta = resolveClassificationMeta(newCatName, firstSub?.name);
+
+    setFormData(prev => ({
+      ...prev,
+      category: newCatName,
+      subCategory: firstSub?.name || '',
+      categoryCode: matchedCat?.code || meta.catCode || '',
+      subCode: firstSub?.code || meta.subCode || '',
+      ukDirector: firstSub?.ukDirector || meta.ukDirector || '',
+      explanatoryNote: firstSub?.note || meta.note || ''
+    }));
+
+    if (errors.category) {
+      setErrors(prev => ({ ...prev, category: null }));
+    }
+  };
+
+  const handleSubCategoryChange = (e) => {
+    const newSubName = e.target.value;
+    const matchedSub = availableSubCategories.find(s => s.name.toLowerCase() === newSubName.toLowerCase());
+    const meta = resolveClassificationMeta(formData.category, newSubName);
+
+    setFormData(prev => ({
+      ...prev,
+      subCategory: newSubName,
+      subCode: matchedSub?.code || meta.subCode || prev.subCode,
+      ukDirector: matchedSub?.ukDirector || meta.ukDirector || prev.ukDirector,
+      explanatoryNote: matchedSub?.note || meta.note || prev.explanatoryNote
+    }));
+  };
 
   if (!isOpen) return null;
 
@@ -156,6 +300,10 @@ export default function RiskFormModal({
     const payload = {
       ...formData,
       projectId,
+      categoryCode: formData.categoryCode,
+      subCode: formData.subCode,
+      ukDirector: formData.ukDirector,
+      explanatoryNote: formData.explanatoryNote,
       likelihood: Number(formData.likelihood),
       impact: Number(formData.impact),
       targetScore: formData.targetScore !== '' ? Number(formData.targetScore) : null,
@@ -297,14 +445,16 @@ export default function RiskFormModal({
                 <select
                   name="category"
                   value={formData.category}
-                  onChange={handleChange}
+                  onChange={handleCategoryChange}
                   className={`w-full px-3.5 py-2 rounded-xl border text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs cursor-pointer ${
                     errors.category ? 'border-rose-400 bg-rose-50/20' : 'border-slate-200'
                   }`}
                 >
                   <option value="">-- Select Category --</option>
                   {categories.map(c => (
-                    <option key={c.name} value={c.name}>{c.name}</option>
+                    <option key={c.name} value={c.name}>
+                      [{c.code || 'CAT'}] {c.name}
+                    </option>
                   ))}
                 </select>
                 {errors.category && <p className="mt-1 text-[11px] text-rose-600 font-semibold">{errors.category}</p>}
@@ -318,16 +468,73 @@ export default function RiskFormModal({
                 <select
                   name="subCategory"
                   value={formData.subCategory}
-                  onChange={handleChange}
+                  onChange={handleSubCategoryChange}
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs cursor-pointer"
                 >
                   <option value="">-- Select Sub-category --</option>
                   {availableSubCategories.map(s => (
-                    <option key={s.name} value={s.name}>{s.name}</option>
+                    <option key={s.name} value={s.name}>
+                      [{s.code || 'SUB'}] {s.name}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
+
+            {/* Official CBDP Classification Meta Banner */}
+            {formData.category && (
+              <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/90 shadow-2xs space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      CBDP Classification:
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <span className="bg-indigo-600 text-white px-1.5 py-0.2 rounded text-[10px]">
+                        {formData.categoryCode || 'CAT'}
+                      </span>
+                      <span>{formData.category}</span>
+                      <span className="text-slate-400 font-sans">›</span>
+                      <span className="bg-indigo-100 text-indigo-900 px-1.5 py-0.2 rounded text-[10px]">
+                        {formData.subCode || 'SUB'}
+                      </span>
+                      <span>{formData.subCategory || 'General'}</span>
+                    </span>
+                  </div>
+
+                  {formData.ukDirector && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-slate-500">UK Director:</span>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getDirectorTheme(formData.ukDirector).bg}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${getDirectorTheme(formData.ukDirector).dot}`}></span>
+                        <span>{formData.ukDirector}</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Explanatory Note Callout */}
+                <div className="text-[11px] text-slate-600 flex items-start gap-2 pt-1 border-t border-slate-200/60">
+                  <Info className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="text-slate-700">Official Explanatory Note: </strong>
+                    <span className={!formData.explanatoryNote || formData.explanatoryNote.toLowerCase().includes('not specified in the source') ? 'italic text-slate-400' : 'text-slate-700 font-medium'}>
+                      {formData.explanatoryNote || 'Not specified in the source document.'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Duplicate Code Overlap Advisory if FS, SG, or PD */}
+                {['FS', 'SG', 'PD'].includes(formData.subCode) && (
+                  <div className="text-[10px] text-amber-800 bg-amber-50/70 p-2 rounded-lg border border-amber-200 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                    <span>
+                      <strong>Shared Code Standard:</strong> "{formData.subCode}" is also referenced as an organizational code. This record is accurately filed under <strong>{formData.category}</strong>.
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Description of Risk */}
             <div>
