@@ -50,35 +50,35 @@ export default function HeatmapModal({ isOpen, onClose, heatmapData, onSelectCel
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh] sm:max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200/80 bg-slate-50/70 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 flex-shrink-0">
-              <Flame className="w-5 h-5" />
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200/80 bg-slate-50/70 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 flex-shrink-0">
+              <Flame className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 leading-tight">
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight truncate">
                 5×5 Risk Assessment Heat Matrix
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate">
                 Formula: Score = (Likelihood × Impact) + Impact
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer flex-shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto custom-scrollbar flex-1">
           {/* Legend Banner */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 p-3 sm:p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs">
             <div className="flex items-center gap-2.5">
               <span className="w-3 h-3 rounded-full bg-rose-500 flex-shrink-0" />
               <div>
@@ -103,7 +103,11 @@ export default function HeatmapModal({ isOpen, onClose, heatmapData, onSelectCel
           </div>
 
           {/* Interactive Matrix */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto touch-pan-x">
+            {/* Mobile swipe hint */}
+            <div className="sm:hidden text-[11px] text-slate-400 pb-1.5 flex items-center gap-1 font-medium">
+              <span>Swipe horizontally to view full matrix →</span>
+            </div>
             <div className="min-w-[560px]">
               {/* Top Impact Axis Label */}
               <div className="text-center font-bold text-xs uppercase tracking-wider text-slate-700 mb-2">
@@ -188,10 +192,10 @@ export default function HeatmapModal({ isOpen, onClose, heatmapData, onSelectCel
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-6 py-3.5 border-t border-slate-200/80 bg-slate-50/70">
+        <div className="flex justify-end px-4 py-3 sm:px-6 sm:py-3.5 border-t border-slate-200/80 bg-slate-50/70">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors shadow-xs cursor-pointer text-center"
           >
             Close Matrix
           </button>

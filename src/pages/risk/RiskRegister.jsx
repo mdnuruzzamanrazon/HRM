@@ -455,17 +455,17 @@ export default function RiskRegister() {
       {/* ========================================================= */}
       {/* REDESIGNED TOP HEADER & MODULE NAVIGATION BAR             */}
       {/* ========================================================= */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-5">
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-4 sm:p-6 space-y-4 sm:space-y-5">
         {/* ROW 1: BRANDING & GLOBAL ACTIONS */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           {/* Left: Icon Badge & Title Stack */}
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 flex items-center justify-center flex-shrink-0">
-              <ShieldAlert className="w-6 h-6 stroke-[2.2]" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 flex items-center justify-center flex-shrink-0">
+              <ShieldAlert className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
             </div>
             <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-heading">
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tracking-tight font-heading">
                   Project Risk Register
                 </h1>
                 <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
@@ -482,13 +482,13 @@ export default function RiskRegister() {
             </div>
           </div>
 
-          {/* Right: Action Buttons Cluster */}
-          <div className="flex flex-wrap items-center gap-2.5 sm:self-auto self-start">
+          {/* Right: Action Buttons Cluster (Responsive 2-column on mobile, inline flex on desktop) */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 w-full lg:w-auto">
             {activeTab === 'register' ? (
               <>
                 <button
                   onClick={() => setIsHeatmapOpen(true)}
-                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-all cursor-pointer"
+                  className="col-span-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-all cursor-pointer"
                   title="Open 5x5 Likelihood x Impact Heat Matrix"
                 >
                   <Flame className="w-4 h-4 text-amber-500" />
@@ -497,7 +497,7 @@ export default function RiskRegister() {
 
                 <button
                   onClick={handleExportCSV}
-                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-all cursor-pointer"
+                  className="col-span-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-all cursor-pointer"
                   title="Download CSV matching CBDP Risk Register spreadsheet format"
                 >
                   <Download className="w-4 h-4 text-slate-500" />
@@ -510,7 +510,7 @@ export default function RiskRegister() {
                   setActiveTab('register');
                   window.history.replaceState(null, '', window.location.pathname);
                 }}
-                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-all cursor-pointer"
+                className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-2xs transition-all cursor-pointer"
               >
                 <TableIcon className="w-4 h-4 text-slate-500" />
                 <span>Back to Register</span>
@@ -523,7 +523,7 @@ export default function RiskRegister() {
                 setSelectedRisk(null);
                 setIsRiskModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/25 transition-all cursor-pointer"
+              className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/25 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Add Risk Record</span>
@@ -532,98 +532,100 @@ export default function RiskRegister() {
         </div>
 
         {/* ROW 2: DEDICATED MODULE TAB NAVIGATION BAR */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
-          {/* Main Segmented Module Tabs */}
-          <div className="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 overflow-x-auto scrollbar-none max-w-full">
-            <button
-              onClick={() => {
-                setActiveTab('register');
-                window.history.replaceState(null, '', window.location.pathname);
-              }}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'register'
-                  ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <TableIcon className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Risk Register</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-                activeTab === 'register' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'
-              }`}>
-                {totalCount}
-              </span>
-            </button>
+        <div className="pt-3.5 sm:pt-4 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Main Segmented Module Tabs (Scrollable on mobile with smooth touch drag) */}
+          <div className="relative w-full md:w-auto overflow-hidden">
+            <div className="flex items-center bg-slate-100/90 p-1 sm:p-1.5 rounded-2xl border border-slate-200/80 overflow-x-auto scrollbar-none touch-pan-x gap-1 scroll-smooth">
+              <button
+                onClick={() => {
+                  setActiveTab('register');
+                  window.history.replaceState(null, '', window.location.pathname);
+                }}
+                className={`inline-flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-shrink-0 ${
+                  activeTab === 'register'
+                    ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                <TableIcon className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Risk Register</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                  activeTab === 'register' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  {totalCount}
+                </span>
+              </button>
 
-            <button
-              onClick={() => {
-                setActiveTab('summary');
-                window.history.replaceState(null, '', '?tab=summary');
-              }}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'summary'
-                  ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Summary Dashboard</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('summary');
+                  window.history.replaceState(null, '', '?tab=summary');
+                }}
+                className={`inline-flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-shrink-0 ${
+                  activeTab === 'summary'
+                    ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Summary Dashboard</span>
+              </button>
 
-            <button
-              onClick={() => {
-                setActiveTab('classifications');
-                window.history.replaceState(null, '', '?tab=classifications');
-              }}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'classifications' || activeTab === 'codes'
-                  ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Categories &amp; Codes</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-                activeTab === 'classifications' || activeTab === 'codes' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'
-              }`}>
-                43
-              </span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('classifications');
+                  window.history.replaceState(null, '', '?tab=classifications');
+                }}
+                className={`inline-flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-shrink-0 ${
+                  activeTab === 'classifications' || activeTab === 'codes'
+                    ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Categories &amp; Codes</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                  activeTab === 'classifications' || activeTab === 'codes' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  43
+                </span>
+              </button>
 
-            <button
-              onClick={() => {
-                setActiveTab('validation');
-                window.history.replaceState(null, '', '?tab=validation');
-              }}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'validation' || activeTab === 'lists'
-                  ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Validation Lists</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
-                activeTab === 'validation' || activeTab === 'lists' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'
-              }`}>
-                43
-              </span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('validation');
+                  window.history.replaceState(null, '', '?tab=validation');
+                }}
+                className={`inline-flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-shrink-0 ${
+                  activeTab === 'validation' || activeTab === 'lists'
+                    ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Validation Lists</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold ${
+                  activeTab === 'validation' || activeTab === 'lists' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-200 text-slate-600'
+                }`}>
+                  43
+                </span>
+              </button>
 
-            <button
-              onClick={() => {
-                setActiveTab('guidance');
-                window.history.replaceState(null, '', '?tab=guidance');
-              }}
-              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'guidance'
-                  ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Guidance Manual</span>
-            </button>
+              <button
+                onClick={() => {
+                  setActiveTab('guidance');
+                  window.history.replaceState(null, '', '?tab=guidance');
+                }}
+                className={`inline-flex items-center gap-2 px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-shrink-0 ${
+                  activeTab === 'guidance'
+                    ? 'bg-white shadow-xs text-indigo-600 border border-slate-200/60'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Guidance Manual</span>
+              </button>
+            </div>
           </div>
 
           {/* Right Status / Indicator Info */}
@@ -722,126 +724,127 @@ export default function RiskRegister() {
           {/* 1. PROJECT INFORMATION SECTION (Clean Enterprise Card) */}
           <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
             {/* Section Header Bar */}
-            <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="px-4 sm:px-5 py-3 sm:py-3.5 bg-slate-50/70 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600">
                   <Building2 className="w-4 h-4" />
                 </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 font-mono">
-                  Active Project
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 font-mono">
+                      Active Project
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-[10px] font-semibold text-slate-500">
+                      Governance Scope
+                    </span>
+                  </div>
+                  <h2 className="text-sm font-bold text-slate-900 truncate">
+                    {currentProject?.name || 'No Project Selected'}
+                  </h2>
+                </div>
+              </div>
+
+              {/* Project Actions & Switcher */}
+              <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 min-w-0 sm:w-64 lg:w-72">
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className="w-full appearance-none pl-3 pr-8 py-2 sm:py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 cursor-pointer shadow-xs truncate"
+                  >
+                    {projects.map(p => (
+                      <option key={p._id} value={p._id}>
+                        {p.name} {p.status !== 'ACTIVE' ? `(${p.status})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                <button
+                  onClick={() => {
+                    setEditingProject(currentProject);
+                    setIsProjectModalOpen(true);
+                  }}
+                  className="p-2 sm:p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors cursor-pointer flex-shrink-0"
+                  title="Edit Project Details"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setEditingProject(null);
+                    setIsProjectModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer shadow-xs flex-shrink-0"
+                  title="Create New Project"
+                >
+                  <FolderPlus className="w-3.5 h-3.5 text-slate-300" />
+                  <span>New</span>
+                  <span className="hidden sm:inline">Project</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Project Metadata Grid */}
+            <div className="p-4 sm:p-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-5 text-xs">
+              <div>
+                <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-0.5 sm:mb-1">
+                  Project Name
                 </span>
-                <span className="text-slate-300">•</span>
-                <span className="text-[10px] font-semibold text-slate-500">
-                  Governance Scope
+                <p className="font-bold text-slate-900 text-xs sm:text-sm line-clamp-2 break-words" title={currentProject?.name}>
+                  {currentProject?.name || '—'}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-0.5 sm:mb-1">
+                  Office Responsible
+                </span>
+                <p className="font-medium text-slate-800 line-clamp-2 break-words" title={currentProject?.officeResponsible}>
+                  {currentProject?.officeResponsible || '—'}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-0.5 sm:mb-1">
+                  Project Location
+                </span>
+                <p className="font-medium text-slate-800 line-clamp-2 break-words" title={currentProject?.location}>
+                  {currentProject?.location || '—'}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-0.5 sm:mb-1">
+                  Project Period
+                </span>
+                <p className="font-medium text-slate-800 line-clamp-2 break-words" title={currentProject?.period}>
+                  {currentProject?.period || '—'}
+                </p>
+              </div>
+
+              <div>
+                <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-0.5 sm:mb-1">
+                  Review Quarter
+                </span>
+                <span className="inline-block px-2 py-0.5 rounded-md font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100">
+                  {currentProject?.reviewQuarter || '—'}
                 </span>
               </div>
-              <h2 className="text-sm font-bold text-slate-900 truncate">
-                {currentProject?.name || 'No Project Selected'}
-              </h2>
+
+              <div>
+                <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-0.5 sm:mb-1">
+                  End Quarter
+                </span>
+                <span className="inline-block px-2 py-0.5 rounded-md font-semibold text-slate-700 bg-slate-100 border border-slate-200">
+                  {currentProject?.endQuarter || '—'}
+                </span>
+              </div>
             </div>
-          </div>
-
-          {/* Project Actions & Switcher */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <div className="relative">
-              <select
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="appearance-none pl-3 pr-8 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 cursor-pointer shadow-xs"
-              >
-                {projects.map(p => (
-                  <option key={p._id} value={p._id}>
-                    {p.name} {p.status !== 'ACTIVE' ? `(${p.status})` : ''}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
-            </div>
-
-            <button
-              onClick={() => {
-                setEditingProject(currentProject);
-                setIsProjectModalOpen(true);
-              }}
-              className="p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors cursor-pointer"
-              title="Edit Project Details"
-            >
-              <Edit3 className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={() => {
-                setEditingProject(null);
-                setIsProjectModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer shadow-xs"
-              title="Create New Project"
-            >
-              <FolderPlus className="w-3.5 h-3.5 text-slate-300" />
-              <span className="hidden sm:inline">New Project</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Project Metadata Grid */}
-        <div className="p-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-5 text-xs">
-          <div>
-            <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-1">
-              Project Name
-            </span>
-            <p className="font-bold text-slate-900 truncate" title={currentProject?.name}>
-              {currentProject?.name || '—'}
-            </p>
-          </div>
-
-          <div>
-            <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-1">
-              Office Responsible
-            </span>
-            <p className="font-medium text-slate-800 truncate" title={currentProject?.officeResponsible}>
-              {currentProject?.officeResponsible || '—'}
-            </p>
-          </div>
-
-          <div>
-            <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-1">
-              Project Location
-            </span>
-            <p className="font-medium text-slate-800 truncate" title={currentProject?.location}>
-              {currentProject?.location || '—'}
-            </p>
-          </div>
-
-          <div>
-            <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-1">
-              Project Period
-            </span>
-            <p className="font-medium text-slate-800 truncate" title={currentProject?.period}>
-              {currentProject?.period || '—'}
-            </p>
-          </div>
-
-          <div>
-            <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-1">
-              Review Quarter
-            </span>
-            <span className="inline-block px-2 py-0.5 rounded-md font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100">
-              {currentProject?.reviewQuarter || '—'}
-            </span>
-          </div>
-
-          <div>
-            <span className="text-slate-400 font-semibold block uppercase text-[10px] tracking-wider mb-1">
-              End Quarter
-            </span>
-            <span className="inline-block px-2 py-0.5 rounded-md font-semibold text-slate-700 bg-slate-100 border border-slate-200">
-              {currentProject?.endQuarter || '—'}
-            </span>
-          </div>
-        </div>
-      </section>
+          </section>
 
       {/* 2. RAG RISK RATING LEGEND & METRICS STRIP */}
       <section className="space-y-3">
@@ -1113,7 +1116,7 @@ export default function RiskRegister() {
           </div>
 
           {/* Rows Per Page */}
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <select
               value={limit}
               onChange={(e) => {
@@ -1130,6 +1133,21 @@ export default function RiskRegister() {
           </div>
         </div>
       </section>
+
+      {/* Mobile View Switcher Helper Banner */}
+      <div className="lg:hidden flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs shadow-2xs">
+        <div className="flex items-center gap-2 text-indigo-950 font-medium min-w-0">
+          <TableIcon className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+          <span className="truncate">20-Column Table (Swipe horizontally)</span>
+        </div>
+        <button
+          onClick={() => setViewMode('cards')}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-700 shadow-xs cursor-pointer flex-shrink-0"
+        >
+          <LayoutGrid className="w-3.5 h-3.5" />
+          <span>Cards View</span>
+        </button>
+      </div>
 
       {/* 3. RISK REGISTER TABLE (Enterprise 20-Column Table) */}
       {viewMode === 'table' ? (
@@ -1476,94 +1494,110 @@ export default function RiskRegister() {
         </section>
       ) : (
         /* CARD / GRID VIEW */
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {risks.map((risk) => (
-            <div
-              key={risk._id}
-              className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-xs text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
-                      #{risk.riskNo}
-                    </span>
-                    <span className="text-xs font-bold text-slate-800">{risk.category}</span>
-                  </div>
-                  {renderRAGBadge(risk.currentScore, risk.riskRating)}
-                </div>
-
-                <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-relaxed">
-                  {risk.description}
-                </h4>
-
-                {risk.subCategory && (
-                  <span className="text-[11px] text-slate-400 font-medium block mt-1">
-                    Sub-category: {risk.subCategory}
-                  </span>
-                )}
-              </div>
-
-              {/* Score Breakdown Bar */}
-              <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center text-xs">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Current</span>
-                  <span className="font-black text-slate-800 font-heading text-sm">{risk.currentScore}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Target</span>
-                  <span className="font-bold text-slate-700 text-sm">{risk.targetScore ?? '—'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Variance</span>
-                  <span className={`font-black text-sm ${risk.variance > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                    {risk.variance > 0 ? `+${risk.variance}` : risk.variance}
-                  </span>
-                </div>
-              </div>
-
-              {/* Mitigation preview */}
-              <div className="text-xs text-slate-600">
-                <span className="font-semibold text-slate-400 text-[10px] uppercase block">Mitigation Action:</span>
-                <p className="line-clamp-2 text-[11px] mt-0.5 text-slate-700">{risk.mitigationAction || 'None specified'}</p>
-              </div>
-
-              {/* Card Footer Actions */}
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
-                <span className="text-slate-400 text-[11px]">Owner: <span className="text-slate-700 font-medium">{risk.riskOwner || 'Unassigned'}</span></span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setDetailRisk(risk);
-                      setIsDetailModalOpen(true);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg cursor-pointer"
-                    title="View Details"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedRisk(risk);
-                      setIsRiskModalOpen(true);
-                    }}
-                    className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-50 rounded-lg cursor-pointer"
-                    title="Edit Record"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirmation({ isOpen: true, item: risk, type: 'risk' })}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded-lg cursor-pointer"
-                    title="Delete Record"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+        <div className="space-y-3">
+          <div className="lg:hidden flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs shadow-2xs">
+            <div className="flex items-center gap-2 text-slate-700 font-medium min-w-0">
+              <LayoutGrid className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+              <span className="truncate">Showing Mobile Card View</span>
             </div>
-          ))}
-        </section>
+            <button
+              onClick={() => setViewMode('table')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 shadow-xs cursor-pointer flex-shrink-0"
+            >
+              <TableIcon className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Table View</span>
+            </button>
+          </div>
+
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+            {risks.map((risk) => (
+              <div
+                key={risk._id}
+                className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between space-y-4"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-md border border-indigo-100">
+                        #{risk.riskNo}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800">{risk.category}</span>
+                    </div>
+                    {renderRAGBadge(risk.currentScore, risk.riskRating)}
+                  </div>
+
+                  <h4 className="text-xs font-bold text-slate-900 line-clamp-2 leading-relaxed">
+                    {risk.description}
+                  </h4>
+
+                  {risk.subCategory && (
+                    <span className="text-[11px] text-slate-400 font-medium block mt-1">
+                      Sub-category: {risk.subCategory}
+                    </span>
+                  )}
+                </div>
+
+                {/* Score Breakdown Bar */}
+                <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center text-xs">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Current</span>
+                    <span className="font-black text-slate-800 font-heading text-sm">{risk.currentScore}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Target</span>
+                    <span className="font-bold text-slate-700 text-sm">{risk.targetScore ?? '—'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 block uppercase">Variance</span>
+                    <span className={`font-black text-sm ${risk.variance > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {risk.variance > 0 ? `+${risk.variance}` : risk.variance}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mitigation preview */}
+                <div className="text-xs text-slate-600">
+                  <span className="font-semibold text-slate-400 text-[10px] uppercase block">Mitigation Action:</span>
+                  <p className="line-clamp-2 text-[11px] mt-0.5 text-slate-700">{risk.mitigationAction || 'None specified'}</p>
+                </div>
+
+                {/* Card Footer Actions */}
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
+                  <span className="text-slate-400 text-[11px]">Owner: <span className="text-slate-700 font-medium">{risk.riskOwner || 'Unassigned'}</span></span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setDetailRisk(risk);
+                        setIsDetailModalOpen(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg cursor-pointer"
+                      title="View Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedRisk(risk);
+                        setIsRiskModalOpen(true);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-50 rounded-lg cursor-pointer"
+                      title="Edit Record"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmation({ isOpen: true, item: risk, type: 'risk' })}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-50 rounded-lg cursor-pointer"
+                      title="Delete Record"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </section>
+        </div>
       )}
 
       {/* PAGINATION BAR */}
