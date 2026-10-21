@@ -8,7 +8,7 @@ import {
   Flame, Layers, FolderPlus, CheckCircle2, AlertTriangle, 
   ChevronLeft, ChevronRight, LayoutGrid, Table as TableIcon,
   X, Check, Info, ShieldCheck, AlertCircle, ArrowUpRight,
-  TrendingDown, TrendingUp, Sparkles, SlidersHorizontal
+  TrendingDown, TrendingUp, Sparkles, SlidersHorizontal, BookOpen
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -17,6 +17,7 @@ import RiskDetailModal from './RiskDetailModal';
 import ProjectModal from './ProjectModal';
 import CategoryModal from './CategoryModal';
 import HeatmapModal from './HeatmapModal';
+import RiskGuidance from './RiskGuidance';
 
 export default function RiskRegister() {
   const { user } = useAuth();
@@ -37,6 +38,7 @@ export default function RiskRegister() {
   const [ownerFilter, setOwnerFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
+  const [activeTab, setActiveTab] = useState('register'); // 'register' | 'guidance'
 
   // State: Sorting & Pagination
   const [sortBy, setSortBy] = useState('riskNo');
@@ -73,8 +75,12 @@ export default function RiskRegister() {
     return projects.find(p => p._id === selectedProjectId) || projects[0] || null;
   }, [projects, selectedProjectId]);
 
-  // Initial load: Fetch Projects and Categories
+  // Initial load: Fetch Projects and Categories & Check URL Tab
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'guidance') {
+      setActiveTab('guidance');
+    }
     fetchInitialData();
   }, []);
 
@@ -457,34 +463,84 @@ export default function RiskRegister() {
           </p>
         </div>
 
-        {/* Global Action Buttons */}
+        {/* Global Action Buttons & Navigation */}
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setIsHeatmapOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs transition-all cursor-pointer"
-            title="Open 5x5 Likelihood x Impact Heat Matrix"
-          >
-            <Flame className="w-4 h-4 text-amber-500" />
-            <span className="hidden sm:inline">5×5 Heatmap</span>
-          </button>
+          {/* Main Module Tab Switcher */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200/80 mr-1">
+            <button
+              onClick={() => {
+                setActiveTab('register');
+                window.history.replaceState(null, '', window.location.pathname);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'register'
+                  ? 'bg-white shadow-xs text-indigo-600'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+              <span>Risk Register</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-mono font-bold">
+                {totalCount}
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('guidance');
+                window.history.replaceState(null, '', '?tab=guidance');
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'guidance'
+                  ? 'bg-white shadow-xs text-indigo-600'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Guidance Manual</span>
+            </button>
+          </div>
 
-          <button
-            onClick={() => setIsCategoryModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs transition-all cursor-pointer"
-            title="Configure Categories and Sub-categories"
-          >
-            <Layers className="w-4 h-4 text-indigo-600" />
-            <span className="hidden sm:inline">Classifications</span>
-          </button>
+          {activeTab === 'register' ? (
+            <>
+              <button
+                onClick={() => setIsHeatmapOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs transition-all cursor-pointer"
+                title="Open 5x5 Likelihood x Impact Heat Matrix"
+              >
+                <Flame className="w-4 h-4 text-amber-500" />
+                <span className="hidden sm:inline">5×5 Heatmap</span>
+              </button>
 
-          <button
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs transition-all cursor-pointer"
-            title="Download CSV matching CBDP Risk Register spreadsheet format"
-          >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>Export CSV</span>
-          </button>
+              <button
+                onClick={() => setIsCategoryModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs transition-all cursor-pointer"
+                title="Configure Categories and Sub-categories"
+              >
+                <Layers className="w-4 h-4 text-indigo-600" />
+                <span className="hidden sm:inline">Classifications</span>
+              </button>
+
+              <button
+                onClick={handleExportCSV}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs transition-all cursor-pointer"
+                title="Download CSV matching CBDP Risk Register spreadsheet format"
+              >
+                <Download className="w-4 h-4 text-slate-500" />
+                <span>Export CSV</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                setActiveTab('register');
+                window.history.replaceState(null, '', window.location.pathname);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-xs transition-all cursor-pointer"
+            >
+              <TableIcon className="w-4 h-4 text-slate-500" />
+              <span>Back to Register</span>
+            </button>
+          )}
 
           <button
             onClick={() => {
@@ -499,14 +555,23 @@ export default function RiskRegister() {
         </div>
       </div>
 
-      {/* 1. PROJECT INFORMATION SECTION (Clean Enterprise Card) */}
-      <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-        {/* Section Header Bar */}
-        <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600">
-              <Building2 className="w-4 h-4" />
-            </div>
+      {activeTab === 'guidance' ? (
+        <RiskGuidance
+          onSwitchToRegister={() => {
+            setActiveTab('register');
+            window.history.replaceState(null, '', window.location.pathname);
+          }}
+        />
+      ) : (
+        <>
+          {/* 1. PROJECT INFORMATION SECTION (Clean Enterprise Card) */}
+          <section className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            {/* Section Header Bar */}
+            <div className="px-5 py-3.5 bg-slate-50/70 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600">
+                  <Building2 className="w-4 h-4" />
+                </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 font-mono">
@@ -1354,6 +1419,8 @@ export default function RiskRegister() {
           </button>
         </div>
       </div>
+      </>
+      )}
 
       {/* MODALS */}
       {/* 1. Add / Edit Risk Modal */}
@@ -1365,6 +1432,11 @@ export default function RiskRegister() {
         projectId={selectedProjectId}
         categories={categories}
         onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
+        onOpenGuidance={() => {
+          setIsRiskModalOpen(false);
+          setActiveTab('guidance');
+          window.history.replaceState(null, '', '?tab=guidance');
+        }}
         isSubmitting={isSubmitting}
       />
 
