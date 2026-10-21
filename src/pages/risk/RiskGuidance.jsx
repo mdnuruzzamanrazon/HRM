@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { calculateRiskScore, getRiskRating, calculateVariance } from '../../utils/riskCalculations.js';
 
-export default function RiskGuidance({ onSwitchToRegister }) {
+export default function RiskGuidance({ onSwitchToRegister, onSwitchToSummary }) {
   // Interactive Live Scoring Calculator state for Topic B & C
   const [testLikelihood, setTestLikelihood] = useState(3);
   const [testImpact, setTestImpact] = useState(3);
@@ -105,6 +105,16 @@ export default function RiskGuidance({ onSwitchToRegister }) {
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors shadow-sm cursor-pointer"
               >
                 <span>Back to Risk Register</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {onSwitchToSummary && (
+              <button
+                onClick={onSwitchToSummary}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-slate-200 hover:text-white font-medium text-xs border border-slate-700/80 transition-colors shadow-sm cursor-pointer"
+              >
+                <span>Summary Dashboard</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}

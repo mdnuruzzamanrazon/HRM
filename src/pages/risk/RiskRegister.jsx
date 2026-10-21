@@ -8,7 +8,7 @@ import {
   Flame, Layers, FolderPlus, CheckCircle2, AlertTriangle, 
   ChevronLeft, ChevronRight, LayoutGrid, Table as TableIcon,
   X, Check, Info, ShieldCheck, AlertCircle, ArrowUpRight,
-  TrendingDown, TrendingUp, Sparkles, SlidersHorizontal, BookOpen
+  TrendingDown, TrendingUp, Sparkles, SlidersHorizontal, BookOpen, BarChart3
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -18,6 +18,7 @@ import ProjectModal from './ProjectModal';
 import CategoryModal from './CategoryModal';
 import HeatmapModal from './HeatmapModal';
 import RiskGuidance from './RiskGuidance';
+import RiskSummary from './RiskSummary';
 
 export default function RiskRegister() {
   const { user } = useAuth();
@@ -38,7 +39,7 @@ export default function RiskRegister() {
   const [ownerFilter, setOwnerFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
-  const [activeTab, setActiveTab] = useState('register'); // 'register' | 'guidance'
+  const [activeTab, setActiveTab] = useState('register'); // 'register' | 'summary' | 'guidance'
 
   // State: Sorting & Pagination
   const [sortBy, setSortBy] = useState('riskNo');
@@ -78,8 +79,9 @@ export default function RiskRegister() {
   // Initial load: Fetch Projects and Categories & Check URL Tab
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('tab') === 'guidance') {
-      setActiveTab('guidance');
+    const tabParam = params.get('tab');
+    if (tabParam === 'guidance' || tabParam === 'summary') {
+      setActiveTab(tabParam);
     }
     fetchInitialData();
   }, []);
@@ -486,6 +488,20 @@ export default function RiskRegister() {
             </button>
             <button
               onClick={() => {
+                setActiveTab('summary');
+                window.history.replaceState(null, '', '?tab=summary');
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'summary'
+                  ? 'bg-white shadow-xs text-indigo-600'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Summary Dashboard</span>
+            </button>
+            <button
+              onClick={() => {
                 setActiveTab('guidance');
                 window.history.replaceState(null, '', '?tab=guidance');
               }}
@@ -560,6 +576,32 @@ export default function RiskRegister() {
           onSwitchToRegister={() => {
             setActiveTab('register');
             window.history.replaceState(null, '', window.location.pathname);
+          }}
+          onSwitchToSummary={() => {
+            setActiveTab('summary');
+            window.history.replaceState(null, '', '?tab=summary');
+          }}
+        />
+      ) : activeTab === 'summary' ? (
+        <RiskSummary
+          project={currentProject}
+          projects={projects}
+          onSelectProject={(id) => setSelectedProjectId(id)}
+          onSwitchToRegister={() => {
+            setActiveTab('register');
+            window.history.replaceState(null, '', window.location.pathname);
+          }}
+          onSwitchToGuidance={() => {
+            setActiveTab('guidance');
+            window.history.replaceState(null, '', '?tab=guidance');
+          }}
+          onAddRisk={() => {
+            setSelectedRisk(null);
+            setIsRiskModalOpen(true);
+          }}
+          onViewRiskDetail={(record) => {
+            setDetailRisk(record);
+            setIsDetailModalOpen(true);
           }}
         />
       ) : (

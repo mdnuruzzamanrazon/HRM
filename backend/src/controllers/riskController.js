@@ -1433,6 +1433,244 @@ export const createCategoryOrSub = async (req, res) => {
 /**
  * Global or Project-specific Risk Statistics & Heatmap Matrix
  */
+/**
+ * Helper to compute full CBDP Risk Register Summary Dashboard statistics
+ */
+const computeRiskStatistics = (records) => {
+  const STANDARD_CATEGORIES = [
+    'Strategy & Governance',
+    'Finance & Services',
+    'Funding & Income',
+    'Programme Delivery',
+    'People',
+    'External'
+  ];
+
+  let highCount = 0;
+  let mediumCount = 0;
+  let lowCount = 0;
+  let totalScore = 0;
+  let totalTarget = 0;
+  let totalVariance = 0;
+
+  let highVarianceSum = 0;
+  let mediumVarianceSum = 0;
+  let lowVarianceSum = 0;
+
+  const categoryCounts = {};
+  const ownerCounts = {};
+
+  // For Summary by Category: high, medium, low, total per category
+  const categorySummaryMap = {};
+  STANDARD_CATEGORIES.forEach(cat => {
+    categorySummaryMap[cat] = {
+      category: cat,
+      high: 0,
+      medium: 0,
+      low: 0,
+      total: 0,
+      scoreSum: 0,
+      targetSum: 0,
+      varianceSum: 0
+    };
+  });
+
+  // 5x5 Heatmap count map & details
+  const heatmap = {};
+  const heatmapDetails = {};
+  for (let l = 1; l <= 5; l++) {
+    heatmap[l] = {};
+    heatmapDetails[l] = {};
+    for (let i = 1; i <= 5; i++) {
+      heatmap[l][i] = 0;
+      heatmapDetails[l][i] = [];
+    }
+  }
+
+  records.forEach(r => {
+    const score = Number(r.currentScore || 0);
+    const target = Number(r.targetScore || 0);
+    const variance = (r.variance !== undefined && r.variance !== null) ? Number(r.variance) : (score - target);
+
+    totalScore += score;
+    totalTarget += target;
+    totalVariance += variance;
+
+    if (r.riskRating === 'HIGH') {
+      highCount++;
+      highVarianceSum += variance;
+    } else if (r.riskRating === 'MEDIUM') {
+      mediumCount++;
+      mediumVarianceSum += variance;
+    } else {
+      lowCount++;
+      lowVarianceSum += variance;
+    }
+
+    const catName = r.category || 'Uncategorized';
+    categoryCounts[catName] = (categoryCounts[catName] || 0) + 1;
+
+    if (!categorySummaryMap[catName]) {
+      categorySummaryMap[catName] = {
+        category: catName,
+        high: 0,
+        medium: 0,
+        low: 0,
+        total: 0,
+        scoreSum: 0,
+        targetSum: 0,
+        varianceSum: 0
+      };
+    }
+
+    const catEntry = categorySummaryMap[catName];
+    catEntry.total += 1;
+    catEntry.scoreSum += score;
+    catEntry.targetSum += target;
+    catEntry.varianceSum += variance;
+
+    if (r.riskRating === 'HIGH') catEntry.high += 1;
+    else if (r.riskRating === 'MEDIUM') catEntry.medium += 1;
+    else catEntry.low += 1;
+
+    if (r.riskOwner) {
+      ownerCounts[r.riskOwner] = (ownerCounts[r.riskOwner] || 0) + 1;
+    }
+
+    const l = Number(r.likelihood);
+    const i = Number(r.impact);
+    if (l >= 1 && l <= 5 && i >= 1 && i <= 5) {
+      heatmap[l][i] += 1;
+      heatmapDetails[l][i].push({
+        _id: r._id,
+        riskNo: r.riskNo,
+        description: r.description,
+        category: r.category,
+        subCategory: r.subCategory,
+        riskOwner: r.riskOwner,
+        likelihood: l,
+        impact: i,
+        currentScore: score,
+        targetScore: target,
+        variance: variance,
+        riskRating: r.riskRating,
+        status: r.status
+      });
+    }
+  });
+
+  const totalRisks = records.length;
+  const avgScore = totalRisks > 0 ? Number((totalScore / totalRisks).toFixed(1)) : 0;
+  const avgTarget = totalRisks > 0 ? Number((totalTarget / totalRisks).toFixed(1)) : 0;
+  const avgVariance = totalRisks > 0 ? Number((totalVariance / totalRisks).toFixed(2)) : 0;
+
+  // 1. Summary of Risks Table Data
+  const summaryOfRisks = {
+    high: {
+      level: 'High Risk (Score ≥ 15)',
+      rating: 'HIGH',
+      count: highCount,
+      percentage: totalRisks > 0 ? Number(((highCount / totalRisks) * 100).toFixed(1)) : 0,
+      avgVariance: highCount > 0 ? Number((highVarianceSum / highCount).toFixed(2)) : 0
+    },
+    medium: {
+      level: 'Medium Risk (Score ≥ 8 and below 15)',
+      rating: 'MEDIUM',
+      count: mediumCount,
+      percentage: totalRisks > 0 ? Number(((mediumCount / totalRisks) * 100).toFixed(1)) : 0,
+      avgVariance: mediumCount > 0 ? Number((mediumVarianceSum / mediumCount).toFixed(2)) : 0
+    },
+    low: {
+      level: 'Low Risk (Score below 8)',
+      rating: 'LOW',
+      count: lowCount,
+      percentage: totalRisks > 0 ? Number(((lowCount / totalRisks) * 100).toFixed(1)) : 0,
+      avgVariance: lowCount > 0 ? Number((lowVarianceSum / lowCount).toFixed(2)) : 0
+    },
+    total: {
+      level: 'Total',
+      count: totalRisks,
+      percentage: totalRisks > 0 ? 100 : 0,
+      avgVariance: avgVariance
+    }
+  };
+
+  // 2. Summary by Category Table Data (Standard categories first, then any custom)
+  const categoryOrder = [
+    ...STANDARD_CATEGORIES,
+    ...Object.keys(categorySummaryMap).filter(c => !STANDARD_CATEGORIES.includes(c))
+  ];
+
+  const summaryByCategory = categoryOrder.map(name => {
+    const c = categorySummaryMap[name] || { category: name, high: 0, medium: 0, low: 0, total: 0 };
+    return {
+      category: c.category,
+      high: c.high,
+      medium: c.medium,
+      low: c.low,
+      total: c.total
+    };
+  });
+
+  // 3. Variance Radar Data (for all categories)
+  const varianceRadar = categoryOrder.map(name => {
+    const c = categorySummaryMap[name] || { category: name, total: 0, scoreSum: 0, targetSum: 0, varianceSum: 0 };
+    const catAvgScore = c.total > 0 ? Number((c.scoreSum / c.total).toFixed(2)) : 0;
+    const catAvgTarget = c.total > 0 ? Number((c.targetSum / c.total).toFixed(2)) : 0;
+    const catVar = c.total > 0 ? Number((c.varianceSum / c.total).toFixed(2)) : 0;
+    let status = 'No Active Risks';
+    if (c.total > 0) {
+      status = catVar > 0 ? 'Gap to Close' : 'Within Appetite';
+    }
+    return {
+      category: c.category,
+      count: c.total,
+      avgScore: catAvgScore,
+      avgTarget: catAvgTarget,
+      variance: catVar,
+      status: status
+    };
+  });
+
+  // 4. Heat Map Data List (25 combinations matching the source document structure)
+  const heatMapDataList = [];
+  for (let l = 5; l >= 1; l--) {
+    for (let i = 1; i <= 5; i++) {
+      const score = (l * i) + i;
+      let rating = 'LOW';
+      if (score >= 15) rating = 'HIGH';
+      else if (score >= 8) rating = 'MEDIUM';
+
+      heatMapDataList.push({
+        likelihood: l,
+        impact: i,
+        score: score,
+        rating: rating,
+        count: heatmap[l][i],
+        records: heatmapDetails[l][i]
+      });
+    }
+  }
+
+  return {
+    totalRisks,
+    highCount,
+    mediumCount,
+    lowCount,
+    avgScore,
+    avgTarget,
+    avgVariance,
+    categoryCounts,
+    ownerCounts,
+    heatmap,
+    heatmapDetails,
+    heatMapDataList,
+    summaryOfRisks,
+    summaryByCategory,
+    varianceRadar
+  };
+};
+
 export const getRiskStats = async (req, res) => {
   try {
     const { projectId } = req.query;
@@ -1441,37 +1679,11 @@ export const getRiskStats = async (req, res) => {
       getMockStore();
       const pId = projectId || mockData.riskProjects[0]?._id;
       const records = pId ? mockData.riskRecords.filter(r => String(r.projectId) === String(pId)) : mockData.riskRecords;
-      let highCount = 0, mediumCount = 0, lowCount = 0, totalScore = 0;
-      const categoryCounts = {}, ownerCounts = {};
-      const heatmap = {};
-      for (let l = 1; l <= 5; l++) {
-        heatmap[l] = {};
-        for (let i = 1; i <= 5; i++) heatmap[l][i] = 0;
-      }
-      records.forEach(r => {
-        if (r.riskRating === 'HIGH') highCount++;
-        else if (r.riskRating === 'MEDIUM') mediumCount++;
-        else lowCount++;
-        totalScore += (r.currentScore || 0);
-        categoryCounts[r.category] = (categoryCounts[r.category] || 0) + 1;
-        if (r.riskOwner) ownerCounts[r.riskOwner] = (ownerCounts[r.riskOwner] || 0) + 1;
-        if (r.likelihood >= 1 && r.likelihood <= 5 && r.impact >= 1 && r.impact <= 5) {
-          heatmap[r.likelihood][r.impact] += 1;
-        }
-      });
-      const totalRisks = records.length;
+      const stats = computeRiskStatistics(records);
+
       return res.status(200).json({
         success: true,
-        data: {
-          totalRisks,
-          highCount,
-          mediumCount,
-          lowCount,
-          avgScore: totalRisks > 0 ? Number((totalScore / totalRisks).toFixed(1)) : 0,
-          categoryCounts,
-          ownerCounts,
-          heatmap
-        }
+        data: stats
       });
     }
 
@@ -1483,54 +1695,11 @@ export const getRiskStats = async (req, res) => {
     }
 
     const records = await RiskRecord.find(match);
-
-    let highCount = 0;
-    let mediumCount = 0;
-    let lowCount = 0;
-    let totalScore = 0;
-    const categoryCounts = {};
-    const ownerCounts = {};
-
-    const heatmap = {};
-    for (let l = 1; l <= 5; l++) {
-      heatmap[l] = {};
-      for (let i = 1; i <= 5; i++) {
-        heatmap[l][i] = 0;
-      }
-    }
-
-    records.forEach(r => {
-      if (r.riskRating === 'HIGH') highCount++;
-      else if (r.riskRating === 'MEDIUM') mediumCount++;
-      else lowCount++;
-
-      totalScore += (r.currentScore || 0);
-      categoryCounts[r.category] = (categoryCounts[r.category] || 0) + 1;
-
-      if (r.riskOwner) {
-        ownerCounts[r.riskOwner] = (ownerCounts[r.riskOwner] || 0) + 1;
-      }
-
-      if (r.likelihood >= 1 && r.likelihood <= 5 && r.impact >= 1 && r.impact <= 5) {
-        heatmap[r.likelihood][r.impact] += 1;
-      }
-    });
-
-    const totalRisks = records.length;
-    const avgScore = totalRisks > 0 ? Number((totalScore / totalRisks).toFixed(1)) : 0;
+    const stats = computeRiskStatistics(records);
 
     return res.status(200).json({
       success: true,
-      data: {
-        totalRisks,
-        highCount,
-        mediumCount,
-        lowCount,
-        avgScore,
-        categoryCounts,
-        ownerCounts,
-        heatmap
-      }
+      data: stats
     });
   } catch (error) {
     console.error('Error in getRiskStats:', error);
