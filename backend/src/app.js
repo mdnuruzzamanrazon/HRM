@@ -32,6 +32,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import securityRoutes from './routes/securityRoutes.js';
 import employeePortalRoutes from './routes/employeePortalRoutes.js';
 import workplaceRoutes from './routes/workplaceRoutes.js';
+import riskRoutes from './routes/riskRoutes.js';
 
 const app = express();
 
@@ -161,6 +162,8 @@ app.use('/api/employee-portal', employeePortalRoutes);
 app.use('/api/employee', employeePortalRoutes);
 app.use('/api/v1/workplaces', workplaceRoutes);
 app.use('/api/workplaces', workplaceRoutes);
+app.use('/api/v1/risk', riskRoutes);
+app.use('/api/risk', riskRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LogOut, LayoutDashboard, Users, Clock, Calendar, CreditCard, 
   CalendarClock, Receipt, Calculator, MapPin, Megaphone, CheckSquare, 
-  Bell, Shield, Menu, X, ChevronRight, UserCheck, Search, Sparkles, Building2
+  Bell, Shield, Menu, X, ChevronRight, UserCheck, Search, Sparkles, Building2,
+  ShieldAlert
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -90,6 +91,12 @@ export default function AdminLayout() {
         { name: 'Digital Notice Board', href: '/noticeboard', icon: Megaphone },
         { name: 'Task Management', href: '/task', icon: CheckSquare },
         { name: 'System Notifications', href: '/notifications', icon: Bell },
+      ]
+    },
+    {
+      group: 'Governance & Risk',
+      items: [
+        { name: 'Risk Register', href: '/risk-register', icon: ShieldAlert },
       ]
     },
     {

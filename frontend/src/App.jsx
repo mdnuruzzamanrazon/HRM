@@ -29,6 +29,7 @@ import TaskDashboard from './pages/task/TaskDashboard';
 import NotificationsDashboard from './pages/notifications/NotificationsDashboard';
 import SecurityDashboard from './pages/security/SecurityDashboard';
 import WorkplaceLocations from './pages/locations/WorkplaceLocations';
+import RiskRegister from './pages/risk/RiskRegister';
 
 // Employee Portal Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
@@ -106,6 +107,7 @@ function App() {
               <Route path="/task" element={<TaskDashboard />} />
               <Route path="/notifications" element={<NotificationsDashboard />} />
               <Route path="/security" element={<SecurityDashboard />} />
+              <Route path="/risk-register" element={<RiskRegister />} />
             </Route>
           </Route>
 

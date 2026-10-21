@@ -105,6 +105,12 @@ async function runAudit() {
   // Module 16: Authentication Diagnostics & Verification
   await testEndpoint('AuthDiagnostics', '/auth/email-diagnostics');
 
+  // Module 17: Risk Register Module
+  await testEndpoint('RiskRegister', '/risk/projects');
+  await testEndpoint('RiskRegister', '/risk/categories');
+  await testEndpoint('RiskRegister', '/risk/records');
+  await testEndpoint('RiskRegister', '/risk/stats');
+
   console.log('\n--- Summary ---');
   const total = results.length;
   const passed = results.filter(r => r.passed).length;
