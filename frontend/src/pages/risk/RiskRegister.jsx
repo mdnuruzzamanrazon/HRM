@@ -20,6 +20,7 @@ import HeatmapModal from './HeatmapModal';
 import RiskGuidance from './RiskGuidance';
 import RiskSummary from './RiskSummary';
 import RiskCategoriesView from './RiskCategoriesView';
+import RiskValidationView from './RiskValidationView';
 
 export default function RiskRegister() {
   const { user } = useAuth();
@@ -82,8 +83,8 @@ export default function RiskRegister() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
-    if (tabParam === 'guidance' || tabParam === 'summary' || tabParam === 'classifications' || tabParam === 'codes') {
-      setActiveTab(tabParam === 'codes' ? 'classifications' : tabParam);
+    if (tabParam === 'guidance' || tabParam === 'summary' || tabParam === 'classifications' || tabParam === 'codes' || tabParam === 'validation' || tabParam === 'lists') {
+      setActiveTab(tabParam === 'codes' ? 'classifications' : (tabParam === 'lists' ? 'validation' : tabParam));
     }
     fetchInitialData();
   }, []);
@@ -516,7 +517,24 @@ export default function RiskRegister() {
               <Layers className="w-3.5 h-3.5 text-indigo-600" />
               <span>Categories &amp; Codes</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-mono font-bold">
-                37
+                43
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('validation');
+                window.history.replaceState(null, '', '?tab=validation');
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'validation' || activeTab === 'lists'
+                  ? 'bg-white shadow-xs text-indigo-600'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Validation Lists</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-mono font-bold">
+                43
               </span>
             </button>
             <button
@@ -626,6 +644,27 @@ export default function RiskRegister() {
           onViewRiskDetail={(record) => {
             setDetailRisk(record);
             setIsDetailModalOpen(true);
+          }}
+        />
+      ) : (activeTab === 'validation' || activeTab === 'lists') ? (
+        <RiskValidationView
+          categories={categories}
+          onSwitchToRegister={() => {
+            setActiveTab('register');
+            window.history.replaceState(null, '', window.location.pathname);
+          }}
+          onSwitchToSummary={() => {
+            setActiveTab('summary');
+            window.history.replaceState(null, '', '?tab=summary');
+          }}
+          onSwitchToClassifications={() => {
+            setActiveTab('classifications');
+            window.history.replaceState(null, '', '?tab=classifications');
+          }}
+          onAddRiskRecordWithPrefill={(prefill) => {
+            setSelectedRisk(null);
+            setPrefillClassification(prefill);
+            setIsRiskModalOpen(true);
           }}
         />
       ) : (activeTab === 'classifications' || activeTab === 'codes') ? (

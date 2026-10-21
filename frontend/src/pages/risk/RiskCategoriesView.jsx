@@ -57,6 +57,14 @@ export const CBDP_STANDARD_CLASSIFICATIONS = [
     ukDirector: 'GMT',
     note: 'Inability to respond properly to a crisis, including public relations'
   },
+  {
+    category: 'Strategy & Governance',
+    categoryCode: 'SG',
+    subCategory: 'Other',
+    subCode: 'OT',
+    ukDirector: 'GMT',
+    note: 'Other Strategy & Governance risk not specified above'
+  },
 
   // B. Finance & Services (FS)
   {
@@ -98,6 +106,14 @@ export const CBDP_STANDARD_CLASSIFICATIONS = [
     subCode: 'CP',
     ukDirector: 'Finance',
     note: 'Failure to manage or support organization-wide change projects'
+  },
+  {
+    category: 'Finance & Services',
+    categoryCode: 'FS',
+    subCategory: 'Other',
+    subCode: 'OT',
+    ukDirector: 'Finance',
+    note: 'Other Finance & Services risk not specified above'
   },
 
   // C. Funding & Income (FR)
@@ -164,6 +180,14 @@ export const CBDP_STANDARD_CLASSIFICATIONS = [
     subCode: 'BR',
     ukDirector: 'Marketing',
     note: 'Limited return on investment, for example due to low internal take-up'
+  },
+  {
+    category: 'Funding & Income',
+    categoryCode: 'FR',
+    subCategory: 'Other',
+    subCode: 'OT',
+    ukDirector: 'Marketing',
+    note: 'Other Funding & Income risk not specified above'
   },
 
   // D. Programme Delivery (PD)
@@ -234,10 +258,34 @@ export const CBDP_STANDARD_CLASSIFICATIONS = [
   {
     category: 'Programme Delivery',
     categoryCode: 'PD',
+    subCategory: 'Project specific',
+    subCode: 'PS',
+    ukDirector: 'International',
+    note: 'Some RCOs have one or more risks related to specific projects'
+  },
+  {
+    category: 'Programme Delivery',
+    categoryCode: 'PD',
     subCategory: 'Donor compliance',
     subCode: 'DC',
     ukDirector: 'International',
     note: 'Not specified in the source'
+  },
+  {
+    category: 'Programme Delivery',
+    categoryCode: 'PD',
+    subCategory: 'Donor complaince',
+    subCode: 'DC',
+    ukDirector: 'International',
+    note: 'Compliance with donor agreements, guidelines and contractual conditions'
+  },
+  {
+    category: 'Programme Delivery',
+    categoryCode: 'PD',
+    subCategory: 'Other',
+    subCode: 'OT',
+    ukDirector: 'International',
+    note: 'Other Programme Delivery risk not specified above'
   },
 
   // E. People
@@ -264,6 +312,14 @@ export const CBDP_STANDARD_CLASSIFICATIONS = [
     subCode: 'SG',
     ukDirector: 'Finance',
     note: 'Not specified in the source'
+  },
+  {
+    category: 'People',
+    categoryCode: 'PE',
+    subCategory: 'Other',
+    subCode: 'OT',
+    ukDirector: 'Finance',
+    note: 'Other People risk not specified above'
   },
 
   // F. External (EX)
@@ -314,6 +370,14 @@ export const CBDP_STANDARD_CLASSIFICATIONS = [
     subCode: 'SO',
     ukDirector: 'International',
     note: 'For example, land disputes and fuel disputes'
+  },
+  {
+    category: 'External',
+    categoryCode: 'EX',
+    subCategory: 'Other',
+    subCode: 'OT',
+    ukDirector: 'International',
+    note: 'Other External risk not specified above'
   }
 ];
 

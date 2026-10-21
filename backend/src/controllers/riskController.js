@@ -12,7 +12,20 @@ import {
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 
-// Pre-defined CBDP Standard Categories and Subcategories matching official Risk Codes manual
+// Official Custom Category Sequence for Sorting and Lookups (1 to 6)
+export const CUSTOM_CATEGORY_ORDER = [
+  'Strategy & Governance',
+  'Finance & Services',
+  'Funding & Income',
+  'Programme Delivery',
+  'People',
+  'External'
+];
+
+// Single source of truth comma-separated list for macro-compatible operations
+export const MACRO_CATEGORY_LIST = 'Strategy & Governance, Finance & Services, Funding & Income, Programme Delivery, People, External';
+
+// Pre-defined CBDP Standard Categories and Subcategories matching official Validation Table
 export const DEFAULT_RISK_CATEGORIES = [
   {
     name: 'Strategy & Governance',
@@ -24,7 +37,8 @@ export const DEFAULT_RISK_CATEGORIES = [
       { name: 'Legal compliance', code: 'LC', ukDirector: 'International', note: 'Particularly national laws' },
       { name: 'Tax compliance', code: 'TC', ukDirector: 'GMT', note: 'Not specified in the source' },
       { name: 'Leadership capacity', code: 'MC', ukDirector: 'GMT', note: 'For example, SMT capacity and SMT stability' },
-      { name: 'Crisis management', code: 'CM', ukDirector: 'GMT', note: 'Inability to respond properly to a crisis, including public relations' }
+      { name: 'Crisis management', code: 'CM', ukDirector: 'GMT', note: 'Inability to respond properly to a crisis, including public relations' },
+      { name: 'Other', code: 'OT', ukDirector: 'GMT', note: 'Other Strategy & Governance risk not specified above' }
     ]
   },
   {
@@ -36,7 +50,8 @@ export const DEFAULT_RISK_CATEGORIES = [
       { name: 'Financial model', code: 'FM', ukDirector: 'Finance', note: 'Long-term financial model not suited to cash flows and commitments' },
       { name: 'Finance controls & Fraud', code: 'FF', ukDirector: 'Finance', note: 'Not specified in the source' },
       { name: 'Data protection & cyber attack', code: 'IT', ukDirector: 'Finance', note: 'IT failures of any type, including data loss and cyber attacks' },
-      { name: 'Change projects', code: 'CP', ukDirector: 'Finance', note: 'Failure to manage or support organization-wide change projects' }
+      { name: 'Change projects', code: 'CP', ukDirector: 'Finance', note: 'Failure to manage or support organization-wide change projects' },
+      { name: 'Other', code: 'OT', ukDirector: 'Finance', note: 'Other Finance & Services risk not specified above' }
     ]
   },
   {
@@ -51,7 +66,8 @@ export const DEFAULT_RISK_CATEGORIES = [
       { name: 'Cost recovery', code: 'CR', ukDirector: 'Marketing', note: 'Reduced ability to cover costs, possibly requiring higher levels of co-funding' },
       { name: 'Secured income', code: 'SI', ukDirector: 'Marketing', note: 'Overall low levels of secured income and a weak pipeline' },
       { name: 'Relationships & Profile', code: 'RP', ukDirector: 'Marketing', note: 'Close associations with another organization may cause reputational damage' },
-      { name: 'Brand', code: 'BR', ukDirector: 'Marketing', note: 'Limited return on investment, for example due to low internal take-up' }
+      { name: 'Brand', code: 'BR', ukDirector: 'Marketing', note: 'Limited return on investment, for example due to low internal take-up' },
+      { name: 'Other', code: 'OT', ukDirector: 'Marketing', note: 'Other Funding & Income risk not specified above' }
     ]
   },
   {
@@ -66,8 +82,9 @@ export const DEFAULT_RISK_CATEGORIES = [
       { name: 'Project Implementation', code: 'PI', ukDirector: 'International', note: 'Not specified in the source' },
       { name: 'Project Impact', code: 'IP', ukDirector: 'Influence', note: 'Projects fail to achieve their intended impact or have negative impacts' },
       { name: 'Learning', code: 'LE', ukDirector: 'Influence', note: 'Failure to learn from projects and adapt' },
-      { name: 'Project-specific', code: 'PS', ukDirector: 'International', note: 'Some RCOs have one or more risks related to specific projects' },
-      { name: 'Donor compliance', code: 'DC', ukDirector: 'International', note: 'Not specified in the source' }
+      { name: 'Project specific', code: 'PS', ukDirector: 'International', note: 'Some RCOs have one or more risks related to specific projects', aliases: ['Project-specific'] },
+      { name: 'Donor complaince', code: 'DC', ukDirector: 'International', note: 'Compliance with donor agreements, guidelines and contractual conditions', aliases: ['Donor compliance'] },
+      { name: 'Other', code: 'OT', ukDirector: 'International', note: 'Other Programme Delivery risk not specified above' }
     ]
   },
   {
@@ -77,7 +94,8 @@ export const DEFAULT_RISK_CATEGORIES = [
     subCategories: [
       { name: 'Staff capacity', code: 'SC', ukDirector: 'Finance', note: 'Inability to recruit and retain a workforce with sufficient numbers and skills' },
       { name: 'Staff development', code: 'SD', ukDirector: 'Finance', note: 'Inability to motivate the workforce and develop skills; may include poor organizational culture' },
-      { name: 'Safeguarding', code: 'SG', ukDirector: 'Finance', note: 'Not specified in the source' }
+      { name: 'Safeguarding', code: 'SG', ukDirector: 'Finance', note: 'Not specified in the source' },
+      { name: 'Other', code: 'OT', ukDirector: 'Finance', note: 'Other People risk not specified above' }
     ]
   },
   {
@@ -90,7 +108,8 @@ export const DEFAULT_RISK_CATEGORIES = [
       { name: 'Civil unrest & terrorism', code: 'CT', ukDirector: 'International', note: 'Not specified in the source' },
       { name: 'Political Unrest', code: 'PU', ukDirector: 'International', note: 'Not specified in the source' },
       { name: 'Macroeconomic shocks', code: 'MS', ukDirector: 'International', note: 'For example, economic unrest and failing banking systems' },
-      { name: 'Security Other', code: 'SO', ukDirector: 'International', note: 'For example, land disputes and fuel disputes' }
+      { name: 'Security Other', code: 'SO', ukDirector: 'International', note: 'For example, land disputes and fuel disputes' },
+      { name: 'Other', code: 'OT', ukDirector: 'International', note: 'Other External risk not specified above' }
     ]
   }
 ];
@@ -281,6 +300,7 @@ export const seedRiskDataIfEmpty = async () => {
             matchSub.code = defSub.code;
             matchSub.ukDirector = defSub.ukDirector;
             matchSub.note = defSub.note;
+            if (defSub.aliases) matchSub.aliases = defSub.aliases;
           } else {
             existing.subCategories.push(defSub);
           }
@@ -1058,7 +1078,10 @@ export const createRiskRecord = async (req, res) => {
       const matchedCat = DEFAULT_RISK_CATEGORIES.find(c => c.name.toLowerCase() === category.trim().toLowerCase());
       if (matchedCat) {
         if (!finalCategoryCode) finalCategoryCode = matchedCat.code;
-        const matchedSub = matchedCat.subCategories.find(s => s.name.toLowerCase() === (subCategory || '').trim().toLowerCase());
+        const matchedSub = matchedCat.subCategories.find(s => 
+          s.name.toLowerCase() === (subCategory || '').trim().toLowerCase() ||
+          (s.aliases && s.aliases.some(a => a.toLowerCase() === (subCategory || '').trim().toLowerCase()))
+        );
         if (matchedSub) {
           if (!finalSubCode) finalSubCode = matchedSub.code;
           if (!finalUkDirector) finalUkDirector = matchedSub.ukDirector;
@@ -1130,7 +1153,10 @@ export const createRiskRecord = async (req, res) => {
     const matchedCat = DEFAULT_RISK_CATEGORIES.find(c => c.name.toLowerCase() === category.trim().toLowerCase());
     if (matchedCat) {
       if (!finalCategoryCode) finalCategoryCode = matchedCat.code;
-      const matchedSub = matchedCat.subCategories.find(s => s.name.toLowerCase() === (subCategory || '').trim().toLowerCase());
+      const matchedSub = matchedCat.subCategories.find(s => 
+        s.name.toLowerCase() === (subCategory || '').trim().toLowerCase() ||
+        (s.aliases && s.aliases.some(a => a.toLowerCase() === (subCategory || '').trim().toLowerCase()))
+      );
       if (matchedSub) {
         if (!finalSubCode) finalSubCode = matchedSub.code;
         if (!finalUkDirector) finalUkDirector = matchedSub.ukDirector;
@@ -1334,11 +1360,28 @@ export const deleteRiskRecord = async (req, res) => {
  */
 export const getCategories = async (req, res) => {
   try {
+    const orderMap = new Map(CUSTOM_CATEGORY_ORDER.map((name, idx) => [name.toLowerCase(), idx]));
+    const sortCats = (cats) => {
+      return [...cats].sort((a, b) => {
+        const aIdx = orderMap.has(a.name?.toLowerCase()) ? orderMap.get(a.name.toLowerCase()) : 999;
+        const bIdx = orderMap.has(b.name?.toLowerCase()) ? orderMap.get(b.name.toLowerCase()) : 999;
+        return aIdx - bIdx;
+      });
+    };
+
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       getMockStore();
+      const rawList = mockData.riskCategories || DEFAULT_RISK_CATEGORIES;
+      const sortedList = sortCats(rawList);
       return res.status(200).json({
         success: true,
-        data: mockData.riskCategories || DEFAULT_RISK_CATEGORIES,
+        data: sortedList,
+        validationMeta: {
+          customCategoryList: CUSTOM_CATEGORY_ORDER,
+          macroCategoryList: MACRO_CATEGORY_LIST,
+          totalCategories: CUSTOM_CATEGORY_ORDER.length,
+          totalSubCategories: sortedList.reduce((acc, c) => acc + (c.subCategories?.length || 0), 0)
+        },
         scoringMeta: {
           formula: 'Score = (Likelihood x Impact) + Impact',
           varianceFormula: 'Variance = Current Score - Target Score',
@@ -1355,12 +1398,19 @@ export const getCategories = async (req, res) => {
 
     await seedRiskDataIfEmpty();
 
-    const dbCategories = await RiskCategory.find().sort({ name: 1 });
+    const dbCategories = await RiskCategory.find();
     const list = dbCategories.length > 0 ? dbCategories : DEFAULT_RISK_CATEGORIES;
+    const sortedList = sortCats(list);
 
     return res.status(200).json({
       success: true,
-      data: list,
+      data: sortedList,
+      validationMeta: {
+        customCategoryList: CUSTOM_CATEGORY_ORDER,
+        macroCategoryList: MACRO_CATEGORY_LIST,
+        totalCategories: CUSTOM_CATEGORY_ORDER.length,
+        totalSubCategories: sortedList.reduce((acc, c) => acc + (c.subCategories?.length || 0), 0)
+      },
       scoringMeta: {
         formula: 'Score = (Likelihood x Impact) + Impact',
         varianceFormula: 'Variance = Current Score - Target Score',
