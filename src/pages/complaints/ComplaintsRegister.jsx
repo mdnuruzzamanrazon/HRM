@@ -9,7 +9,7 @@ import {
   Info, ShieldCheck, AlertCircle, ArrowUpRight, Scale,
   Lock, EyeOff, Layers, FolderClock, MessageSquareWarning,
   Sparkles, SlidersHorizontal, Phone, Mail, User, Inbox, Globe,
-  BookOpen, BarChart3, Table as TableIcon, Shield
+  BookOpen, BarChart3, Table as TableIcon, Shield, LayoutList, Columns
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
@@ -46,6 +46,7 @@ export default function ComplaintsRegister() {
   const [hasAppealFilter, setHasAppealFilter] = useState(false);
   const [maskPhones, setMaskPhones] = useState(true);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const [tableMode, setTableMode] = useState('standard'); // 'standard' | 'all_fields'
 
   // State: Sorting & Pagination
   const [sortBy, setSortBy] = useState('dateReceived');
@@ -355,7 +356,16 @@ export default function ComplaintsRegister() {
     }
   };
 
-  // Active filters count
+  // Active secondary filters count (excluding search & status)
+  const activeSecondaryFiltersCount = [
+    channelFilter !== 'ALL',
+    categoryFilter !== 'ALL',
+    partnerFilter !== 'ALL',
+    startDate !== '',
+    endDate !== ''
+  ].filter(Boolean).length;
+
+  // Total active filters count
   const activeFiltersCount = [
     statusFilter !== 'ALL',
     channelFilter !== 'ALL',
@@ -364,7 +374,8 @@ export default function ComplaintsRegister() {
     startDate !== '',
     endDate !== '',
     isOverdueFilter,
-    hasAppealFilter
+    hasAppealFilter,
+    searchQuery.trim() !== ''
   ].filter(Boolean).length;
 
   // Selected Project Object
@@ -375,7 +386,7 @@ export default function ComplaintsRegister() {
   }, [projects, selectedProjectId]);
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-in fade-in duration-200">
       
       {/* Toast Notification */}
       {toast.show && (
@@ -401,8 +412,8 @@ export default function ComplaintsRegister() {
         {/* ROW 1: HEADER & PRIMARY ACTIONS */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 flex items-center justify-center flex-shrink-0">
-              <FolderClock className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 flex items-center justify-center flex-shrink-0">
+              <FolderClock className="w-6 h-6 stroke-[2.2]" />
             </div>
             <div>
               <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
@@ -414,11 +425,11 @@ export default function ComplaintsRegister() {
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>Database Connected</span>
+                  <span>Database Live</span>
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Record, monitor, and manage project complaints and feedback securely.
+                Centralized registry for intake, investigation, and time-bound redressal complying with joint Partner and Oxfam standards.
               </p>
             </div>
           </div>
@@ -427,7 +438,7 @@ export default function ComplaintsRegister() {
           <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
             {/* Project Selector */}
             <div className="relative min-w-[210px] flex-1 sm:flex-initial">
-              <Building2 className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+              <Building2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <select
                 value={selectedProjectId}
                 onChange={(e) => {
@@ -441,22 +452,8 @@ export default function ComplaintsRegister() {
                   <option key={p._id} value={p._id}>{p.name}</option>
                 ))}
               </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 text-slate-400 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             </div>
-
-            {/* Phone Privacy Mask Toggle */}
-            <button
-              type="button"
-              onClick={() => setMaskPhones(!maskPhones)}
-              title={maskPhones ? 'Reveal phone numbers (PII)' : 'Mask phone numbers for privacy'}
-              className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                maskPhones 
-                  ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 shadow-2xs' 
-                  : 'bg-indigo-50 text-indigo-700 border-indigo-300 ring-2 ring-indigo-500/20 shadow-2xs'
-              }`}
-            >
-              {maskPhones ? <Lock className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
 
             {/* Print / Export Sheet */}
             <button
@@ -465,21 +462,7 @@ export default function ComplaintsRegister() {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
             >
               <Printer className="w-3.5 h-3.5 text-slate-500" />
-              <span className="hidden sm:inline">Monthly Register Sheet</span>
-            </button>
-
-            {/* Refresh Data */}
-            <button
-              type="button"
-              onClick={() => {
-                fetchComplaints();
-                fetchStats();
-                showToast('Refreshed complaints register.');
-              }}
-              title="Refresh register"
-              className="p-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer shadow-2xs"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-600' : ''}`} />
+              <span>Monthly Register Sheet</span>
             </button>
 
             {/* Add Complaint / Feedback Button */}
@@ -549,18 +532,50 @@ export default function ComplaintsRegister() {
             </button>
           </div>
 
-          {/* Quick Notice Link when on Register Tab */}
-          {activeTab === 'register' && (
+          {/* Quick Notice & Utilities */}
+          <div className="flex items-center gap-2.5">
+            {/* Phone Privacy Mask Toggle */}
             <button
               type="button"
-              onClick={() => handleTabChange('guidelines')}
-              className="inline-flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
+              onClick={() => setMaskPhones(!maskPhones)}
+              title={maskPhones ? 'Reveal phone numbers (PII)' : 'Mask phone numbers for privacy'}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                maskPhones 
+                  ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200 shadow-2xs' 
+                  : 'bg-indigo-50 text-indigo-700 border-indigo-300 ring-2 ring-indigo-500/20 shadow-2xs'
+              }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Joint Safeguarding Standards Active</span>
-              <ArrowUpRight className="w-3 h-3" />
+              {maskPhones ? <Lock className="w-3.5 h-3.5 text-slate-500" /> : <Eye className="w-3.5 h-3.5 text-indigo-600" />}
+              <span>{maskPhones ? 'PII Protected' : 'PII Revealed'}</span>
             </button>
-          )}
+
+            {/* Refresh Data */}
+            <button
+              type="button"
+              onClick={() => {
+                fetchComplaints();
+                fetchStats();
+                showToast('Refreshed complaints register.');
+              }}
+              title="Refresh register"
+              className="p-1.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer shadow-2xs"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-600' : ''}`} />
+            </button>
+
+            {/* Guidelines Link */}
+            {activeTab === 'register' && (
+              <button
+                type="button"
+                onClick={() => handleTabChange('guidelines')}
+                className="hidden sm:inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer ml-1"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+                <span>SOP Standards</span>
+                <ArrowUpRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -591,9 +606,9 @@ export default function ComplaintsRegister() {
       {activeTab === 'register' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           
-          {/* Summary Dashboard Cards (Dynamically Calculated from Database) */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {/* Total Records */}
+          {/* Summary Dashboard Cards (Cohesive, Uniform Enterprise Styling) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            {/* 1. Total Records */}
             <div 
               onClick={() => {
                 setStatusFilter('ALL');
@@ -602,27 +617,30 @@ export default function ComplaintsRegister() {
               }}
               className={`p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
                 statusFilter === 'ALL' && !isOverdueFilter && !hasAppealFilter
-                  ? 'bg-slate-900 text-white border-slate-900 ring-2 ring-slate-900/20 shadow-xs'
-                  : 'bg-white border-slate-200/90 hover:bg-slate-50 text-slate-900 shadow-2xs'
+                  ? 'bg-white border-indigo-500 ring-2 ring-indigo-500/15 shadow-sm'
+                  : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1.5">
-                <span className={statusFilter === 'ALL' && !isOverdueFilter && !hasAppealFilter ? 'text-slate-300' : 'text-slate-500'}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                   Total Records
                 </span>
-                <Layers className={`w-3.5 h-3.5 ${statusFilter === 'ALL' && !isOverdueFilter && !hasAppealFilter ? 'text-indigo-400' : 'text-slate-400'}`} />
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Layers className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black font-mono">
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-2">
                 {stats ? stats.totalRecords : complaints.length}
               </div>
-              <span className={`text-[10px] mt-1 block font-medium truncate ${
-                statusFilter === 'ALL' && !isOverdueFilter && !hasAppealFilter ? 'text-slate-400' : 'text-slate-500'
-              }`}>
-                Logged project intake
-              </span>
+              <div className="flex items-center justify-between text-[11px] mt-1.5 text-slate-500 font-medium">
+                <span>Logged project intake</span>
+                {statusFilter === 'ALL' && !isOverdueFilter && !hasAppealFilter && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                )}
+              </div>
             </div>
 
-            {/* Open Complaints */}
+            {/* 2. Open Complaints */}
             <div 
               onClick={() => {
                 setStatusFilter('Open');
@@ -631,27 +649,30 @@ export default function ComplaintsRegister() {
               }}
               className={`p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
                 statusFilter === 'Open' && !isOverdueFilter
-                  ? 'bg-amber-500 text-white border-amber-500 ring-2 ring-amber-500/20 shadow-xs'
-                  : 'bg-white border-slate-200/90 hover:bg-amber-50/50 text-slate-900 shadow-2xs'
+                  ? 'bg-white border-amber-500 ring-2 ring-amber-500/15 shadow-sm'
+                  : 'bg-white border-slate-200/90 hover:border-amber-200 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1.5">
-                <span className={statusFilter === 'Open' && !isOverdueFilter ? 'text-amber-100' : 'text-amber-700'}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
                   Open Complaints
                 </span>
-                <Clock className={`w-3.5 h-3.5 ${statusFilter === 'Open' && !isOverdueFilter ? 'text-white' : 'text-amber-600'}`} />
+                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black font-mono">
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-2">
                 {stats ? stats.openComplaints : 0}
               </div>
-              <span className={`text-[10px] mt-1 block font-medium truncate ${
-                statusFilter === 'Open' && !isOverdueFilter ? 'text-amber-100' : 'text-slate-500'
-              }`}>
-                Under redressal
-              </span>
+              <div className="flex items-center justify-between text-[11px] mt-1.5 text-slate-500 font-medium">
+                <span>Under active redressal</span>
+                {statusFilter === 'Open' && !isOverdueFilter && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                )}
+              </div>
             </div>
 
-            {/* Closed Complaints */}
+            {/* 3. Closed Complaints */}
             <div 
               onClick={() => {
                 setStatusFilter('Closed');
@@ -660,27 +681,30 @@ export default function ComplaintsRegister() {
               }}
               className={`p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
                 statusFilter === 'Closed'
-                  ? 'bg-emerald-600 text-white border-emerald-600 ring-2 ring-emerald-600/20 shadow-xs'
-                  : 'bg-white border-slate-200/90 hover:bg-emerald-50/50 text-slate-900 shadow-2xs'
+                  ? 'bg-white border-emerald-500 ring-2 ring-emerald-500/15 shadow-sm'
+                  : 'bg-white border-slate-200/90 hover:border-emerald-200 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1.5">
-                <span className={statusFilter === 'Closed' ? 'text-emerald-100' : 'text-emerald-700'}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
                   Closed Complaints
                 </span>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${statusFilter === 'Closed' ? 'text-white' : 'text-emerald-600'}`} />
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black font-mono">
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-2">
                 {stats ? stats.closedComplaints : 0}
               </div>
-              <span className={`text-[10px] mt-1 block font-medium truncate ${
-                statusFilter === 'Closed' ? 'text-emerald-100' : 'text-slate-500'
-              }`}>
-                Formally resolved
-              </span>
+              <div className="flex items-center justify-between text-[11px] mt-1.5 text-slate-500 font-medium">
+                <span>Formally resolved</span>
+                {statusFilter === 'Closed' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                )}
+              </div>
             </div>
 
-            {/* Pending Appeals */}
+            {/* 4. Pending Appeals */}
             <div 
               onClick={() => {
                 setHasAppealFilter(!hasAppealFilter);
@@ -688,27 +712,30 @@ export default function ComplaintsRegister() {
               }}
               className={`p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-md ${
                 hasAppealFilter
-                  ? 'bg-purple-600 text-white border-purple-600 ring-2 ring-purple-600/20 shadow-xs'
-                  : 'bg-white border-slate-200/90 hover:bg-purple-50/50 text-slate-900 shadow-2xs'
+                  ? 'bg-white border-purple-500 ring-2 ring-purple-500/15 shadow-sm'
+                  : 'bg-white border-slate-200/90 hover:border-purple-200 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1.5">
-                <span className={hasAppealFilter ? 'text-purple-100' : 'text-purple-700'}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700">
                   Pending Appeals
                 </span>
-                <Scale className={`w-3.5 h-3.5 ${hasAppealFilter ? 'text-white' : 'text-purple-600'}`} />
+                <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <Scale className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black font-mono">
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-2">
                 {stats ? stats.pendingAppeals : 0}
               </div>
-              <span className={`text-[10px] mt-1 block font-medium truncate ${
-                hasAppealFilter ? 'text-purple-100' : 'text-slate-500'
-              }`}>
-                Under committee review
-              </span>
+              <div className="flex items-center justify-between text-[11px] mt-1.5 text-slate-500 font-medium">
+                <span>Under review</span>
+                {hasAppealFilter && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                )}
+              </div>
             </div>
 
-            {/* Overdue Complaints (>30 days) */}
+            {/* 5. Overdue Complaints (>30 days) */}
             <div 
               onClick={() => {
                 setIsOverdueFilter(!isOverdueFilter);
@@ -716,141 +743,57 @@ export default function ComplaintsRegister() {
               }}
               className={`p-4 rounded-2xl border transition-all cursor-pointer hover:shadow-md col-span-2 sm:col-span-1 ${
                 isOverdueFilter
-                  ? 'bg-rose-600 text-white border-rose-600 ring-2 ring-rose-600/20 shadow-xs'
-                  : 'bg-white border-slate-200/90 hover:bg-rose-50/50 text-slate-900 shadow-2xs'
+                  ? 'bg-white border-rose-500 ring-2 ring-rose-500/15 shadow-sm'
+                  : 'bg-white border-slate-200/90 hover:border-rose-200 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1.5">
-                <span className={isOverdueFilter ? 'text-rose-100' : 'text-rose-700'}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700">
                   Overdue Complaints
                 </span>
-                <AlertTriangle className={`w-3.5 h-3.5 ${isOverdueFilter ? 'text-white' : 'text-rose-600'}`} />
+                <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black font-mono">
+              <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-2">
                 {stats ? stats.overdueComplaints : 0}
               </div>
-              <span className={`text-[10px] mt-1 block font-medium truncate ${
-                isOverdueFilter ? 'text-rose-100' : 'text-slate-500'
-              }`}>
-                Open &gt; 30 days
-              </span>
+              <div className="flex items-center justify-between text-[11px] mt-1.5 text-slate-500 font-medium">
+                <span>Open &gt; 30 days</span>
+                {isOverdueFilter && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Clean Unified Search & Filter Toolbar */}
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-3.5 sm:p-4 space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               
               {/* Search Box */}
-              <div className="md:col-span-4 relative">
-                <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <div className="relative flex-1 min-w-[260px]">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search S.No, complainant, category, partner, or issue..."
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 placeholder-slate-400 font-medium"
+                  className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-400 font-medium transition-all"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
-              {/* Status Filter */}
-              <div className="md:col-span-2">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 font-bold"
-                >
-                  <option value="ALL">Status: All</option>
-                  <option value="Open">Status: Open</option>
-                  <option value="Closed">Status: Closed</option>
-                </select>
-              </div>
-
-              {/* Receiving Channel Filter */}
-              <div className="md:col-span-2">
-                <select
-                  value={channelFilter}
-                  onChange={(e) => {
-                    setChannelFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 font-medium truncate"
-                >
-                  <option value="ALL">Channel: All</option>
-                  <option value="Phone">Phone</option>
-                  <option value="Email">Email</option>
-                  <option value="In-Person">In-Person</option>
-                  <option value="Suggestion Box">Suggestion Box</option>
-                  <option value="Website / Online Form">Website / Form</option>
-                  <option value="Community Helpdesk">Community Helpdesk</option>
-                  <option value="SMS / WhatsApp">SMS / WhatsApp</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              {/* Category Filter */}
-              <div className="md:col-span-2">
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => {
-                    setCategoryFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 font-medium truncate"
-                >
-                  <option value="ALL">Category: All</option>
-                  <option value="Staff Conduct & Safeguarding">Staff Conduct &amp; Safeguarding</option>
-                  <option value="Programme Quality & Delivery">Programme Quality &amp; Delivery</option>
-                  <option value="Procurement & Financial Management">Procurement &amp; Finance</option>
-                  <option value="Aid Diversion & Corruption">Aid Diversion &amp; Corruption</option>
-                  <option value="Harassment & Discrimination">Harassment &amp; Discrimination</option>
-                  <option value="Information Request & Inquiry">Information Request &amp; Inquiry</option>
-                  <option value="Community Relations & Respect">Community Relations</option>
-                  <option value="Service Delivery & Assistance">Service Delivery &amp; Assistance</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              {/* Partner Organization Filter */}
-              <div className="md:col-span-2">
-                <select
-                  value={partnerFilter}
-                  onChange={(e) => {
-                    setPartnerFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 font-semibold truncate"
-                >
-                  <option value="ALL">Partner: All</option>
-                  <option value="Oxfam">Oxfam</option>
-                  <option value="CBDP Foundation">CBDP Foundation</option>
-                  <option value="Rupantar">Rupantar</option>
-                  <option value="Coast Foundation">Coast Foundation</option>
-                  <option value="BRAC">BRAC</option>
-                  <option value="ActionAid">ActionAid</option>
-                  <option value="Local Partner NGO">Local Partner NGO</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Quick Filter Pills Row */}
-            <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-slate-100 text-xs">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-bold text-slate-500 mr-1">Quick Filters:</span>
-                
+              {/* Segmented Quick Status Pills */}
+              <div className="flex items-center bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 overflow-x-auto scrollbar-none gap-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -858,13 +801,13 @@ export default function ComplaintsRegister() {
                     setIsOverdueFilter(false);
                     setHasAppealFilter(false);
                   }}
-                  className={`px-2.5 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     statusFilter === 'ALL' && !isOverdueFilter && !hasAppealFilter
-                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      ? 'bg-white shadow-xs text-indigo-700'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  All
+                  All ({stats?.totalRecords || complaints.length})
                 </button>
 
                 <button
@@ -872,14 +815,15 @@ export default function ComplaintsRegister() {
                   onClick={() => {
                     setStatusFilter('Open');
                     setIsOverdueFilter(false);
+                    setHasAppealFilter(false);
                   }}
-                  className={`px-2.5 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${
-                    statusFilter === 'Open' && !isOverdueFilter
-                      ? 'bg-amber-50 text-amber-800 border-amber-300'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    statusFilter === 'Open' && !isOverdueFilter && !hasAppealFilter
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-amber-700 hover:bg-amber-50'
                   }`}
                 >
-                  Open Only
+                  Open ({stats?.openComplaints || 0})
                 </button>
 
                 <button
@@ -887,14 +831,15 @@ export default function ComplaintsRegister() {
                   onClick={() => {
                     setStatusFilter('Closed');
                     setIsOverdueFilter(false);
+                    setHasAppealFilter(false);
                   }}
-                  className={`px-2.5 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${
-                    statusFilter === 'Closed'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    statusFilter === 'Closed' && !isOverdueFilter && !hasAppealFilter
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-emerald-700 hover:bg-emerald-50'
                   }`}
                 >
-                  Closed Only
+                  Closed ({stats?.closedComplaints || 0})
                 </button>
 
                 <button
@@ -903,191 +848,341 @@ export default function ComplaintsRegister() {
                     setIsOverdueFilter(!isOverdueFilter);
                     setStatusFilter('Open');
                   }}
-                  className={`px-2.5 py-1 rounded-lg font-bold border transition-colors cursor-pointer flex items-center gap-1 ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     isOverdueFilter
-                      ? 'bg-rose-100 text-rose-800 border-rose-300'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'text-rose-700 hover:bg-rose-50'
                   }`}
                 >
-                  <AlertTriangle className="w-3 h-3 text-rose-500" />
-                  <span>Overdue (&gt;30d)</span>
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>Overdue ({stats?.overdueComplaints || 0})</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setHasAppealFilter(!hasAppealFilter)}
-                  className={`px-2.5 py-1 rounded-lg font-bold border transition-colors cursor-pointer flex items-center gap-1 ${
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     hasAppealFilter
-                      ? 'bg-purple-100 text-purple-800 border-purple-300'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      ? 'bg-purple-600 text-white shadow-xs'
+                      : 'text-purple-700 hover:bg-purple-50'
                   }`}
                 >
-                  <Scale className="w-3 h-3 text-purple-500" />
-                  <span>Appeals</span>
+                  <Scale className="w-3 h-3" />
+                  <span>Appeals ({stats?.pendingAppeals || 0})</span>
                 </button>
-
-                {/* Date range toggle / inputs */}
-                <div className="flex items-center gap-1.5 ml-2 text-slate-500 font-medium">
-                  <span className="text-[11px]">From:</span>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="px-2 py-0.5 text-xs rounded-lg border border-slate-200 bg-white"
-                  />
-                  <span className="text-[11px]">To:</span>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="px-2 py-0.5 text-xs rounded-lg border border-slate-200 bg-white"
-                  />
-                </div>
               </div>
 
-              {/* Active filters and reset */}
+              {/* Advanced Filters Toggle & Reset */}
               <div className="flex items-center gap-2">
-                {activeFiltersCount > 0 && (
-                  <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                    {activeFiltersCount} active filter{activeFiltersCount > 1 ? 's' : ''}
-                  </span>
-                )}
                 <button
                   type="button"
-                  onClick={handleResetFilters}
-                  className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                  onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    isFilterExpanded || activeSecondaryFiltersCount > 0
+                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 ring-2 ring-indigo-500/15'
+                      : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}
                 >
-                  Clear Filters
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Filters</span>
+                  {activeSecondaryFiltersCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center">
+                      {activeSecondaryFiltersCount}
+                    </span>
+                  )}
                 </button>
+
+                {(activeFiltersCount > 0 || searchQuery) && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="text-xs font-bold text-slate-500 hover:text-rose-600 transition-colors px-2 py-1 cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* Collapsible Secondary Filter Tray */}
+            {isFilterExpanded && (
+              <div className="pt-3.5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in duration-150">
+                {/* Receiving Channel Filter */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Receiving Channel</label>
+                  <select
+                    value={channelFilter}
+                    onChange={(e) => {
+                      setChannelFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 font-medium"
+                  >
+                    <option value="ALL">All Channels</option>
+                    <option value="Phone">Phone</option>
+                    <option value="Email">Email</option>
+                    <option value="In-Person">In-Person</option>
+                    <option value="Suggestion Box">Suggestion Box</option>
+                    <option value="Website / Online Form">Website / Online Form</option>
+                    <option value="Community Helpdesk">Community Helpdesk</option>
+                    <option value="SMS / WhatsApp">SMS / WhatsApp</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                {/* Complaint Category Filter */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Complaint Category</label>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => {
+                      setCategoryFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 font-medium truncate"
+                  >
+                    <option value="ALL">All Categories</option>
+                    <option value="Staff Conduct & Safeguarding">Staff Conduct &amp; Safeguarding</option>
+                    <option value="Programme Quality & Delivery">Programme Quality &amp; Delivery</option>
+                    <option value="Procurement & Financial Management">Procurement &amp; Finance</option>
+                    <option value="Aid Diversion & Corruption">Aid Diversion &amp; Corruption</option>
+                    <option value="Harassment & Discrimination">Harassment &amp; Discrimination</option>
+                    <option value="Information Request & Inquiry">Information Request &amp; Inquiry</option>
+                    <option value="Community Relations & Respect">Community Relations</option>
+                    <option value="Service Delivery & Assistance">Service Delivery &amp; Assistance</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                {/* Partner Organization Filter */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Concerned Partner Org</label>
+                  <select
+                    value={partnerFilter}
+                    onChange={(e) => {
+                      setPartnerFilter(e.target.value);
+                      setPage(1);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-white focus:ring-2 focus:ring-indigo-500 font-semibold truncate"
+                  >
+                    <option value="ALL">All Partners</option>
+                    <option value="Oxfam">Oxfam</option>
+                    <option value="CBDP Foundation">CBDP Foundation</option>
+                    <option value="Rupantar">Rupantar</option>
+                    <option value="Coast Foundation">Coast Foundation</option>
+                    <option value="BRAC">BRAC</option>
+                    <option value="ActionAid">ActionAid</option>
+                    <option value="Local Partner NGO">Local Partner NGO</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                {/* Date Range */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 mb-1">Intake Date Range</label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setPage(1);
+                      }}
+                      className="w-1/2 px-2 py-1 text-xs rounded-xl border border-slate-300 bg-white"
+                    />
+                    <span className="text-slate-400 text-xs">to</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setPage(1);
+                      }}
+                      className="w-1/2 px-2 py-1 text-xs rounded-xl border border-slate-300 bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Clean Enterprise Table Card */}
           <div className="bg-white rounded-3xl shadow-xs border border-slate-200/90 overflow-hidden">
             
-            {/* Table Header Bar */}
+            {/* Table Header Controls Bar */}
             <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between flex-wrap gap-2 text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-900">Complaints &amp; Feedback Records</span>
                 <span className="text-slate-400">•</span>
-                <span className="text-slate-500">
+                <span className="text-slate-500 font-medium">
                   Showing {complaints.length > 0 ? (page - 1) * limit + 1 : 0} - {Math.min(page * limit, totalCount)} of {totalCount} records
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500">Page size:</span>
-                <select
-                  value={limit}
-                  onChange={(e) => {
-                    setLimit(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="px-2 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-700 cursor-pointer"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
+              <div className="flex items-center gap-3">
+                {/* View Mode Toggle: Standard vs All 18 Fields */}
+                <div className="hidden sm:flex items-center bg-slate-200/70 p-0.5 rounded-lg border border-slate-300/60">
+                  <button
+                    type="button"
+                    onClick={() => setTableMode('standard')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                      tableMode === 'standard'
+                        ? 'bg-white text-indigo-700 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <LayoutList className="w-3.5 h-3.5" />
+                    <span>Standard View</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTableMode('all_fields')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                      tableMode === 'all_fields'
+                        ? 'bg-white text-indigo-700 shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Columns className="w-3.5 h-3.5" />
+                    <span>All 18 Fields</span>
+                  </button>
+                </div>
+
+                {/* Page Size Selector */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500 font-medium">Page size:</span>
+                  <select
+                    value={limit}
+                    onChange={(e) => {
+                      setLimit(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="px-2 py-1 rounded-lg border border-slate-300 bg-white font-bold text-slate-700 cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Scrollable Table */}
+            {/* Scrollable Table Area */}
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs">
+                {/* ========================================================= */}
+                {/* TABLE HEAD: STANDARD VIEW vs ALL 18 FIELDS VIEW           */}
+                {/* ========================================================= */}
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100/70 text-[11px] font-bold text-slate-700 tracking-wider sticky top-0 z-10 select-none">
-                    {/* 1. S.No */}
-                    <th 
-                      onClick={() => handleSort('sNo')}
-                      className="py-3 px-3.5 cursor-pointer hover:bg-slate-200/60 transition-colors whitespace-nowrap"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span>1. S.No</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                      </div>
-                    </th>
+                  {tableMode === 'standard' ? (
+                    /* Standard High-Frequency Operational Headers */
+                    <tr className="border-b border-slate-200 bg-slate-100/70 text-[11px] font-bold text-slate-700 tracking-wider sticky top-0 z-10 select-none">
+                      <th 
+                        onClick={() => handleSort('sNo')}
+                        className="py-3 px-4 cursor-pointer hover:bg-slate-200/60 transition-colors whitespace-nowrap min-w-[140px]"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>Case ID &amp; Date</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
 
-                    {/* 2. Date Received */}
-                    <th 
-                      onClick={() => handleSort('dateReceived')}
-                      className="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors whitespace-nowrap"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span>2. Date Received</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                      </div>
-                    </th>
+                      <th className="py-3 px-3.5 min-w-[200px]">Complainant &amp; Location</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[130px]">Channel &amp; Contact</th>
+                      <th className="py-3 px-3 min-w-[160px]">Category</th>
+                      <th className="py-3 px-3 min-w-[240px]">Issue Description</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[130px]">Partner Org</th>
 
-                    {/* 3. Receiving Channel */}
-                    <th className="py-3 px-3 whitespace-nowrap">3. Channel</th>
+                      <th 
+                        onClick={() => handleSort('status')}
+                        className="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors whitespace-nowrap min-w-[130px]"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>Status &amp; SLA</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
 
-                    {/* 4. Feedback / Complainant */}
-                    <th className="py-3 px-3 min-w-[160px]">4. Complainant Name &amp; Address</th>
+                      <th className="py-3 px-4 text-right sticky right-0 bg-slate-100/95 backdrop-blur-xs whitespace-nowrap z-20 min-w-[130px]">
+                        Actions
+                      </th>
+                    </tr>
+                  ) : (
+                    /* All 18 Standard Compliance Register Headers */
+                    <tr className="border-b border-slate-200 bg-slate-100/70 text-[11px] font-bold text-slate-700 tracking-wider sticky top-0 z-10 select-none">
+                      <th 
+                        onClick={() => handleSort('sNo')}
+                        className="py-3 px-3.5 cursor-pointer hover:bg-slate-200/60 transition-colors whitespace-nowrap min-w-[120px]"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>01. S.No</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
 
-                    {/* 5. Contact Phone */}
-                    <th className="py-3 px-3 whitespace-nowrap">5. Contact Phone</th>
+                      <th 
+                        onClick={() => handleSort('dateReceived')}
+                        className="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors whitespace-nowrap min-w-[120px]"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>02. Date Received</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
 
-                    {/* 6. Complaint Category */}
-                    <th className="py-3 px-3 min-w-[150px]">6. Category</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[110px]">03. Channel</th>
+                      <th className="py-3 px-3 min-w-[170px]">04. Complainant Name &amp; Address</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[130px]">05. Contact Phone</th>
+                      <th className="py-3 px-3 min-w-[160px]">06. Category</th>
+                      <th className="py-3 px-3 min-w-[220px]">07. Description of Issue</th>
 
-                    {/* 7. Description */}
-                    <th className="py-3 px-3 min-w-[220px]">7. Description of Issue</th>
+                      <th className="py-3 px-2 text-center whitespace-nowrap min-w-[80px]">08. Gender</th>
+                      <th className="py-3 px-2 text-center whitespace-nowrap min-w-[70px]">09. Age</th>
+                      <th className="py-3 px-2 text-center whitespace-nowrap min-w-[90px]">10. Disability</th>
 
-                    {/* 8-10. Demographics */}
-                    <th className="py-3 px-2 text-center whitespace-nowrap">8. Gender</th>
-                    <th className="py-3 px-2 text-center whitespace-nowrap">9. Age</th>
-                    <th className="py-3 px-2 text-center whitespace-nowrap">10. Disability</th>
+                      <th className="py-3 px-3 min-w-[140px] whitespace-nowrap">11. Partner Org</th>
+                      <th className="py-3 px-3 min-w-[180px]">12. Redressal Action</th>
+                      <th className="py-3 px-3 min-w-[160px]">13. 30-Day Delay Info</th>
 
-                    {/* 11. Concerned Partner */}
-                    <th className="py-3 px-3 min-w-[110px]">11. Partner / Org</th>
+                      <th 
+                        onClick={() => handleSort('status')}
+                        className="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors text-center whitespace-nowrap min-w-[100px]"
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          <span>14. Status</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
 
-                    {/* 12. Actions Taken */}
-                    <th className="py-3 px-3 min-w-[180px]">12. Redressal Action</th>
+                      <th 
+                        onClick={() => handleSort('dateClosed')}
+                        className="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors whitespace-nowrap min-w-[110px]"
+                      >
+                        <div className="flex items-center gap-1">
+                          <span>15. Closed</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        </div>
+                      </th>
 
-                    {/* 13. Reason for Delay */}
-                    <th className="py-3 px-3 min-w-[160px]">13. 30-Day Delay Info</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[110px]">16. Appeal Date</th>
+                      <th className="py-3 px-3 min-w-[140px]">17. Appeal Outcome</th>
+                      <th className="py-3 px-3 whitespace-nowrap min-w-[110px]">18. Final Closing</th>
 
-                    {/* 14. Current Status */}
-                    <th 
-                      onClick={() => handleSort('status')}
-                      className="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors text-center whitespace-nowrap"
-                    >
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span>14. Status</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                      </div>
-                    </th>
-
-                    {/* 15. Date Closed */}
-                    <th 
-                      onClick={() => handleSort('dateClosed')}
-                      className="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors whitespace-nowrap"
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span>15. Closed</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                      </div>
-                    </th>
-
-                    {/* 16-18. Appeal Columns */}
-                    <th className="py-3 px-3 whitespace-nowrap">16. Appeal Date</th>
-                    <th className="py-3 px-3 min-w-[140px]">17. Appeal Outcome</th>
-                    <th className="py-3 px-3 whitespace-nowrap">18. Final Closing</th>
-
-                    {/* Actions */}
-                    <th className="py-3 px-3 text-right sticky right-0 bg-slate-100/95 backdrop-blur-xs whitespace-nowrap z-20">
-                      Actions
-                    </th>
-                  </tr>
+                      <th className="py-3 px-3 text-right sticky right-0 bg-slate-100/95 backdrop-blur-xs whitespace-nowrap z-20 min-w-[130px]">
+                        Actions
+                      </th>
+                    </tr>
+                  )}
                 </thead>
 
+                {/* ========================================================= */}
+                {/* TABLE BODY: CLEAN DATA RENDERING                          */}
+                {/* ========================================================= */}
                 <tbody className="divide-y divide-slate-150">
                   {loading ? (
                     <tr>
-                      <td colSpan={19} className="py-12 text-center">
+                      <td colSpan={tableMode === 'standard' ? 8 : 19} className="py-14 text-center">
                         <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
                           <RefreshCw className="w-6 h-6 animate-spin text-indigo-600" />
                           <span className="font-bold text-xs">Loading Complaints &amp; Feedback Register...</span>
@@ -1096,7 +1191,7 @@ export default function ComplaintsRegister() {
                     </tr>
                   ) : complaints.length === 0 ? (
                     <tr>
-                      <td colSpan={19} className="py-12 text-center">
+                      <td colSpan={tableMode === 'standard' ? 8 : 19} className="py-14 text-center">
                         <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto text-slate-500">
                           <FolderClock className="w-10 h-10 text-slate-300" />
                           <span className="font-bold text-slate-800 text-sm">No complaints or feedback found</span>
@@ -1129,198 +1224,314 @@ export default function ComplaintsRegister() {
                             isRecordOverdue ? 'bg-amber-50/20' : ''
                           }`}
                         >
-                          {/* 1. S.No */}
-                          <td className="py-3 px-3.5 font-mono font-bold whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDetailComplaint(c);
-                                setIsDetailModalOpen(true);
-                              }}
-                              className="text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
-                            >
-                              {c.sNo}
-                            </button>
-                          </td>
-
-                          {/* 2. Date Received */}
-                          <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700">
-                            {formatDateDisplay(c.dateReceived)}
-                            {daysOld > 0 && (
-                              <span className="text-[10px] text-slate-400 block font-normal">
-                                ({daysOld}d ago)
-                              </span>
-                            )}
-                          </td>
-
-                          {/* 3. Receiving Channel */}
-                          <td className="py-3 px-3 whitespace-nowrap">
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-800">
-                              {getChannelIcon(c.receivingChannel)}
-                              <span>{c.receivingChannel}</span>
-                            </div>
-                            {c.receivingChannelOther && (
-                              <span className="text-[10px] text-slate-500 block truncate max-w-[100px]">
-                                {c.receivingChannelOther}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* 4. Feedback / Complainant Name & Address */}
-                          <td className="py-3 px-3">
-                            <div className="font-bold text-slate-900 truncate max-w-[160px]">
-                              {c.complainantName || 'Anonymous'}
-                            </div>
-                            {c.isAnonymous && (
-                              <span className="inline-block text-[9px] font-bold uppercase bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded mt-0.5">
-                                Anonymous
-                              </span>
-                            )}
-                            {c.complainantAddress && (
-                              <span className="text-[10px] text-slate-500 block truncate max-w-[160px]" title={c.complainantAddress}>
-                                {c.complainantAddress}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* 5. Complainant Contact Phone Number */}
-                          <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px]">
-                            <span className="font-semibold block">{displayPhone(c.complainantPhone)}</span>
-                            {c.numberCalledFrom && c.numberCalledFrom !== c.complainantPhone && (
-                              <span className="text-[10px] text-slate-400 block">
-                                Called: {displayPhone(c.numberCalledFrom)}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* 6. Complaint Type / Category */}
-                          <td className="py-3 px-3">
-                            <span className="inline-block px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-bold truncate max-w-[160px]" title={c.complaintCategory}>
-                              {c.complaintCategory}
-                            </span>
-                            {c.complaintCategoryOther && (
-                              <span className="text-[10px] text-slate-500 block truncate max-w-[150px]">
-                                {c.complaintCategoryOther}
-                              </span>
-                            )}
-                          </td>
-
-                          {/* 7. Description */}
-                          <td className="py-3 px-3">
-                            <p 
-                              className="line-clamp-2 text-slate-700 font-sans cursor-pointer hover:text-slate-900 leading-snug"
-                              onClick={() => {
-                                setDetailComplaint(c);
-                                setIsDetailModalOpen(true);
-                              }}
-                              title={c.description}
-                            >
-                              {c.description}
-                            </p>
-                          </td>
-
-                          {/* 8. Gender */}
-                          <td className="py-3 px-2 text-center text-slate-700 whitespace-nowrap">
-                            {c.complainantGender || '—'}
-                          </td>
-
-                          {/* 9. Age */}
-                          <td className="py-3 px-2 text-center text-slate-700 whitespace-nowrap">
-                            {c.complainantAge || '—'}
-                          </td>
-
-                          {/* 10. Disability */}
-                          <td className="py-3 px-2 text-center whitespace-nowrap">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              c.complainantDisability === 'Yes' 
-                                ? 'bg-purple-100 text-purple-800' 
-                                : 'text-slate-600 bg-slate-100'
-                            }`}>
-                              {c.complainantDisability || 'Not recorded'}
-                            </span>
-                          </td>
-
-                          {/* 11. Concerned Partner / Organization Name */}
-                          <td className="py-3 px-3 font-semibold text-slate-900 whitespace-nowrap">
-                            {c.partnerOrgName}
-                          </td>
-
-                          {/* 12. Actions Taken / How Issue Was Redressed */}
-                          <td className="py-3 px-3">
-                            <p className="line-clamp-2 text-slate-600 font-sans leading-snug" title={c.actionsTaken}>
-                              {c.actionsTaken || '—'}
-                            </p>
-                          </td>
-
-                          {/* 13. Reason for Delay and Complainant Notification */}
-                          <td className="py-3 px-3">
-                            {c.delayReason ? (
-                              <div className="space-y-0.5">
-                                <p className="line-clamp-1 text-slate-700 font-medium" title={c.delayReason}>
-                                  {c.delayReason}
-                                </p>
-                                <span className="text-[10px] font-semibold text-slate-500 block">
-                                  Notified: <strong className={c.isComplainantNotifiedOfDelay === 'Yes' ? 'text-emerald-700' : 'text-amber-700'}>
-                                    {c.isComplainantNotifiedOfDelay || 'No'}
-                                  </strong>
+                          {/* ========================================================= */}
+                          {/* ROW RENDERING: STANDARD VIEW                              */}
+                          {/* ========================================================= */}
+                          {tableMode === 'standard' ? (
+                            <>
+                              {/* 1. Case ID & Date */}
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDetailComplaint(c);
+                                    setIsDetailModalOpen(true);
+                                  }}
+                                  className="font-mono font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer block text-left"
+                                >
+                                  {c.sNo}
+                                </button>
+                                <span className="text-[11px] text-slate-500 font-medium block mt-0.5">
+                                  {formatDateDisplay(c.dateReceived)}
+                                  {daysOld > 0 && <span className="text-slate-400"> • {daysOld}d ago</span>}
                                 </span>
-                              </div>
-                            ) : isRecordOverdue ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                                <AlertTriangle className="w-3 h-3" />
-                                Delay reason needed
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
+                              </td>
 
-                          {/* 14. Current Status */}
-                          <td className="py-3 px-3 text-center whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                              c.status === 'Closed'
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                : 'bg-amber-100 text-amber-800 border border-amber-300'
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                c.status === 'Closed' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
-                              }`} />
-                              {c.status}
-                            </span>
-                          </td>
+                              {/* 2. Complainant & Location */}
+                              <td className="py-3.5 px-3.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-slate-900 text-xs truncate max-w-[180px]">
+                                    {c.complainantName || 'Anonymous Complainant'}
+                                  </span>
+                                  {c.isAnonymous && (
+                                    <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase rounded bg-slate-100 text-slate-600 border border-slate-200">
+                                      Anon
+                                    </span>
+                                  )}
+                                </div>
+                                {c.complainantAddress && (
+                                  <span className="text-[11px] text-slate-500 block truncate max-w-[190px] mt-0.5" title={c.complainantAddress}>
+                                    {c.complainantAddress}
+                                  </span>
+                                )}
+                                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-400 font-medium flex-wrap">
+                                  {c.complainantGender && <span>{c.complainantGender}</span>}
+                                  {c.complainantAge && <span>• {c.complainantAge} yrs</span>}
+                                  {c.complainantDisability === 'Yes' && (
+                                    <span className="px-1 rounded bg-purple-50 text-purple-700 font-bold border border-purple-200/60">
+                                      PWD
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
 
-                          {/* 15. Date Complaint Closed */}
-                          <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700">
-                            {formatDateDisplay(c.dateClosed)}
-                          </td>
+                              {/* 3. Channel & Contact */}
+                              <td className="py-3.5 px-3 whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200/80 text-[11px] font-semibold text-slate-800">
+                                  {getChannelIcon(c.receivingChannel)}
+                                  <span>{c.receivingChannel}</span>
+                                </div>
+                                <span className="font-mono text-[11px] text-slate-600 block mt-1">
+                                  {displayPhone(c.complainantPhone)}
+                                </span>
+                              </td>
 
-                          {/* 16. Appeal Date */}
-                          <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700">
-                            {formatDateDisplay(c.appealDate)}
-                          </td>
+                              {/* 4. Category */}
+                              <td className="py-3.5 px-3">
+                                <span className="inline-block px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200/60 text-indigo-700 text-[11px] font-semibold max-w-[180px] truncate" title={c.complaintCategory}>
+                                  {c.complaintCategory}
+                                </span>
+                              </td>
 
-                          {/* 17. Appeal Outcome */}
-                          <td className="py-3 px-3">
-                            {c.appealOutcome ? (
-                              <p className="line-clamp-1 text-slate-700 font-medium" title={c.appealOutcome}>
-                                {c.appealOutcome}
-                              </p>
-                            ) : c.hasAppeal ? (
-                              <span className="text-[10px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded">
-                                {c.appealStatus || 'Under Review'}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">—</span>
-                            )}
-                          </td>
+                              {/* 5. Issue Description */}
+                              <td className="py-3.5 px-3">
+                                <p 
+                                  className="line-clamp-2 text-slate-700 font-sans text-xs leading-relaxed cursor-pointer hover:text-slate-900"
+                                  onClick={() => {
+                                    setDetailComplaint(c);
+                                    setIsDetailModalOpen(true);
+                                  }}
+                                  title={c.description}
+                                >
+                                  {c.description}
+                                </p>
+                              </td>
 
-                          {/* 18. Final Closing Date After Appeal */}
-                          <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700">
-                            {formatDateDisplay(c.finalClosingDateAfterAppeal)}
-                          </td>
+                              {/* 6. Partner Org */}
+                              <td className="py-3.5 px-3 whitespace-nowrap">
+                                <span className="font-bold text-slate-800 text-xs">
+                                  {c.partnerOrgName || 'CBDP Foundation'}
+                                </span>
+                              </td>
 
-                          {/* Action Buttons */}
-                          <td className="py-3 px-3 text-right sticky right-0 bg-white/95 backdrop-blur-xs whitespace-nowrap z-10 shadow-xs">
+                              {/* 7. Status & SLA */}
+                              <td className="py-3.5 px-3 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                  c.status === 'Closed'
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-300'
+                                    : 'bg-amber-50 text-amber-800 border border-amber-300'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    c.status === 'Closed' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                                  }`} />
+                                  <span>{c.status}</span>
+                                </span>
+
+                                {/* 30-Day SLA Indicator */}
+                                {c.status === 'Closed' ? (
+                                  <span className="text-[10px] text-slate-400 block mt-1 font-medium">
+                                    Resolved {formatDateDisplay(c.dateClosed)}
+                                  </span>
+                                ) : isRecordOverdue ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200 mt-1">
+                                    <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                    <span>Overdue ({daysOld}d)</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-500 block mt-1 font-medium">
+                                    SLA: {Math.max(0, 30 - daysOld)}d left
+                                  </span>
+                                )}
+
+                                {c.hasAppeal && (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 mt-1">
+                                    <Scale className="w-3 h-3 text-purple-600" />
+                                    <span>Appeal Active</span>
+                                  </span>
+                                )}
+                              </td>
+                            </>
+                          ) : (
+                            /* ========================================================= */
+                            /* ROW RENDERING: ALL 18 FIELDS VIEW (FULL AUDIT SHEET)      */
+                            /* ========================================================= */
+                            <>
+                              {/* 01. S.No */}
+                              <td className="py-3 px-3.5 font-mono font-bold whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setDetailComplaint(c);
+                                    setIsDetailModalOpen(true);
+                                  }}
+                                  className="text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
+                                >
+                                  {c.sNo}
+                                </button>
+                              </td>
+
+                              {/* 02. Date Received */}
+                              <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700">
+                                {formatDateDisplay(c.dateReceived)}
+                                {daysOld > 0 && (
+                                  <span className="text-[10px] text-slate-400 block">
+                                    ({daysOld}d ago)
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 03. Receiving Channel */}
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-800">
+                                  {getChannelIcon(c.receivingChannel)}
+                                  <span>{c.receivingChannel}</span>
+                                </div>
+                              </td>
+
+                              {/* 04. Complainant Name & Address */}
+                              <td className="py-3 px-3">
+                                <div className="font-bold text-slate-900 truncate max-w-[160px]">
+                                  {c.complainantName || 'Anonymous'}
+                                </div>
+                                {c.complainantAddress && (
+                                  <span className="text-[10px] text-slate-500 block truncate max-w-[160px]" title={c.complainantAddress}>
+                                    {c.complainantAddress}
+                                  </span>
+                                )}
+                              </td>
+
+                              {/* 05. Contact Phone */}
+                              <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px]">
+                                <span className="font-semibold block">{displayPhone(c.complainantPhone)}</span>
+                              </td>
+
+                              {/* 06. Category */}
+                              <td className="py-3 px-3">
+                                <span className="inline-block px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-bold truncate max-w-[150px]" title={c.complaintCategory}>
+                                  {c.complaintCategory}
+                                </span>
+                              </td>
+
+                              {/* 07. Description */}
+                              <td className="py-3 px-3">
+                                <p 
+                                  className="line-clamp-2 text-slate-700 font-sans cursor-pointer hover:text-slate-900 leading-snug"
+                                  onClick={() => {
+                                    setDetailComplaint(c);
+                                    setIsDetailModalOpen(true);
+                                  }}
+                                  title={c.description}
+                                >
+                                  {c.description}
+                                </p>
+                              </td>
+
+                              {/* 08. Gender */}
+                              <td className="py-3 px-2 text-center text-slate-700 whitespace-nowrap">
+                                {c.complainantGender || '—'}
+                              </td>
+
+                              {/* 09. Age */}
+                              <td className="py-3 px-2 text-center text-slate-700 whitespace-nowrap">
+                                {c.complainantAge || '—'}
+                              </td>
+
+                              {/* 10. Disability */}
+                              <td className="py-3 px-2 text-center whitespace-nowrap">
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  c.complainantDisability === 'Yes' 
+                                    ? 'bg-purple-100 text-purple-800' 
+                                    : 'text-slate-600 bg-slate-100'
+                                }`}>
+                                  {c.complainantDisability || 'Not recorded'}
+                                </span>
+                              </td>
+
+                              {/* 11. Partner Org (Properly spaced, no truncation!) */}
+                              <td className="py-3 px-3 font-semibold text-slate-900 whitespace-nowrap">
+                                {c.partnerOrgName || 'CBDP Foundation'}
+                              </td>
+
+                              {/* 12. Actions Taken */}
+                              <td className="py-3 px-3">
+                                <p className="line-clamp-2 text-slate-600 font-sans leading-snug" title={c.actionsTaken}>
+                                  {c.actionsTaken || '—'}
+                                </p>
+                              </td>
+
+                              {/* 13. Reason for Delay */}
+                              <td className="py-3 px-3">
+                                {c.delayReason ? (
+                                  <div className="space-y-0.5">
+                                    <p className="line-clamp-1 text-slate-700 font-medium" title={c.delayReason}>
+                                      {c.delayReason}
+                                    </p>
+                                    <span className="text-[10px] font-semibold text-slate-500 block">
+                                      Notified: <strong className={c.isComplainantNotifiedOfDelay === 'Yes' ? 'text-emerald-700' : 'text-amber-700'}>
+                                        {c.isComplainantNotifiedOfDelay || 'No'}
+                                      </strong>
+                                    </span>
+                                  </div>
+                                ) : isRecordOverdue ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    Delay reason needed
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+
+                              {/* 14. Status */}
+                              <td className="py-3 px-3 text-center whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                  c.status === 'Closed'
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${
+                                    c.status === 'Closed' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'
+                                  }`} />
+                                  {c.status}
+                                </span>
+                              </td>
+
+                              {/* 15. Date Closed */}
+                              <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700">
+                                {formatDateDisplay(c.dateClosed)}
+                              </td>
+
+                              {/* 16. Appeal Date */}
+                              <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700">
+                                {formatDateDisplay(c.appealDate)}
+                              </td>
+
+                              {/* 17. Appeal Outcome */}
+                              <td className="py-3 px-3">
+                                {c.appealOutcome ? (
+                                  <p className="line-clamp-1 text-slate-700 font-medium" title={c.appealOutcome}>
+                                    {c.appealOutcome}
+                                  </p>
+                                ) : c.hasAppeal ? (
+                                  <span className="text-[10px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded">
+                                    {c.appealStatus || 'Under Review'}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+
+                              {/* 18. Final Closing */}
+                              <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-700">
+                                {formatDateDisplay(c.finalClosingDateAfterAppeal)}
+                              </td>
+                            </>
+                          )}
+
+                          {/* ========================================================= */}
+                          {/* ACTIONS COLUMN (UNIFIED & CLEAN)                          */}
+                          {/* ========================================================= */}
+                          <td className="py-3.5 px-4 text-right sticky right-0 bg-white/95 backdrop-blur-xs whitespace-nowrap z-10 shadow-xs">
                             <div className="flex items-center justify-end gap-1">
                               {/* View Details */}
                               <button
@@ -1329,13 +1540,13 @@ export default function ComplaintsRegister() {
                                   setDetailComplaint(c);
                                   setIsDetailModalOpen(true);
                                 }}
-                                title="View Details"
+                                title="View Complete Record"
                                 className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                               >
-                                <Eye className="w-3.5 h-3.5" />
+                                <Eye className="w-4 h-4" />
                               </button>
 
-                              {/* Quick Status Toggle */}
+                              {/* Quick Status / Resolution Update */}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1345,10 +1556,10 @@ export default function ComplaintsRegister() {
                                 title="Update Status / Resolution"
                                 className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
                               >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <CheckCircle2 className="w-4 h-4" />
                               </button>
 
-                              {/* Manage Appeal */}
+                              {/* Appeal Workflow */}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1358,10 +1569,10 @@ export default function ComplaintsRegister() {
                                 title="Manage Appeal"
                                 className="p-1.5 rounded-lg text-slate-500 hover:text-purple-600 hover:bg-purple-50 transition-colors cursor-pointer"
                               >
-                                <Scale className="w-3.5 h-3.5" />
+                                <Scale className="w-4 h-4" />
                               </button>
 
-                              {/* Edit */}
+                              {/* Edit Record */}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1371,17 +1582,17 @@ export default function ComplaintsRegister() {
                                 title="Edit Record"
                                 className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
+                                <Edit3 className="w-4 h-4" />
                               </button>
 
-                              {/* Delete */}
+                              {/* Delete Record */}
                               <button
                                 type="button"
                                 onClick={() => setDeleteConfirmation({ isOpen: true, item: c })}
                                 title="Delete Record"
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
