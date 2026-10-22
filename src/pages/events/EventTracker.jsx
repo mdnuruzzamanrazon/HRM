@@ -34,6 +34,8 @@ import {
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
+  CalendarDays,
+  Sparkles,
 } from 'lucide-react';
 
 import LocationSelector from '../../components/common/LocationSelector';
@@ -221,7 +223,6 @@ export default function EventTracker() {
   const handleExportCSV = async () => {
     try {
       showToast('Preparing event register export...', 'info');
-      // Request complete filtered dataset
       const params = {
         limit: 2000,
         division: locationFilter.division || undefined,
@@ -239,7 +240,6 @@ export default function EventTracker() {
         return;
       }
 
-      // Convert to CSV
       const headers = [
         'SL',
         'Event ID',
@@ -376,245 +376,245 @@ export default function EventTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/60 dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-200">
       
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium flex items-center gap-2 animate-bounce-short ${
+          className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl border text-xs font-bold flex items-center gap-2.5 transition-all transform animate-in slide-in-from-bottom-3 ${
             toast.type === 'error'
-              ? 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-200 dark:border-rose-800'
+              ? 'bg-rose-900/95 text-white border-rose-700 shadow-rose-950/20'
               : toast.type === 'info'
-              ? 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-200 dark:border-blue-800'
-              : 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-800'
+              ? 'bg-slate-900/95 text-white border-slate-700 shadow-slate-950/20'
+              : 'bg-slate-900/95 text-white border-slate-700 shadow-slate-950/20'
           }`}
         >
           {toast.type === 'error' ? (
-            <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+            <AlertCircle className="w-4 h-4 text-rose-400" />
           ) : (
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           )}
           <span>{toast.message}</span>
         </div>
       )}
 
-      {/* 1. Page Header */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 sm:p-8 border border-gray-200/80 dark:border-gray-800 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 max-w-3xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                <Globe className="w-3.5 h-3.5" />
-                Community Based Development Project (CBDP)
-              </span>
-
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                <MapPin className="w-3.5 h-3.5" />
-                All 64 Districts • 547 Upazilas • 5,161 Unions
-              </span>
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER & PRIMARY ACTIONS (CONSISTENT WITH OTHER MODULES)           */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          {/* Left Stack: Branding, Title, Badges & Subtitle */}
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-700 text-white shadow-md shadow-emerald-600/20 flex items-center justify-center flex-shrink-0">
+              <CalendarDays className="w-6 h-6 stroke-[2.2]" />
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white tracking-tight">
-              Event Tracker
-            </h1>
+            <div>
+              <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-heading">
+                  Event Tracker
+                </h1>
+                
+                <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono">
+                  CBDP Project Events
+                </span>
 
-            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed font-normal">
-              Manage, track, and monitor project events, activities, locations, and related information in one centralized workspace.
-            </p>
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                  <MapPin className="w-3 h-3 text-indigo-500" />
+                  <span>All 64 Districts Active</span>
+                </span>
+
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Database Live</span>
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-500 mt-1">
+                Manage, track, and monitor project events, activities, locations, and related information in one centralized workspace.
+              </p>
+            </div>
           </div>
 
-          {/* Action Toolbar */}
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 self-start lg:self-auto">
+          {/* Right Action Toolbar */}
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
+            {/* Official SOP & Guidelines */}
             <button
+              type="button"
               onClick={() => setIsInstructionsOpen(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
               title="Official SOP and Guidelines"
             >
-              <BookOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
               <span>Official SOP & Guidelines</span>
             </button>
 
+            {/* Export Register CSV */}
             <button
+              type="button"
               onClick={handleExportCSV}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 shadow-sm transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
               title="Export Register as CSV"
             >
-              <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <Download className="w-3.5 h-3.5 text-indigo-600" />
               <span>Export Register</span>
             </button>
 
+            {/* Refresh Data */}
             <button
+              type="button"
               onClick={() => {
                 fetchEvents();
                 fetchStats();
-                showToast('Refreshed events list', 'info');
+                showToast('Refreshed events list');
               }}
-              className="p-2.5 rounded-xl text-xs font-semibold bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-700 shadow-sm transition-all"
               title="Refresh Records"
+              className="p-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer shadow-2xs"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
             </button>
 
+            {/* Add New Event Primary Button */}
             <button
+              type="button"
               onClick={() => {
                 setEditingEvent(null);
                 setIsFormModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all active:scale-95"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-600/25 transition-all cursor-pointer flex-shrink-0"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>+ Add New Event</span>
             </button>
           </div>
+
         </div>
       </div>
 
-      {/* 2. Summary Dashboard KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* ========================================================================= */}
+      {/* 2. SUMMARY DASHBOARD KPI CARDS (UNIFORM ENTERPRISE STYLING)               */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         
         {/* KPI 1: Total Events */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-3 relative overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-md transition-all p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Total Events Recorded
             </span>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
-              <Calendar className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Calendar className="w-3.5 h-3.5" />
             </div>
           </div>
 
-          <div>
-            <span className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white">
-              {statsLoading ? '...' : (stats?.totalEvents ?? totalCount).toLocaleString()}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-              Active project records
-            </span>
+          <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-1">
+            {statsLoading ? '...' : (stats?.totalEvents ?? totalCount).toLocaleString()}
           </div>
 
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
-            <span>Completed: <strong className="text-emerald-700 dark:text-emerald-400">{stats?.byStatus?.find(s => s._id === 'Completed')?.count || 0}</strong></span>
-            <span>Upcoming: <strong className="text-amber-700 dark:text-amber-400">{stats?.byStatus?.find(s => s._id === 'Upcoming')?.count || 0}</strong></span>
+          <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 text-slate-500 font-medium">
+            <span>Completed: <strong className="text-emerald-700">{stats?.byStatus?.find(s => s._id === 'Completed')?.count || 0}</strong></span>
+            <span>Upcoming: <strong className="text-amber-700">{stats?.byStatus?.find(s => s._id === 'Upcoming')?.count || 0}</strong></span>
           </div>
         </div>
 
         {/* KPI 2: Direct Participants */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-3 relative overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-md transition-all p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Direct Participants
             </span>
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-              <Users className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Users className="w-3.5 h-3.5" />
             </div>
           </div>
 
-          <div>
-            <span className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white">
-              {statsLoading ? '...' : (stats?.totalDirectParticipants || 0).toLocaleString()}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-              Community & Gov attendees
-            </span>
+          <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-1">
+            {statsLoading ? '...' : (stats?.totalDirectParticipants || 0).toLocaleString()}
           </div>
 
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
-            <span>Comm: <strong className="text-gray-800 dark:text-gray-200">{(stats?.totalCommunityParticipants || 0).toLocaleString()}</strong></span>
-            <span>Gov: <strong className="text-gray-800 dark:text-gray-200">{(stats?.totalGovParticipants || 0).toLocaleString()}</strong></span>
+          <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 text-slate-500 font-medium">
+            <span>Comm: <strong className="text-slate-800">{(stats?.totalCommunityParticipants || 0).toLocaleString()}</strong></span>
+            <span>Gov: <strong className="text-slate-800">{(stats?.totalGovParticipants || 0).toLocaleString()}</strong></span>
           </div>
         </div>
 
         {/* KPI 3: Estimated Indirect Reach */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-3 relative overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-md transition-all p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Est. Indirect Reach
             </span>
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
-              <Radio className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <Radio className="w-3.5 h-3.5" />
             </div>
           </div>
 
-          <div>
-            <span className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white">
-              {statsLoading ? '...' : (stats?.totalIndirectReachAudience || 0).toLocaleString()}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-              Media & community dissemination
-            </span>
+          <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-1">
+            {statsLoading ? '...' : (stats?.totalIndirectReachAudience || 0).toLocaleString()}
           </div>
 
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
-            <span>Campaigns: <strong className="text-purple-700 dark:text-purple-400">{stats?.indirectReachEventsCount || 0}</strong></span>
-            <span>Channels: <strong className="text-gray-700 dark:text-gray-300">Social / Radio</strong></span>
+          <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 text-slate-500 font-medium">
+            <span>Events: <strong className="text-purple-700">{stats?.indirectReachEventsCount || 0}</strong></span>
+            <span>Social &amp; Media</span>
           </div>
         </div>
 
         {/* KPI 4: Government Engagement */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-3 relative overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-md transition-all p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Gov Engagement
             </span>
-            <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400">
-              <Building className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+              <Building className="w-3.5 h-3.5" />
             </div>
           </div>
 
-          <div>
-            <span className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white">
-              {statsLoading ? '...' : (stats?.govEngagedEventsCount || 0).toLocaleString()}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-              Events with Gov. Reps present
-            </span>
+          <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-1">
+            {statsLoading ? '...' : (stats?.govEngagedEventsCount || 0).toLocaleString()}
           </div>
 
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
-            <span>Positive: <strong className="text-emerald-700 dark:text-emerald-400">{stats?.govPositiveResponseCount || 0}</strong></span>
-            <span>Rate: <strong className="text-teal-700 dark:text-teal-400">
+          <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 text-slate-500 font-medium">
+            <span>Positive: <strong className="text-emerald-700">{stats?.govPositiveResponseCount || 0}</strong></span>
+            <span>Rate: <strong className="text-teal-700">
               {stats?.totalEvents ? Math.round(((stats.govEngagedEventsCount || 0) / stats.totalEvents) * 100) : 0}%
             </strong></span>
           </div>
         </div>
 
         {/* KPI 5: Conflict Prevention */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-3 relative overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 shadow-2xs hover:shadow-md transition-all p-4 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Conflict Prevention
             </span>
-            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-              <ShieldCheck className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <ShieldCheck className="w-3.5 h-3.5" />
             </div>
           </div>
 
-          <div>
-            <span className="text-2xl sm:text-3xl font-extrabold text-gray-950 dark:text-white">
-              {statsLoading ? '...' : (stats?.conflictPreventionEventsCount || 0).toLocaleString()}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1">
-              Peacebuilding & harmony actions
-            </span>
+          <div className="text-2xl sm:text-3xl font-extrabold font-mono text-slate-900 mt-1">
+            {statsLoading ? '...' : (stats?.conflictPreventionEventsCount || 0).toLocaleString()}
           </div>
 
-          <div className="pt-2 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between text-[11px] text-gray-500">
-            <span>Focus: <strong className="text-amber-700 dark:text-amber-400">Cohesion & Dialogue</strong></span>
-            <span>Active: <strong className="text-gray-800 dark:text-gray-200">100%</strong></span>
+          <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 text-slate-500 font-medium">
+            <span>Peacebuilding</span>
+            <span>Active: <strong className="text-emerald-700">100%</strong></span>
           </div>
         </div>
 
       </div>
 
-      {/* 3. Search & Hierarchical Location Filter Section */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 sm:p-6 border border-gray-200/80 dark:border-gray-800 shadow-sm space-y-4">
+      {/* ========================================================================= */}
+      {/* 3. SEARCH & BANGLADESH LOCATION FILTER CARD (LIGHT ENTERPRISE STYLING)     */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4">
         
-        {/* Search Bar & Toggle */}
+        {/* Global Search & Toggle Filter Button */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-gray-400" />
+            <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
@@ -622,16 +622,17 @@ export default function EventTracker() {
                 setSearchQuery(e.target.value);
                 setPage(1);
               }}
-              placeholder="Global Search by Event ID, Title, Implementing Organization, Upazila, or District..."
-              className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none transition-all"
+              placeholder="Search by Event ID, Title, Implementing Organization, Upazila, or District..."
+              className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none transition-all shadow-2xs"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setPage(1);
                 }}
-                className="absolute right-3.5 top-3.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -640,27 +641,29 @@ export default function EventTracker() {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
+              className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs ${
                 isFilterExpanded || activeFiltersCount > 0
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:bg-gray-50'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
               }`}
             >
-              <SlidersHorizontal className="w-4 h-4" />
-              <span>Filters</span>
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>More Filters</span>
               {activeFiltersCount > 0 && (
                 <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">
                   {activeFiltersCount}
                 </span>
               )}
-              {isFilterExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {isFilterExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
 
             {activeFiltersCount > 0 && (
               <button
+                type="button"
                 onClick={handleResetFilters}
-                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
                 title="Reset All Filters"
               >
                 <X className="w-3.5 h-3.5" />
@@ -670,22 +673,23 @@ export default function EventTracker() {
           </div>
         </div>
 
-        {/* Hierarchical Location Selector Hub (Always visible or expandable) */}
-        <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+        {/* Bangladesh Administrative Location Cascading Filter Hub */}
+        <div className="pt-4 border-t border-slate-100 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+              <MapPin className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Bangladesh Administrative Location Filter (Division → District → Upazila → Union)
               </span>
             </div>
             {(locationFilter.division || locationFilter.district || locationFilter.upazila || locationFilter.union) && (
               <button
+                type="button"
                 onClick={() => {
                   setLocationFilter({ division: '', district: '', upazila: '', union: '' });
                   setPage(1);
                 }}
-                className="text-xs text-rose-600 hover:underline"
+                className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
               >
                 Clear Location
               </button>
@@ -706,12 +710,12 @@ export default function EventTracker() {
           />
         </div>
 
-        {/* Expanded Filters Panel (Type, Theme, Date Range, Status) */}
+        {/* Secondary Expanded Filters Panel */}
         {isFilterExpanded && (
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fadeIn">
+          <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-150">
             {/* Event Type Filter */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block">
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-600 block">
                 Event Type
               </label>
               <select
@@ -720,7 +724,7 @@ export default function EventTracker() {
                   setEventTypeFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
               >
                 <option value="ALL">All Event Types (31)</option>
                 {metadata.eventTypes?.map((t) => (
@@ -732,8 +736,8 @@ export default function EventTracker() {
             </div>
 
             {/* Event Theme Filter */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block">
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-600 block">
                 Event Theme
               </label>
               <select
@@ -742,7 +746,7 @@ export default function EventTracker() {
                   setEventThemeFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
               >
                 <option value="ALL">All Event Themes (16)</option>
                 {metadata.eventThemes?.map((th) => (
@@ -754,9 +758,9 @@ export default function EventTracker() {
             </div>
 
             {/* Status Filter */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block">
-                Status
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-600 block">
+                Event Status
               </label>
               <select
                 value={statusFilter}
@@ -764,7 +768,7 @@ export default function EventTracker() {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="Completed">Completed</option>
@@ -775,9 +779,9 @@ export default function EventTracker() {
             </div>
 
             {/* Date Range Filters */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 block">
-                Date Range
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold text-slate-600 block">
+                Event Date Range
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -787,7 +791,7 @@ export default function EventTracker() {
                     setDateFromFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 shadow-2xs"
                   title="From Date"
                 />
                 <input
@@ -797,7 +801,7 @@ export default function EventTracker() {
                     setDateToFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 bg-white text-slate-800 shadow-2xs"
                   title="To Date"
                 />
               </div>
@@ -806,29 +810,31 @@ export default function EventTracker() {
         )}
       </div>
 
-      {/* 4. Professional Event Listing Table */}
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col">
+      {/* ========================================================================= */}
+      {/* 4. PROFESSIONAL EVENT LISTING TABLE (LIGHT ENTERPRISE STYLING)            */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col">
         
-        {/* Table Header Bar */}
-        <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-50/50 dark:bg-gray-850">
+        {/* Table Top Header Bar */}
+        <div className="p-4 sm:p-5 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
           <div className="flex items-center gap-3">
-            <h2 className="text-base font-bold text-gray-950 dark:text-white">
+            <h2 className="text-base font-bold text-slate-900 font-heading">
               Event Register Records
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono">
               {totalCount.toLocaleString()} {totalCount === 1 ? 'event' : 'events'} found
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-500">Page size:</span>
+            <span className="text-slate-500 font-medium">Page size:</span>
             <select
               value={limit}
               onChange={(e) => {
                 setLimit(Number(e.target.value));
                 setPage(1);
               }}
-              className="px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium"
+              className="px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-800 font-bold text-xs cursor-pointer shadow-2xs"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -838,16 +844,16 @@ export default function EventTracker() {
           </div>
         </div>
 
-        {/* Responsive Table */}
+        {/* Responsive Table Body */}
         <div className="overflow-x-auto min-h-[350px]">
-          <table className="w-full text-left text-xs text-gray-700 dark:text-gray-300">
-            <thead className="bg-gray-100/80 dark:bg-gray-800/80 text-gray-600 dark:text-gray-400 uppercase text-[11px] font-bold tracking-wider border-b border-gray-200 dark:border-gray-700">
+          <table className="w-full text-left text-xs text-slate-700">
+            <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 uppercase text-[11px] font-bold tracking-wider">
               <tr>
                 <th className="px-4 py-3.5 w-14">SL</th>
 
                 <th
                   onClick={() => handleSort('eventId')}
-                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-600 transition-colors whitespace-nowrap"
+                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-700 transition-colors whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Event ID</span>
@@ -857,7 +863,7 @@ export default function EventTracker() {
 
                 <th
                   onClick={() => handleSort('dateFrom')}
-                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-600 transition-colors whitespace-nowrap"
+                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-700 transition-colors whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Date</span>
@@ -867,7 +873,7 @@ export default function EventTracker() {
 
                 <th
                   onClick={() => handleSort('eventTitle')}
-                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-600 transition-colors min-w-[220px]"
+                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-700 transition-colors min-w-[220px]"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Event Title & Theme</span>
@@ -881,7 +887,7 @@ export default function EventTracker() {
 
                 <th
                   onClick={() => handleSort('participantCountCommunity')}
-                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-600 transition-colors whitespace-nowrap text-right"
+                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-700 transition-colors whitespace-nowrap text-right"
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     <span>Participants</span>
@@ -897,13 +903,13 @@ export default function EventTracker() {
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={10} className="text-center py-20 text-gray-400">
+                  <td colSpan={10} className="text-center py-20 text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
-                      <span className="text-xs font-semibold">Loading CBDP event records...</span>
+                      <span className="text-xs font-bold text-slate-600">Loading CBDP event records...</span>
                     </div>
                   </td>
                 </tr>
@@ -911,31 +917,33 @@ export default function EventTracker() {
                 <tr>
                   <td colSpan={10} className="text-center py-20">
                     <div className="max-w-md mx-auto space-y-3">
-                      <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-full w-12 h-12 flex items-center justify-center mx-auto text-emerald-600">
+                      <div className="p-3 bg-emerald-50 rounded-2xl w-12 h-12 flex items-center justify-center mx-auto text-emerald-600">
                         <Calendar className="w-6 h-6" />
                       </div>
-                      <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                      <h3 className="text-base font-bold text-slate-900">
                         No Event Records Found
                       </h3>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-slate-500">
                         {activeFiltersCount > 0
                           ? 'No events match your current filter criteria. Try resetting your search or location filters.'
                           : 'No project events have been registered yet. Click "+ Add New Event" to record your first event.'}
                       </p>
                       {activeFiltersCount > 0 ? (
                         <button
+                          type="button"
                           onClick={handleResetFilters}
-                          className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-sm"
                         >
                           Reset Filters
                         </button>
                       ) : (
                         <button
+                          type="button"
                           onClick={() => {
                             setEditingEvent(null);
                             setIsFormModalOpen(true);
                           }}
-                          className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-sm"
                         >
                           + Record First Event
                         </button>
@@ -956,20 +964,21 @@ export default function EventTracker() {
                         setSelectedEvent(ev);
                         setIsDetailModalOpen(true);
                       }}
-                      className="hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 cursor-pointer transition-colors group"
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                     >
                       {/* SL */}
-                      <td className="px-4 py-3 font-medium text-gray-400">
+                      <td className="px-4 py-3 font-semibold text-slate-400 font-mono">
                         {ev.sl || (page - 1) * limit + index + 1}
                       </td>
 
                       {/* Event ID */}
                       <td className="px-4 py-3">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-gray-100 dark:bg-gray-800 text-emerald-700 dark:text-emerald-400 border border-gray-200 dark:border-gray-700 group-hover:border-emerald-400 transition-colors">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-100 group-hover:bg-emerald-50 text-slate-800 group-hover:text-emerald-800 border border-slate-200 group-hover:border-emerald-300 transition-colors">
                           <span>{ev.eventId}</span>
                           <button
+                            type="button"
                             onClick={(e) => handleCopyId(ev.eventId, e)}
-                            className="text-gray-400 hover:text-emerald-600"
+                            className="text-slate-400 hover:text-emerald-700"
                             title="Copy Event ID"
                           >
                             {copiedId === ev.eventId ? (
@@ -983,11 +992,11 @@ export default function EventTracker() {
 
                       {/* Date */}
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="font-semibold text-gray-900 dark:text-white block">
+                        <span className="font-bold text-slate-900 block">
                           {formatDate(ev.dateFrom)}
                         </span>
                         {ev.dateTo && ev.dateTo !== ev.dateFrom && (
-                          <span className="text-[11px] text-gray-400 block">
+                          <span className="text-[11px] text-slate-400 block">
                             to {formatDate(ev.dateTo)}
                           </span>
                         )}
@@ -996,22 +1005,23 @@ export default function EventTracker() {
                       {/* Title & Theme */}
                       <td className="px-4 py-3">
                         <div className="space-y-1">
-                          <span className="font-bold text-gray-900 dark:text-white line-clamp-1 block text-xs sm:text-sm">
+                          <span className="font-bold text-slate-900 line-clamp-1 block text-xs sm:text-sm">
                             {ev.eventTitle}
                           </span>
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono">
                               {ev.eventType}
                             </span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
                               {ev.eventTheme}
                             </span>
                             {ev.conflictPrevention === 'Yes' && (
                               <span
-                                className="p-0.5 rounded text-amber-600 dark:text-amber-400"
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60"
                                 title="Conflict Prevention Event"
                               >
-                                <ShieldCheck className="w-3.5 h-3.5 inline" />
+                                <ShieldCheck className="w-3 h-3 inline text-amber-600" />
+                                <span>Peace</span>
                               </span>
                             )}
                           </div>
@@ -1020,11 +1030,11 @@ export default function EventTracker() {
 
                       {/* Organization */}
                       <td className="px-4 py-3">
-                        <span className="font-semibold text-gray-900 dark:text-white block line-clamp-1">
+                        <span className="font-bold text-slate-900 block line-clamp-1">
                           {ev.implementingOrg}
                         </span>
                         {ev.consortiumPartner && (
-                          <span className="text-[11px] text-gray-500 line-clamp-1">
+                          <span className="text-[11px] text-slate-500 font-medium line-clamp-1">
                             Partner: {ev.consortiumPartner}
                           </span>
                         )}
@@ -1033,10 +1043,10 @@ export default function EventTracker() {
                       {/* Administrative Location */}
                       <td className="px-4 py-3">
                         <div className="space-y-0.5">
-                          <span className="font-semibold text-gray-900 dark:text-white block">
+                          <span className="font-bold text-slate-900 block">
                             {[ev.upazila, ev.district].filter(Boolean).join(', ') || ev.district}
                           </span>
-                          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block">
+                          <span className="text-[11px] text-slate-500 block">
                             Div: {ev.division} {ev.union ? `• Un: ${ev.union}` : ''}
                           </span>
                         </div>
@@ -1044,10 +1054,10 @@ export default function EventTracker() {
 
                       {/* Participants */}
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <span className="font-extrabold text-gray-950 dark:text-white text-sm block">
+                        <span className="font-extrabold font-mono text-slate-900 text-sm block">
                           {totalDirect.toLocaleString()}
                         </span>
-                        <span className="text-[10px] text-gray-400 block">
+                        <span className="text-[10px] text-slate-400 block">
                           {commCount} comm + {gCount} gov
                         </span>
                       </td>
@@ -1055,25 +1065,25 @@ export default function EventTracker() {
                       {/* Gov Engagement */}
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         {ev.govRepresentativePresent === 'Yes' ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
                             {ev.govResponse || 'Yes'}
                           </span>
                         ) : (
-                          <span className="text-gray-400 text-[11px]">—</span>
+                          <span className="text-slate-400 text-[11px]">—</span>
                         )}
                       </td>
 
                       {/* Status */}
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                             ev.status === 'Completed'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
                               : ev.status === 'In Progress'
-                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200/80'
                               : ev.status === 'Upcoming'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200/80'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200/80'
                           }`}
                         >
                           {ev.status || 'Completed'}
@@ -1087,41 +1097,45 @@ export default function EventTracker() {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
+                            type="button"
                             onClick={() => {
                               setSelectedEvent(ev);
                               setIsDetailModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-slate-100 transition-colors cursor-pointer"
                             title="View Full Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
 
                           <button
+                            type="button"
                             onClick={() => {
                               setSelectedEvent(ev);
                               setIsPrintModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-700 hover:bg-slate-100 transition-colors cursor-pointer"
                             title="Print Top Sheet"
                           >
                             <Printer className="w-4 h-4" />
                           </button>
 
                           <button
+                            type="button"
                             onClick={() => {
                               setEditingEvent(ev);
                               setIsFormModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-700 hover:bg-slate-100 transition-colors cursor-pointer"
                             title="Edit Event"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
 
                           <button
+                            type="button"
                             onClick={() => setDeleteCandidate(ev)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                             title="Delete Event Record"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -1136,38 +1150,40 @@ export default function EventTracker() {
           </table>
         </div>
 
-        {/* Table Pagination */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-gray-50/50 dark:bg-gray-850">
-          <span className="text-gray-500">
+        {/* Table Pagination Footer */}
+        <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-slate-50/60 text-slate-500">
+          <span className="font-medium">
             Showing{' '}
-            <strong className="text-gray-900 dark:text-white">
+            <strong className="text-slate-900 font-mono">
               {totalCount === 0 ? 0 : (page - 1) * limit + 1}
             </strong>{' '}
             to{' '}
-            <strong className="text-gray-900 dark:text-white">
+            <strong className="text-slate-900 font-mono">
               {Math.min(page * limit, totalCount)}
             </strong>{' '}
-            of <strong className="text-gray-900 dark:text-white">{totalCount}</strong> records
+            of <strong className="text-slate-900 font-mono">{totalCount}</strong> records
           </span>
 
           <div className="flex items-center gap-1.5 self-center sm:self-auto">
             <button
+              type="button"
               onClick={() => setPage((p) => Math.max(p - 1, 1))}
               disabled={page <= 1}
-              className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="p-1.5 rounded-xl border border-slate-300 bg-white text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer shadow-2xs"
               title="Previous Page"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <span className="px-3 py-1 font-semibold text-gray-800 dark:text-gray-200">
+            <span className="px-3 py-1 font-bold text-slate-800">
               Page {page} of {totalPages || 1}
             </span>
 
             <button
+              type="button"
               onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
               disabled={page >= totalPages}
-              className="p-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="p-1.5 rounded-xl border border-slate-300 bg-white text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50 cursor-pointer shadow-2xs"
               title="Next Page"
             >
               <ChevronRight className="w-4 h-4" />
@@ -1176,7 +1192,9 @@ export default function EventTracker() {
         </div>
       </div>
 
-      {/* 5. Modals */}
+      {/* ========================================================================= */}
+      {/* 5. MODALS INTEGRATION                                                     */}
+      {/* ========================================================================= */}
       
       {/* Add / Edit Event Modal */}
       <EventFormModal
@@ -1223,19 +1241,19 @@ export default function EventTracker() {
 
       {/* Delete Confirmation Dialog */}
       {deleteCandidate && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 p-6 space-y-4 animate-scaleUp">
-            <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center mx-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-gray-950 dark:text-white">
+              <h3 className="text-lg font-black text-slate-900 font-heading">
                 Delete Event Record?
               </h3>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-slate-500">
                 Are you sure you want to permanently delete event{' '}
-                <strong className="text-gray-800 dark:text-gray-200 font-mono">
+                <strong className="text-slate-800 font-mono">
                   {deleteCandidate.eventId}
                 </strong>
                 ? This action will archive the record from the active project register.
@@ -1244,16 +1262,18 @@ export default function EventTracker() {
 
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => setDeleteCandidate(null)}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-md flex items-center gap-1.5"
+                className="px-5 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/25 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 {isDeleting ? 'Deleting...' : 'Confirm Delete'}
               </button>

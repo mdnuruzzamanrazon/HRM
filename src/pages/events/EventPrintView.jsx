@@ -26,11 +26,11 @@ export default function EventPrintView({ event, isOpen, onClose }) {
   const totalDirect = communityCount + govCount;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative w-full max-w-4xl bg-white text-gray-900 rounded-xl shadow-2xl border border-gray-300 overflow-hidden my-6 flex flex-col">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="relative w-full max-w-4xl bg-white text-slate-900 rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6 flex flex-col">
         
         {/* Screen Action Bar (hidden in actual print) */}
-        <div className="print:hidden bg-gray-900 text-white px-6 py-3.5 flex items-center justify-between">
+        <div className="print:hidden bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Printer className="w-5 h-5 text-emerald-400" />
             <span className="text-sm font-bold">Printable Event Official Top Sheet</span>
