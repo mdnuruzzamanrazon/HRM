@@ -66,7 +66,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
       items: [
         { name: 'Radio program', desc: 'সিভিক ইস্যু/CEF থিম নিয়ে রেডিওতে সম্প্রচার। ব্রডকাস্ট সার্টিফিকেট বা অডিও রেকর্ডিং আবশ্যক।' },
         { name: 'Community Radio Program', desc: 'লোকাল রেডিওতে সম্প্রচারিত প্রোগ্রাম। স্ক্রিপ্ট ও স্টেশন ব্রডকাস্ট সার্টিফিকেট লাগবে।' },
-        { name: 'TV program', desc: 'টেলিভিশনে সম্প্রচারিত প্রোগ্রাম। ভিডিও রেকর্ড ও ব্রডকাস্টার সার্টিফিকেট রাখতে হবে।' },
+        { name: 'TV program', desc: 'টেলিভিশনে সম্প্রচারিত প্রোগ্রাম। ভিডিও record ও ব্রডকাস্টার সার্টিফিকেট রাখতে হবে।' },
         { name: 'Social Media Post/Campaign', desc: 'অনলাইনে পোস্ট বা ডিজিটাল ক্যাম্পেইন। ভিউ, লাইক, শেয়ার ইত্যাদি এনগেজমেন্ট মেট্রিক্স নিতে হবে।' },
         { name: 'IEC Material distribution', desc: 'লিফলেট, পোস্টার, বুকলেট ইত্যাদি বিতরণ। স্যাম্পল ও বিতরণ রসিদ সংরক্ষণ করতে হবে।' },
         { name: 'Mass Gathering', desc: 'বড় আকারের জনসমাগম (যেমন র‍্যালি, সাংস্কৃতিক অনুষ্ঠান)। ২০০ জনের বেশি হলে Headcount Sampling পদ্ধতি প্রয়োগ করতে হবে।' },
@@ -83,7 +83,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
         <div className="bg-slate-50 border-b border-slate-200/80 p-6 relative">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-700 text-white shadow-md shadow-emerald-600/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 flex items-center justify-center flex-shrink-0">
                 <BookOpen className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div>
@@ -103,7 +103,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
                   type="button"
                   onClick={() => setLanguage('bn')}
                   className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                    language === 'bn' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    language === 'bn' ? 'bg-white text-indigo-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   বাংলা
@@ -112,7 +112,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
                   type="button"
                   onClick={() => setLanguage('en')}
                   className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                    language === 'en' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+                    language === 'en' ? 'bg-white text-indigo-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   English
@@ -137,7 +137,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
               onClick={() => setActiveSection('sop')}
               className={`px-3.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                 activeSection === 'sop'
-                  ? 'bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-600/25'
+                  ? 'bg-indigo-600 text-white font-bold shadow-sm shadow-indigo-600/25'
                   : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs'
               }`}
             >
@@ -149,7 +149,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
               onClick={() => setActiveSection('eventId')}
               className={`px-3.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                 activeSection === 'eventId'
-                  ? 'bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-600/25'
+                  ? 'bg-indigo-600 text-white font-bold shadow-sm shadow-indigo-600/25'
                   : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs'
               }`}
             >
@@ -161,7 +161,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
               onClick={() => setActiveSection('types')}
               className={`px-3.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                 activeSection === 'types'
-                  ? 'bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-600/25'
+                  ? 'bg-indigo-600 text-white font-bold shadow-sm shadow-indigo-600/25'
                   : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs'
               }`}
             >
@@ -173,7 +173,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
               onClick={() => setActiveSection('locations')}
               className={`px-3.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                 activeSection === 'locations'
-                  ? 'bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-600/25'
+                  ? 'bg-indigo-600 text-white font-bold shadow-sm shadow-indigo-600/25'
                   : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs'
               }`}
             >
@@ -185,7 +185,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
               onClick={() => setActiveSection('govPeace')}
               className={`px-3.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                 activeSection === 'govPeace'
-                  ? 'bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-600/25'
+                  ? 'bg-indigo-600 text-white font-bold shadow-sm shadow-indigo-600/25'
                   : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs'
               }`}
             >
@@ -197,7 +197,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
               onClick={() => setActiveSection('reach')}
               className={`px-3.5 py-1.5 rounded-xl whitespace-nowrap transition-all cursor-pointer ${
                 activeSection === 'reach'
-                  ? 'bg-emerald-600 text-white font-bold shadow-sm shadow-emerald-600/25'
+                  ? 'bg-indigo-600 text-white font-bold shadow-sm shadow-indigo-600/25'
                   : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 shadow-2xs'
               }`}
             >
@@ -214,7 +214,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 mb-2 font-heading">
-                  <FileText className="w-5 h-5 text-emerald-600" />
+                  <FileText className="w-5 h-5 text-indigo-600" />
                   {language === 'bn' ? 'সাধারণ পরিচালনা পদ্ধতি (General SOP)' : 'General Operating Procedure'}
                 </h3>
                 <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
@@ -227,7 +227,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
               {/* Means of Verification (MoV) Checklist */}
               <div className="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-2xs space-y-4">
                 <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 font-heading">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <CheckCircle2 className="w-4 h-4 text-indigo-600" />
                   Mandatory Means of Verification (MoV) Checklist
                 </h4>
 
@@ -264,8 +264,8 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 font-heading">
-                  <Key className="w-5 h-5 text-emerald-600" />
-                  Event ID Formula &amp; Specification: <code className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono text-sm border border-emerald-200">YYYYMMXXEVNN</code>
+                  <Key className="w-5 h-5 text-indigo-600" />
+                  Event ID Formula &amp; Specification: <code className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono text-sm border border-indigo-200">YYYYMMXXEVNN</code>
                 </h3>
 
                 <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
@@ -275,32 +275,32 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
                 {/* Visual Formula Decoder */}
                 <div className="p-5 bg-slate-50 rounded-xl border border-slate-200">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-3 font-heading">
-                    Formula Decomposition Example: <span className="font-mono text-emerald-800 text-sm font-bold">202511CBOR01</span>
+                    Formula Decomposition Example: <span className="font-mono text-indigo-700 text-sm font-bold">202511CBOR01</span>
                   </span>
 
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
                     <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-base font-black text-emerald-700 font-mono">2025</span>
+                      <span className="text-base font-black text-indigo-600 font-mono">2025</span>
                       <span className="text-[11px] text-slate-500 block mt-1 font-bold">Year (YYYY)</span>
                     </div>
 
                     <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-base font-black text-emerald-700 font-mono">11</span>
+                      <span className="text-base font-black text-indigo-600 font-mono">11</span>
                       <span className="text-[11px] text-slate-500 block mt-1 font-bold">Month (MM)</span>
                     </div>
 
                     <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-base font-black text-emerald-700 font-mono">CB</span>
+                      <span className="text-base font-black text-indigo-600 font-mono">CB</span>
                       <span className="text-[11px] text-slate-500 block mt-1 font-bold">Org Initials (2 Chars)</span>
                     </div>
 
                     <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs">
-                      <span className="text-base font-black text-emerald-700 font-mono">OR</span>
+                      <span className="text-base font-black text-indigo-600 font-mono">OR</span>
                       <span className="text-[11px] text-slate-500 block mt-1 font-bold">Type (2 Chars)</span>
                     </div>
 
                     <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs col-span-2 sm:col-span-1">
-                      <span className="text-base font-black text-emerald-700 font-mono">01</span>
+                      <span className="text-base font-black text-indigo-600 font-mono">01</span>
                       <span className="text-[11px] text-slate-500 block mt-1 font-bold">Seq No (2 Digits)</span>
                     </div>
                   </div>
@@ -339,7 +339,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
 
                   return (
                     <div key={idx} className="space-y-3">
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 border-b border-slate-200 pb-1 font-heading">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-700 border-b border-slate-200 pb-1 font-heading">
                         {cat.category} ({filteredItems.length})
                       </h4>
 
@@ -347,7 +347,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
                         {filteredItems.map((item, i) => (
                           <div
                             key={i}
-                            className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-emerald-500 transition-colors"
+                            className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-indigo-400 transition-colors"
                           >
                             <span className="text-xs font-bold text-slate-900 block mb-1">
                               {item.name}
@@ -411,17 +411,17 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
             <div className="space-y-6 animate-in fade-in duration-150">
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 font-heading">
-                  <Building className="w-4 h-4 text-emerald-600" />
+                  <Building className="w-4 h-4 text-indigo-600" />
                   Government Response Guidelines (250 Characters Max)
                 </h3>
                 <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
                   {instructions['Government Response']}
                 </p>
-                <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-200 text-xs">
-                  <span className="font-bold text-emerald-900 block mb-1">
+                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-200 text-xs">
+                  <span className="font-bold text-indigo-900 block mb-1">
                     Guidance for Response Summary (within 250 characters):
                   </span>
-                  <p className="text-emerald-800">
+                  <p className="text-indigo-800">
                     {instructions['What was the response \r\n(Within 250 Caracter)'] ||
                       'Summarize the response of the most senior government official on priority CEF themes.'}
                   </p>
@@ -430,7 +430,7 @@ export default function EventInstructionsModal({ isOpen, onClose }) {
 
               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 font-heading">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
                   Conflict Prevention &amp; Peacebuilding Criteria
                 </h3>
                 <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">

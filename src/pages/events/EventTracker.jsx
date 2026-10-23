@@ -399,14 +399,14 @@ export default function EventTracker() {
       )}
 
       {/* ========================================================================= */}
-      {/* 1. TOP HEADER & PRIMARY ACTIONS (CONSISTENT WITH OTHER MODULES)           */}
+      {/* 1. TOP HEADER & PRIMARY ACTIONS (MATCHING BLUE / INDIGO THEME)           */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           
           {/* Left Stack: Branding, Title, Badges & Subtitle */}
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-700 text-white shadow-md shadow-emerald-600/20 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-600/20 flex items-center justify-center flex-shrink-0">
               <CalendarDays className="w-6 h-6 stroke-[2.2]" />
             </div>
 
@@ -416,7 +416,7 @@ export default function EventTracker() {
                   Event Tracker
                 </h1>
                 
-                <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono">
+                <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
                   CBDP Project Events
                 </span>
 
@@ -446,7 +446,7 @@ export default function EventTracker() {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
               title="Official SOP and Guidelines"
             >
-              <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
               <span>Official SOP & Guidelines</span>
             </button>
 
@@ -472,17 +472,17 @@ export default function EventTracker() {
               title="Refresh Records"
               className="p-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer shadow-2xs"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-600' : ''}`} />
             </button>
 
-            {/* Add New Event Primary Button */}
+            {/* Add New Event Primary Button (Consistent Indigo Theme) */}
             <button
               type="button"
               onClick={() => {
                 setEditingEvent(null);
                 setIsFormModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-600/25 transition-all cursor-pointer flex-shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm shadow-indigo-600/25 transition-all cursor-pointer flex-shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>+ Add New Event</span>
@@ -493,7 +493,7 @@ export default function EventTracker() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. SUMMARY DASHBOARD KPI CARDS (UNIFORM ENTERPRISE STYLING)               */}
+      {/* 2. SUMMARY DASHBOARD KPI CARDS (MATCHING BLUE / INDIGO THEME)             */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         
@@ -503,7 +503,7 @@ export default function EventTracker() {
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Total Events Recorded
             </span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Calendar className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -513,7 +513,7 @@ export default function EventTracker() {
           </div>
 
           <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 text-slate-500 font-medium">
-            <span>Completed: <strong className="text-emerald-700">{stats?.byStatus?.find(s => s._id === 'Completed')?.count || 0}</strong></span>
+            <span>Completed: <strong className="text-indigo-700">{stats?.byStatus?.find(s => s._id === 'Completed')?.count || 0}</strong></span>
             <span>Upcoming: <strong className="text-amber-700">{stats?.byStatus?.find(s => s._id === 'Upcoming')?.count || 0}</strong></span>
           </div>
         </div>
@@ -566,7 +566,7 @@ export default function EventTracker() {
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               Gov Engagement
             </span>
-            <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
               <Building className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -576,8 +576,8 @@ export default function EventTracker() {
           </div>
 
           <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 text-slate-500 font-medium">
-            <span>Positive: <strong className="text-emerald-700">{stats?.govPositiveResponseCount || 0}</strong></span>
-            <span>Rate: <strong className="text-teal-700">
+            <span>Positive: <strong className="text-indigo-700">{stats?.govPositiveResponseCount || 0}</strong></span>
+            <span>Rate: <strong className="text-sky-700">
               {stats?.totalEvents ? Math.round(((stats.govEngagedEventsCount || 0) / stats.totalEvents) * 100) : 0}%
             </strong></span>
           </div>
@@ -600,14 +600,14 @@ export default function EventTracker() {
 
           <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100 text-slate-500 font-medium">
             <span>Peacebuilding</span>
-            <span>Active: <strong className="text-emerald-700">100%</strong></span>
+            <span>Active: <strong className="text-indigo-700">100%</strong></span>
           </div>
         </div>
 
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. SEARCH & BANGLADESH LOCATION FILTER CARD (LIGHT ENTERPRISE STYLING)     */}
+      {/* 3. SEARCH & BANGLADESH LOCATION FILTER CARD (LIGHT BLUE / INDIGO THEME)   */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-5 sm:p-6 space-y-4">
         
@@ -623,7 +623,7 @@ export default function EventTracker() {
                 setPage(1);
               }}
               placeholder="Search by Event ID, Title, Implementing Organization, Upazila, or District..."
-              className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 outline-none transition-all shadow-2xs"
+              className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 outline-none transition-all shadow-2xs"
             />
             {searchQuery && (
               <button
@@ -645,14 +645,14 @@ export default function EventTracker() {
               onClick={() => setIsFilterExpanded(!isFilterExpanded)}
               className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs ${
                 isFilterExpanded || activeFiltersCount > 0
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  ? 'bg-indigo-50 text-indigo-800 border-indigo-300'
                   : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>More Filters</span>
               {activeFiltersCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center">
+                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
                   {activeFiltersCount}
                 </span>
               )}
@@ -677,7 +677,7 @@ export default function EventTracker() {
         <div className="pt-4 border-t border-slate-100 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-emerald-600" />
+              <MapPin className="w-4 h-4 text-indigo-600" />
               <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                 Bangladesh Administrative Location Filter (Division → District → Upazila → Union)
               </span>
@@ -724,7 +724,7 @@ export default function EventTracker() {
                   setEventTypeFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs cursor-pointer"
               >
                 <option value="ALL">All Event Types (31)</option>
                 {metadata.eventTypes?.map((t) => (
@@ -746,7 +746,7 @@ export default function EventTracker() {
                   setEventThemeFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs cursor-pointer"
               >
                 <option value="ALL">All Event Themes (16)</option>
                 {metadata.eventThemes?.map((th) => (
@@ -768,7 +768,7 @@ export default function EventTracker() {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 shadow-2xs cursor-pointer"
+                className="w-full px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 bg-white text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 shadow-2xs cursor-pointer"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="Completed">Completed</option>
@@ -811,7 +811,7 @@ export default function EventTracker() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. PROFESSIONAL EVENT LISTING TABLE (LIGHT ENTERPRISE STYLING)            */}
+      {/* 4. PROFESSIONAL EVENT LISTING TABLE (BLUE / INDIGO THEME)                 */}
       {/* ========================================================================= */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden flex flex-col">
         
@@ -821,7 +821,7 @@ export default function EventTracker() {
             <h2 className="text-base font-bold text-slate-900 font-heading">
               Event Register Records
             </h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
               {totalCount.toLocaleString()} {totalCount === 1 ? 'event' : 'events'} found
             </span>
           </div>
@@ -853,7 +853,7 @@ export default function EventTracker() {
 
                 <th
                   onClick={() => handleSort('eventId')}
-                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-700 transition-colors whitespace-nowrap"
+                  className="px-4 py-3.5 cursor-pointer hover:text-indigo-700 transition-colors whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Event ID</span>
@@ -863,7 +863,7 @@ export default function EventTracker() {
 
                 <th
                   onClick={() => handleSort('dateFrom')}
-                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-700 transition-colors whitespace-nowrap"
+                  className="px-4 py-3.5 cursor-pointer hover:text-indigo-700 transition-colors whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Date</span>
@@ -873,7 +873,7 @@ export default function EventTracker() {
 
                 <th
                   onClick={() => handleSort('eventTitle')}
-                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-700 transition-colors min-w-[220px]"
+                  className="px-4 py-3.5 cursor-pointer hover:text-indigo-700 transition-colors min-w-[220px]"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Event Title & Theme</span>
@@ -887,7 +887,7 @@ export default function EventTracker() {
 
                 <th
                   onClick={() => handleSort('participantCountCommunity')}
-                  className="px-4 py-3.5 cursor-pointer hover:text-emerald-700 transition-colors whitespace-nowrap text-right"
+                  className="px-4 py-3.5 cursor-pointer hover:text-indigo-700 transition-colors whitespace-nowrap text-right"
                 >
                   <div className="flex items-center justify-end gap-1.5">
                     <span>Participants</span>
@@ -908,7 +908,7 @@ export default function EventTracker() {
                 <tr>
                   <td colSpan={10} className="text-center py-20 text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-3">
-                      <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
+                      <RefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
                       <span className="text-xs font-bold text-slate-600">Loading CBDP event records...</span>
                     </div>
                   </td>
@@ -917,7 +917,7 @@ export default function EventTracker() {
                 <tr>
                   <td colSpan={10} className="text-center py-20">
                     <div className="max-w-md mx-auto space-y-3">
-                      <div className="p-3 bg-emerald-50 rounded-2xl w-12 h-12 flex items-center justify-center mx-auto text-emerald-600">
+                      <div className="p-3 bg-indigo-50 rounded-2xl w-12 h-12 flex items-center justify-center mx-auto text-indigo-600">
                         <Calendar className="w-6 h-6" />
                       </div>
                       <h3 className="text-base font-bold text-slate-900">
@@ -932,7 +932,7 @@ export default function EventTracker() {
                         <button
                           type="button"
                           onClick={handleResetFilters}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-sm"
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors cursor-pointer shadow-sm"
                         >
                           Reset Filters
                         </button>
@@ -943,7 +943,7 @@ export default function EventTracker() {
                             setEditingEvent(null);
                             setIsFormModalOpen(true);
                           }}
-                          className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors cursor-pointer shadow-sm"
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors cursor-pointer shadow-sm"
                         >
                           + Record First Event
                         </button>
@@ -973,16 +973,16 @@ export default function EventTracker() {
 
                       {/* Event ID */}
                       <td className="px-4 py-3">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-100 group-hover:bg-emerald-50 text-slate-800 group-hover:text-emerald-800 border border-slate-200 group-hover:border-emerald-300 transition-colors">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-100 group-hover:bg-indigo-50 text-slate-800 group-hover:text-indigo-800 border border-slate-200 group-hover:border-indigo-300 transition-colors">
                           <span>{ev.eventId}</span>
                           <button
                             type="button"
                             onClick={(e) => handleCopyId(ev.eventId, e)}
-                            className="text-slate-400 hover:text-emerald-700"
+                            className="text-slate-400 hover:text-indigo-700"
                             title="Copy Event ID"
                           >
                             {copiedId === ev.eventId ? (
-                              <Check className="w-3 h-3 text-emerald-600" />
+                              <Check className="w-3 h-3 text-indigo-600" />
                             ) : (
                               <Copy className="w-3 h-3" />
                             )}
@@ -1009,7 +1009,7 @@ export default function EventTracker() {
                             {ev.eventTitle}
                           </span>
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-mono">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
                               {ev.eventType}
                             </span>
                             <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
@@ -1065,7 +1065,7 @@ export default function EventTracker() {
                       {/* Gov Engagement */}
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         {ev.govRepresentativePresent === 'Yes' ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
                             {ev.govResponse || 'Yes'}
                           </span>
                         ) : (
@@ -1102,7 +1102,7 @@ export default function EventTracker() {
                               setSelectedEvent(ev);
                               setIsDetailModalOpen(true);
                             }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-700 hover:bg-slate-100 transition-colors cursor-pointer"
                             title="View Full Details"
                           >
                             <Eye className="w-4 h-4" />

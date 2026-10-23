@@ -32,13 +32,13 @@ export default function EventPrintView({ event, isOpen, onClose }) {
         {/* Screen Action Bar (hidden in actual print) */}
         <div className="print:hidden bg-slate-900 text-white px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Printer className="w-5 h-5 text-emerald-400" />
+            <Printer className="w-5 h-5 text-indigo-400" />
             <span className="text-sm font-bold">Printable Event Official Top Sheet</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
             >
               <Printer className="w-4 h-4" />
               Print Document
@@ -56,9 +56,9 @@ export default function EventPrintView({ event, isOpen, onClose }) {
         <div className="p-8 sm:p-10 space-y-6 bg-white text-gray-900">
           
           {/* Header */}
-          <div className="border-b-2 border-emerald-900 pb-4 flex items-start justify-between">
+          <div className="border-b-2 border-indigo-900 pb-4 flex items-start justify-between">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-emerald-800">
+              <span className="text-xs font-bold uppercase tracking-widest text-indigo-800">
                 Community Based Development Project (CBDP)
               </span>
               <h1 className="text-2xl font-black text-gray-950 mt-0.5 tracking-tight">
@@ -70,8 +70,8 @@ export default function EventPrintView({ event, isOpen, onClose }) {
             </div>
 
             <div className="text-right">
-              <div className="inline-block border-2 border-emerald-800 px-3 py-1 rounded bg-emerald-50 text-emerald-950">
-                <span className="text-[10px] font-bold block uppercase text-emerald-800">Unique Event ID</span>
+              <div className="inline-block border-2 border-indigo-800 px-3 py-1 rounded bg-indigo-50 text-indigo-950">
+                <span className="text-[10px] font-bold block uppercase text-indigo-800">Unique Event ID</span>
                 <span className="text-base font-mono font-black">{event.eventId}</span>
               </div>
               <span className="text-[11px] text-gray-500 block mt-1">SL #{event.sl || 1}</span>
@@ -93,7 +93,7 @@ export default function EventPrintView({ event, isOpen, onClose }) {
             
             {/* Box 1: Organization & Classification */}
             <div className="border border-gray-300 rounded-lg p-3.5 space-y-2">
-              <h3 className="font-bold uppercase tracking-wider text-emerald-900 border-b border-gray-200 pb-1 text-[11px]">
+              <h3 className="font-bold uppercase tracking-wider text-indigo-900 border-b border-gray-200 pb-1 text-[11px]">
                 1. Organization & Classification
               </h3>
               <div>
@@ -118,7 +118,7 @@ export default function EventPrintView({ event, isOpen, onClose }) {
 
             {/* Box 2: Schedule & Administrative Location */}
             <div className="border border-gray-300 rounded-lg p-3.5 space-y-2">
-              <h3 className="font-bold uppercase tracking-wider text-emerald-900 border-b border-gray-200 pb-1 text-[11px]">
+              <h3 className="font-bold uppercase tracking-wider text-indigo-900 border-b border-gray-200 pb-1 text-[11px]">
                 2. Schedule & Administrative Location
               </h3>
               <div className="grid grid-cols-2 gap-2">
@@ -145,7 +145,7 @@ export default function EventPrintView({ event, isOpen, onClose }) {
 
             {/* Box 3: Participation & Gov Engagement */}
             <div className="border border-gray-300 rounded-lg p-3.5 space-y-2">
-              <h3 className="font-bold uppercase tracking-wider text-emerald-900 border-b border-gray-200 pb-1 text-[11px]">
+              <h3 className="font-bold uppercase tracking-wider text-indigo-900 border-b border-gray-200 pb-1 text-[11px]">
                 3. Direct Participation & Gov Engagement
               </h3>
               <div className="grid grid-cols-3 gap-2">
@@ -159,7 +159,7 @@ export default function EventPrintView({ event, isOpen, onClose }) {
                 </div>
                 <div>
                   <span className="text-gray-500 block">Total Direct:</span>
-                  <span className="font-black text-emerald-800 text-sm">{totalDirect}</span>
+                  <span className="font-black text-indigo-800 text-sm">{totalDirect}</span>
                 </div>
               </div>
               <div className="pt-1">
@@ -179,7 +179,7 @@ export default function EventPrintView({ event, isOpen, onClose }) {
 
             {/* Box 4: Conflict Prevention & Indirect Reach */}
             <div className="border border-gray-300 rounded-lg p-3.5 space-y-2">
-              <h3 className="font-bold uppercase tracking-wider text-emerald-900 border-b border-gray-200 pb-1 text-[11px]">
+              <h3 className="font-bold uppercase tracking-wider text-indigo-900 border-b border-gray-200 pb-1 text-[11px]">
                 4. Conflict Prevention & Indirect Reach
               </h3>
               <div>
@@ -194,7 +194,7 @@ export default function EventPrintView({ event, isOpen, onClose }) {
                 <span className="font-bold text-gray-900">
                   {event.indirectReach || 'No'}
                   {event.indirectReach === 'Yes' && (
-                    <span className="ml-2 font-normal text-emerald-800">
+                    <span className="ml-2 font-normal text-indigo-800">
                       (Est. Audience: {(Number(event.estimatedAudienceReach) || 0).toLocaleString()} via {event.indirectReachChannel || 'N/A'})
                     </span>
                   )}
