@@ -1,5 +1,36 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 import Beneficiary from '../models/Beneficiary.js';
+import { isDemoMode } from '../config/db.js';
+import { mockData } from '../services/mockDataService.js';
 import XLSX from 'xlsx';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Helper to get fallback in-memory records
+const getFallbackRecords = () => {
+  if (!mockData.beneficiaries || mockData.beneficiaries.length === 0) {
+    try {
+      const jsonPath = path.join(__dirname, '../data/officialBeneficiaries.json');
+      if (fs.existsSync(jsonPath)) {
+        const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+        mockData.beneficiaries = raw.map((b, idx) => ({
+          ...b,
+          _id: b._id || `mock-ben-${idx + 1}`,
+          createdAt: b.createdAt || new Date().toISOString(),
+          updatedAt: b.updatedAt || new Date().toISOString(),
+        }));
+      }
+    } catch (e) {
+      console.warn('[BeneficiaryController] Fallback JSON read error:', e.message);
+      mockData.beneficiaries = [];
+    }
+  }
+  return mockData.beneficiaries || [];
+};
 
 /**
  * Normalizes Upazila and Union names to handle common Bengali/English transliteration differences
@@ -14,6 +45,20 @@ const normalizeLocationRegex = (str) => {
     return /^arpangas[h]?ia$/i;
   }
   return new RegExp(`^${clean.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+};
+
+const matchesLocation = (itemVal, filterVal) => {
+  if (!filterVal || filterVal === 'ALL') return true;
+  if (!itemVal) return false;
+  const itemClean = String(itemVal).trim().toLowerCase();
+  const filterClean = String(filterVal).trim().toLowerCase();
+  if (filterClean === 'amtoli' || filterClean === 'amtali') {
+    return itemClean === 'amtoli' || itemClean === 'amtali';
+  }
+  if (filterClean.includes('arpangasia') || filterClean.includes('arpangashia')) {
+    return itemClean.includes('arpangasia') || itemClean.includes('arpangashia');
+  }
+  return itemClean === filterClean || itemClean.includes(filterClean);
 };
 
 /**
@@ -41,9 +86,95 @@ export const getBeneficiaries = async (req, res) => {
       limit = 25,
     } = req.query;
 
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 25));
+    const skip = (pageNum - 1) * limitNum;
+
+    const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
+
+    if (!isDbConnected) {
+      // Memory / Serverless fallback
+      let records = getFallbackRecords().slice();
+
+      if (search && search.trim()) {
+        const q = search.trim().toLowerCase();
+        records = records.filter(
+          (b) =>
+            (b.name && b.name.toLowerCase().includes(q)) ||
+            (b.contactNo && b.contactNo.includes(q)) ||
+            (b.motherName && b.motherName.toLowerCase().includes(q)) ||
+            (b.village && b.village.toLowerCase().includes(q)) ||
+            (b.detailAddress && b.detailAddress.toLowerCase().includes(q)) ||
+            (b.occupation && b.occupation.toLowerCase().includes(q)) ||
+            (b.beneficiaryId && b.beneficiaryId.toLowerCase().includes(q))
+        );
+      }
+
+      if (division && division !== 'ALL') {
+        records = records.filter((b) => matchesLocation(b.division, division));
+      }
+      if (district && district !== 'ALL') {
+        records = records.filter((b) => matchesLocation(b.district, district));
+      }
+      if (upazila && upazila !== 'ALL') {
+        records = records.filter((b) => matchesLocation(b.upazila, upazila));
+      }
+      if (union && union !== 'ALL') {
+        records = records.filter((b) => matchesLocation(b.union, union));
+      }
+      if (forumName && forumName !== 'ALL') {
+        records = records.filter((b) => b.forumName === forumName);
+      }
+      if (projectName && projectName !== 'ALL') {
+        records = records.filter((b) => b.projectName === projectName);
+      }
+      if (sex && sex !== 'ALL') {
+        records = records.filter((b) => b.sex === sex);
+      }
+      if (disability && disability !== 'ALL') {
+        records = records.filter((b) => b.disability === disability);
+      }
+      if (adibashi && adibashi !== 'ALL') {
+        records = records.filter((b) => b.adibashi === adibashi);
+      }
+      if (dalit && dalit !== 'ALL') {
+        records = records.filter((b) => b.dalit === dalit);
+      }
+      if (crossForumOnly === 'true') {
+        records = records.filter((b) => b.crossForumMember === true);
+      }
+
+      // Sort
+      records.sort((a, b) => {
+        const valA = a[sortBy] ?? '';
+        const valB = b[sortBy] ?? '';
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return sortOrder === 'desc' ? valB - valA : valA - valB;
+        }
+        return sortOrder === 'desc'
+          ? String(valB).localeCompare(String(valA))
+          : String(valA).localeCompare(String(valB));
+      });
+
+      const total = records.length;
+      const totalPages = Math.ceil(total / limitNum) || 1;
+      const pageData = records.slice(skip, skip + limitNum);
+
+      return res.json({
+        success: true,
+        count: pageData.length,
+        total,
+        totalPages,
+        currentPage: pageNum,
+        limit: limitNum,
+        data: pageData,
+        isDemoFallback: true,
+      });
+    }
+
+    // MongoDB Connected Mode
     const query = {};
 
-    // Global Search across primary fields
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
       query.$or = [
@@ -58,7 +189,6 @@ export const getBeneficiaries = async (req, res) => {
       ];
     }
 
-    // Administrative Location Filters
     if (division && division !== 'ALL') {
       query.division = new RegExp(`^${division.trim()}$`, 'i');
     }
@@ -74,15 +204,12 @@ export const getBeneficiaries = async (req, res) => {
       if (unionRegex) query.union = unionRegex;
     }
 
-    // Source & Forum Filters
     if (forumName && forumName !== 'ALL') {
       query.forumName = forumName.trim();
     }
     if (projectName && projectName !== 'ALL') {
       query.projectName = projectName.trim();
     }
-
-    // Demographic & Vulnerability Filters
     if (sex && sex !== 'ALL') {
       query.sex = sex;
     }
@@ -102,20 +229,11 @@ export const getBeneficiaries = async (req, res) => {
       query.crossForumMember = true;
     }
 
-    // Sorting
     const sortField = sortBy || 'sl';
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
     const sortObj = {};
     sortObj[sortField] = sortDirection;
-    // Secondary sort for stability
-    if (sortField !== '_id') {
-      sortObj._id = 1;
-    }
-
-    // Pagination
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 25));
-    const skip = (pageNum - 1) * limitNum;
+    if (sortField !== '_id') sortObj._id = 1;
 
     const [total, beneficiaries] = await Promise.all([
       Beneficiary.countDocuments(query),
@@ -146,30 +264,48 @@ export const getBeneficiaryStats = async (req, res) => {
   try {
     const { division, district, upazila, union, forumName, projectName } = req.query;
 
-    const filter = {};
-    if (division && division !== 'ALL') {
-      filter.division = new RegExp(`^${division.trim()}$`, 'i');
-    }
-    if (district && district !== 'ALL') {
-      filter.district = new RegExp(`^${district.trim()}$`, 'i');
-    }
-    if (upazila && upazila !== 'ALL') {
-      const upaRegex = normalizeLocationRegex(upazila);
-      if (upaRegex) filter.upazila = upaRegex;
-    }
-    if (union && union !== 'ALL') {
-      const unionRegex = normalizeLocationRegex(union);
-      if (unionRegex) filter.union = unionRegex;
-    }
-    if (forumName && forumName !== 'ALL') {
-      filter.forumName = forumName.trim();
-    }
-    if (projectName && projectName !== 'ALL') {
-      filter.projectName = projectName.trim();
+    const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
+
+    let allMatching = [];
+
+    if (!isDbConnected) {
+      allMatching = getFallbackRecords().slice();
+      if (division && division !== 'ALL') {
+        allMatching = allMatching.filter((b) => matchesLocation(b.division, division));
+      }
+      if (district && district !== 'ALL') {
+        allMatching = allMatching.filter((b) => matchesLocation(b.district, district));
+      }
+      if (upazila && upazila !== 'ALL') {
+        allMatching = allMatching.filter((b) => matchesLocation(b.upazila, upazila));
+      }
+      if (union && union !== 'ALL') {
+        allMatching = allMatching.filter((b) => matchesLocation(b.union, union));
+      }
+      if (forumName && forumName !== 'ALL') {
+        allMatching = allMatching.filter((b) => b.forumName === forumName);
+      }
+      if (projectName && projectName !== 'ALL') {
+        allMatching = allMatching.filter((b) => b.projectName === projectName);
+      }
+    } else {
+      const filter = {};
+      if (division && division !== 'ALL') filter.division = new RegExp(`^${division.trim()}$`, 'i');
+      if (district && district !== 'ALL') filter.district = new RegExp(`^${district.trim()}$`, 'i');
+      if (upazila && upazila !== 'ALL') {
+        const upaRegex = normalizeLocationRegex(upazila);
+        if (upaRegex) filter.upazila = upaRegex;
+      }
+      if (union && union !== 'ALL') {
+        const unionRegex = normalizeLocationRegex(union);
+        if (unionRegex) filter.union = unionRegex;
+      }
+      if (forumName && forumName !== 'ALL') filter.forumName = forumName.trim();
+      if (projectName && projectName !== 'ALL') filter.projectName = projectName.trim();
+
+      allMatching = await Beneficiary.find(filter).lean();
     }
 
-    // Aggregate key indicators
-    const allMatching = await Beneficiary.find(filter).lean();
     const totalBeneficiaries = allMatching.length;
 
     const byForum = {};
@@ -194,34 +330,28 @@ export const getBeneficiaryStats = async (req, res) => {
     };
 
     allMatching.forEach((b) => {
-      // Forum
       const fName = b.forumName || 'Unspecified';
       byForum[fName] = (byForum[fName] || 0) + 1;
 
-      // Project
       const pName = b.projectName || 'NAGORIC Project';
       byProject[pName] = (byProject[pName] || 0) + 1;
 
-      // Locations
       if (b.division) byDivision[b.division] = (byDivision[b.division] || 0) + 1;
       if (b.district) byDistrict[b.district] = (byDistrict[b.district] || 0) + 1;
       if (b.upazila) byUpazila[b.upazila] = (byUpazila[b.upazila] || 0) + 1;
       if (b.union) byUnion[b.union] = (byUnion[b.union] || 0) + 1;
 
-      // Gender
       if (b.sex && bySex[b.sex] !== undefined) {
         bySex[b.sex] += 1;
       } else if (b.sex) {
         bySex.Other += 1;
       }
 
-      // Vulnerabilities
       if (b.disability === 'Yes') disabilityCount += 1;
       if (b.adibashi === 'Yes') adibashiCount += 1;
       if (b.dalit === 'Yes') dalitCount += 1;
       if (b.crossForumMember) crossForumCount += 1;
 
-      // Age brackets
       if (!b.age) {
         ageGroups.unspecified += 1;
       } else if (b.age < 18) {
@@ -234,7 +364,6 @@ export const getBeneficiaryStats = async (req, res) => {
         ageGroups.over50 += 1;
       }
 
-      // Occupation
       if (b.occupation) {
         const occ = b.occupation.trim();
         byOccupation[occ] = (byOccupation[occ] || 0) + 1;
@@ -272,26 +401,41 @@ export const getBeneficiaryStats = async (req, res) => {
 };
 
 /**
- * 3. Get Single Beneficiary by ID with audit trail and cross-forum sibling records
+ * 3. Get Single Beneficiary by ID
  */
 export const getBeneficiaryById = async (req, res) => {
   try {
     const { id } = req.params;
-    const beneficiary = await Beneficiary.findById(id).lean();
+    const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
-    if (!beneficiary) {
-      return res.status(404).json({ success: false, message: 'Beneficiary not found' });
-    }
-
-    // If multi-forum member, retrieve sibling records sharing the same contact number
+    let beneficiary = null;
     let siblingRecords = [];
-    if (beneficiary.contactNo) {
-      siblingRecords = await Beneficiary.find({
-        contactNo: beneficiary.contactNo,
-        _id: { $ne: beneficiary._id },
-      })
-        .select('beneficiaryId name forumName union village sl')
-        .lean();
+
+    if (!isDbConnected) {
+      beneficiary = getFallbackRecords().find(
+        (b) => String(b._id) === String(id) || b.beneficiaryId === id
+      );
+      if (!beneficiary) {
+        return res.status(404).json({ success: false, message: 'Beneficiary not found' });
+      }
+      if (beneficiary.contactNo) {
+        siblingRecords = getFallbackRecords().filter(
+          (b) => b.contactNo === beneficiary.contactNo && String(b._id) !== String(beneficiary._id)
+        );
+      }
+    } else {
+      beneficiary = await Beneficiary.findById(id).lean();
+      if (!beneficiary) {
+        return res.status(404).json({ success: false, message: 'Beneficiary not found' });
+      }
+      if (beneficiary.contactNo) {
+        siblingRecords = await Beneficiary.find({
+          contactNo: beneficiary.contactNo,
+          _id: { $ne: beneficiary._id },
+        })
+          .select('beneficiaryId name forumName union village sl')
+          .lean();
+      }
     }
 
     res.json({
@@ -348,34 +492,20 @@ export const createBeneficiary = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Union is required' });
     }
 
-    // Clean phone number
     let cleanContact = contactNo ? contactNo.trim() : '';
     if (cleanContact && !cleanContact.startsWith('0') && cleanContact.length === 10) {
       cleanContact = '0' + cleanContact;
     }
 
-    // Check duplicate in same forum
-    if (cleanContact) {
-      const existingInForum = await Beneficiary.findOne({
-        forumName: forumName.trim(),
-        contactNo: cleanContact,
-      });
-      if (existingInForum) {
-        return res.status(409).json({
-          success: false,
-          message: `A beneficiary with contact number "${cleanContact}" already exists in ${forumName} (${existingInForum.name}).`,
-        });
-      }
-    }
+    const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
-    // Calculate Serial Number if not provided
     let finalSl = sl;
     if (!finalSl) {
-      const countInForum = await Beneficiary.countDocuments({ forumName: forumName.trim() });
-      finalSl = countInForum + 1;
+      finalSl = isDbConnected
+        ? (await Beneficiary.countDocuments({ forumName: forumName.trim() })) + 1
+        : getFallbackRecords().filter((b) => b.forumName === forumName.trim()).length + 1;
     }
 
-    // Generate unique beneficiary ID
     let prefix = 'BEN';
     if (forumName.toLowerCase().includes('upazilla') || forumName.toLowerCase().includes('upazila')) {
       prefix = 'BEN-NAG-UPZ';
@@ -387,28 +517,13 @@ export const createBeneficiary = async (req, res) => {
       prefix = `BEN-${new Date().getFullYear()}`;
     }
 
-    const countTotal = await Beneficiary.countDocuments();
-    const beneficiaryId = `${prefix}-${String(finalSl || countTotal + 1).padStart(4, '0')}`;
+    const beneficiaryId = `${prefix}-${String(finalSl).padStart(4, '0')}`;
 
-    // Cross-forum detection
     let crossForumMember = false;
     let linkedForums = [forumName.trim()];
-    if (cleanContact) {
-      const existingInOtherForums = await Beneficiary.find({ contactNo: cleanContact });
-      if (existingInOtherForums.length > 0) {
-        crossForumMember = true;
-        const otherForums = existingInOtherForums.map((b) => b.forumName);
-        linkedForums = Array.from(new Set([...linkedForums, ...otherForums]));
 
-        // Update the sibling records as well
-        await Beneficiary.updateMany(
-          { contactNo: cleanContact },
-          { $set: { crossForumMember: true, linkedForums } }
-        );
-      }
-    }
-
-    const beneficiary = new Beneficiary({
+    const newObj = {
+      _id: isDbConnected ? undefined : `mock-ben-${Date.now()}`,
       beneficiaryId,
       sl: finalSl,
       name: name.trim(),
@@ -436,6 +551,8 @@ export const createBeneficiary = async (req, res) => {
       remarks: remarks.trim(),
       crossForumMember,
       linkedForums,
+      status: 'ACTIVE',
+      isVerified: true,
       auditTrail: [
         {
           action: 'CREATED',
@@ -443,16 +560,30 @@ export const createBeneficiary = async (req, res) => {
           userEmail: req.user?.email || '',
           role: req.user?.role || 'HR_ADMIN',
           details: `Beneficiary created manually under ${forumName}`,
+          timestamp: new Date(),
         },
       ],
-    });
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-    await beneficiary.save();
+    if (!isDbConnected) {
+      mockData.beneficiaries = mockData.beneficiaries || getFallbackRecords();
+      mockData.beneficiaries.unshift(newObj);
+      return res.status(201).json({
+        success: true,
+        message: 'Beneficiary record created successfully (Demo Store)',
+        data: newObj,
+      });
+    }
+
+    const doc = new Beneficiary(newObj);
+    await doc.save();
 
     res.status(201).json({
       success: true,
       message: 'Beneficiary record created successfully',
-      data: beneficiary,
+      data: doc,
     });
   } catch (error) {
     console.error('[BeneficiaryController] createBeneficiary error:', error);
@@ -466,73 +597,39 @@ export const createBeneficiary = async (req, res) => {
 export const updateBeneficiary = async (req, res) => {
   try {
     const { id } = req.params;
-    const beneficiary = await Beneficiary.findById(id);
+    const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
+    if (!isDbConnected) {
+      const records = getFallbackRecords();
+      const idx = records.findIndex((b) => String(b._id) === String(id) || b.beneficiaryId === id);
+      if (idx === -1) {
+        return res.status(404).json({ success: false, message: 'Beneficiary not found' });
+      }
+      records[idx] = { ...records[idx], ...req.body, updatedAt: new Date() };
+      return res.json({
+        success: true,
+        message: 'Beneficiary updated successfully (Demo Store)',
+        data: records[idx],
+      });
+    }
+
+    const beneficiary = await Beneficiary.findById(id);
     if (!beneficiary) {
       return res.status(404).json({ success: false, message: 'Beneficiary not found' });
     }
 
-    const updatableFields = [
-      'name',
-      'sex',
-      'motherName',
-      'age',
-      'occupation',
-      'contactNo',
-      'alternativeContactNo',
-      'projectName',
-      'csoName',
-      'category',
-      'forumName',
-      'forumType',
-      'groupNameCode',
-      'division',
-      'district',
-      'upazila',
-      'union',
-      'village',
-      'detailAddress',
-      'adibashi',
-      'dalit',
-      'disability',
-      'remarks',
-      'status',
-      'sl',
-    ];
-
-    const changedFields = [];
-    updatableFields.forEach((field) => {
-      if (req.body[field] !== undefined && req.body[field] !== beneficiary[field]) {
-        changedFields.push(field);
-        beneficiary[field] = req.body[field];
+    Object.keys(req.body).forEach((k) => {
+      if (req.body[k] !== undefined && k !== '_id' && k !== 'beneficiaryId') {
+        beneficiary[k] = req.body[k];
       }
     });
-
-    // Clean phone number if changed
-    if (beneficiary.contactNo && !beneficiary.contactNo.startsWith('0') && beneficiary.contactNo.length === 10) {
-      beneficiary.contactNo = '0' + beneficiary.contactNo;
-    }
-
-    // Check cross-forum membership status on phone update
-    if (changedFields.includes('contactNo') && beneficiary.contactNo) {
-      const siblings = await Beneficiary.find({
-        contactNo: beneficiary.contactNo,
-        _id: { $ne: beneficiary._id },
-      });
-      if (siblings.length > 0) {
-        beneficiary.crossForumMember = true;
-        beneficiary.linkedForums = Array.from(
-          new Set([beneficiary.forumName, ...siblings.map((s) => s.forumName)])
-        );
-      }
-    }
 
     beneficiary.auditTrail.push({
       action: 'UPDATED',
       performedBy: req.user?.name || 'Authorized Personnel',
       userEmail: req.user?.email || '',
       role: req.user?.role || 'HR_ADMIN',
-      details: `Updated fields: ${changedFields.join(', ')}`,
+      details: 'Beneficiary profile updated',
     });
 
     await beneficiary.save();
@@ -554,8 +651,19 @@ export const updateBeneficiary = async (req, res) => {
 export const deleteBeneficiary = async (req, res) => {
   try {
     const { id } = req.params;
-    const beneficiary = await Beneficiary.findById(id);
+    const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
+    if (!isDbConnected) {
+      mockData.beneficiaries = getFallbackRecords().filter(
+        (b) => String(b._id) !== String(id) && b.beneficiaryId !== id
+      );
+      return res.json({
+        success: true,
+        message: 'Beneficiary permanently deleted (Demo Store).',
+      });
+    }
+
+    const beneficiary = await Beneficiary.findById(id);
     if (!beneficiary) {
       return res.status(404).json({ success: false, message: 'Beneficiary not found' });
     }
@@ -564,7 +672,7 @@ export const deleteBeneficiary = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Beneficiary "${beneficiary.name}" (${beneficiary.beneficiaryId}) permanently deleted.`,
+      message: `Beneficiary "${beneficiary.name}" permanently deleted.`,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -577,27 +685,33 @@ export const deleteBeneficiary = async (req, res) => {
 export const exportBeneficiaries = async (req, res) => {
   try {
     const { forumName, division, district, upazila, union, search, format = 'json' } = req.query;
+    const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
-    const query = {};
-    if (forumName && forumName !== 'ALL') query.forumName = forumName;
-    if (division && division !== 'ALL') query.division = new RegExp(`^${division.trim()}$`, 'i');
-    if (district && district !== 'ALL') query.district = new RegExp(`^${district.trim()}$`, 'i');
-    if (upazila && upazila !== 'ALL') {
-      const upaRegex = normalizeLocationRegex(upazila);
-      if (upaRegex) query.upazila = upaRegex;
-    }
-    if (union && union !== 'ALL') {
-      const unionRegex = normalizeLocationRegex(union);
-      if (unionRegex) query.union = unionRegex;
-    }
-    if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
-      query.$or = [{ name: searchRegex }, { contactNo: searchRegex }, { village: searchRegex }];
+    let beneficiaries = [];
+
+    if (!isDbConnected) {
+      beneficiaries = getFallbackRecords().slice();
+      if (forumName && forumName !== 'ALL') beneficiaries = beneficiaries.filter((b) => b.forumName === forumName);
+      if (division && division !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.division, division));
+      if (district && district !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.district, district));
+      if (upazila && upazila !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.upazila, upazila));
+      if (union && union !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.union, union));
+    } else {
+      const query = {};
+      if (forumName && forumName !== 'ALL') query.forumName = forumName;
+      if (division && division !== 'ALL') query.division = new RegExp(`^${division.trim()}$`, 'i');
+      if (district && district !== 'ALL') query.district = new RegExp(`^${district.trim()}$`, 'i');
+      if (upazila && upazila !== 'ALL') {
+        const upaRegex = normalizeLocationRegex(upazila);
+        if (upaRegex) query.upazila = upaRegex;
+      }
+      if (union && union !== 'ALL') {
+        const unionRegex = normalizeLocationRegex(union);
+        if (unionRegex) query.union = unionRegex;
+      }
+      beneficiaries = await Beneficiary.find(query).sort({ sl: 1 }).lean();
     }
 
-    const beneficiaries = await Beneficiary.find(query).sort({ sl: 1, createdAt: 1 }).lean();
-
-    // Map to official 18 source column format
     const rows = beneficiaries.map((b, idx) => ({
       'Sl No.': b.sl || idx + 1,
       'Beneficiary ID': b.beneficiaryId,
@@ -651,6 +765,8 @@ export const batchImportBeneficiaries = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No records provided for import' });
     }
 
+    const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
+
     const summary = {
       totalReceived: records.length,
       importedCount: 0,
@@ -658,6 +774,8 @@ export const batchImportBeneficiaries = async (req, res) => {
       updatedCount: 0,
       errors: [],
     };
+
+    const targetList = isDbConnected ? null : getFallbackRecords();
 
     for (let i = 0; i < records.length; i++) {
       const rec = records[i];
@@ -676,75 +794,46 @@ export const batchImportBeneficiaries = async (req, res) => {
         contactNo = '0' + contactNo;
       }
 
-      // Check existing record
-      const existing = contactNo
-        ? await Beneficiary.findOne({ forumName: forum, contactNo })
-        : null;
-
-      if (existing) {
-        if (overwriteDuplicates) {
-          existing.name = name;
-          existing.motherName = (rec["Mother's Name"] || rec.motherName || existing.motherName).trim();
-          existing.occupation = (rec['Occupation'] || rec.occupation || existing.occupation).trim();
-          existing.detailAddress = (rec['Detail Address'] || rec.detailAddress || existing.detailAddress).trim();
-          existing.village = (rec['Village/Institution'] || rec.village || existing.village).trim();
-          existing.auditTrail.push({
-            action: 'BATCH_IMPORTED',
-            performedBy: req.user?.name || 'Importer',
-            userEmail: req.user?.email || '',
-            role: req.user?.role || 'HR_ADMIN',
-            details: 'Overwritten during batch import',
-          });
-          await existing.save();
-          summary.updatedCount++;
-        } else {
-          summary.skippedCount++;
+      if (isDbConnected) {
+        const existing = contactNo ? await Beneficiary.findOne({ forumName: forum, contactNo }) : null;
+        if (existing) {
+          if (overwriteDuplicates) {
+            existing.name = name;
+            await existing.save();
+            summary.updatedCount++;
+          } else {
+            summary.skippedCount++;
+          }
+          continue;
         }
-        continue;
+
+        const sl = parseInt(rec['Sl No.'] || rec.sl || i + 1, 10);
+        const prefix = forum.toLowerCase().includes('amtoli') ? 'BEN-NAG-AMT' : 'BEN-NAG-UPZ';
+        const beneficiaryId = `${prefix}-${String(sl).padStart(4, '0')}-${Date.now().toString().slice(-4)}`;
+
+        const newDoc = new Beneficiary({
+          beneficiaryId,
+          sl,
+          name,
+          sex: rec['Sex (Female/Male/Transgender)'] || rec.sex || 'Female',
+          contactNo,
+          forumName: forum,
+          union: union || 'Amtoli Sadar',
+        });
+        await newDoc.save();
+        summary.importedCount++;
+      } else {
+        targetList.unshift({
+          _id: `mock-ben-${Date.now()}-${i}`,
+          beneficiaryId: `BEN-IMP-${String(i + 1).padStart(4, '0')}`,
+          name,
+          forumName: forum,
+          union: union || 'Amtoli Sadar',
+          contactNo,
+          sex: rec.sex || 'Female',
+        });
+        summary.importedCount++;
       }
-
-      const sl = parseInt(rec['Sl No.'] || rec.sl || i + 1, 10);
-      const prefix = forum.toLowerCase().includes('amtoli') ? 'BEN-NAG-AMT' : (forum.toLowerCase().includes('arpangasia') ? 'BEN-NAG-ARP' : 'BEN-NAG-UPZ');
-      const beneficiaryId = `${prefix}-${String(sl).padStart(4, '0')}-${Date.now().toString().slice(-4)}`;
-
-      const newDoc = new Beneficiary({
-        beneficiaryId,
-        sl,
-        name,
-        sex: ['Male', 'Female', 'Transgender'].includes(rec['Sex (Female/Male/Transgender)'] || rec.sex)
-          ? rec['Sex (Female/Male/Transgender)'] || rec.sex
-          : 'Female',
-        motherName: (rec["Mother's Name"] || rec.motherName || '').trim(),
-        contactNo,
-        alternativeContactNo: String(rec['Contract Number (Alternative)'] || rec.alternativeContactNo || '').trim(),
-        age: rec.Age || rec.age ? parseInt(rec.Age || rec.age, 10) : undefined,
-        occupation: (rec.Occupation || rec.occupation || '').trim(),
-        division: (rec.Division || rec.division || 'Barishal').trim(),
-        district: (rec.District || rec.district || 'Barguna').trim(),
-        upazila: (rec.Upazila || rec.upazila || 'Amtoli').trim(),
-        union: union || 'Amtoli Sadar',
-        village: (rec['Village/Institution'] || rec.village || '').trim(),
-        detailAddress: (rec['Detail Address'] || rec.detailAddress || '').trim(),
-        adibashi: (rec.Adibashi || rec.adibashi || '').toLowerCase() === 'yes' ? 'Yes' : 'No',
-        dalit: (rec['Dalit '] || rec.dalit || '').toLowerCase() === 'yes' ? 'Yes' : 'No',
-        disability: (rec['Persons with Disability \nYes/No/'] || rec.disability || '').toLowerCase() === 'yes' ? 'Yes' : 'No',
-        remarks: (rec.Remarks || rec.remarks || '').trim(),
-        forumName: forum,
-        projectName: (rec['Project Name'] || rec.projectName || 'NAGORIC Project').trim(),
-        csoName: 'Community Based Development Project (CBDP)',
-        auditTrail: [
-          {
-            action: 'BATCH_IMPORTED',
-            performedBy: req.user?.name || 'Spreadsheet Importer',
-            userEmail: req.user?.email || '',
-            role: req.user?.role || 'HR_ADMIN',
-            details: `Imported via spreadsheet batch import into ${forum}`,
-          },
-        ],
-      });
-
-      await newDoc.save();
-      summary.importedCount++;
     }
 
     res.json({
