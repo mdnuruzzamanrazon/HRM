@@ -601,6 +601,7 @@
     ],
     "Barguna": [
       "Amtali",
+      "Amtoli",
       "Bamna",
       "Barguna Sadar",
       "Betagi",
@@ -2200,7 +2201,10 @@
     ],
     "Barguna__Amtali": [
       "Amtali",
+      "Amtoli Pourashova",
+      "Amtoli Sadar",
       "Arpangashia",
+      "Arpangasia",
       "Atharagashia",
       "Barabagi",
       "Chhota Bagi",
@@ -7023,6 +7027,26 @@
       "Ward No-83",
       "Ward No-87",
       "Ward No-90"
+    ],
+    "Barguna__Amtoli": [
+      "Amtali",
+      "Amtoli Pourashova",
+      "Amtoli Sadar",
+      "Arpangashia",
+      "Arpangasia",
+      "Atharagashia",
+      "Barabagi",
+      "Chhota Bagi",
+      "Chowra",
+      "Gulisakhali",
+      "Haldia",
+      "Karaibaria",
+      "Kukua",
+      "Nishanbaria",
+      "Pancha Koralia",
+      "Paurashava",
+      "Sarikkhali",
+      "Sonakata"
     ]
   },
   "districtToDivision": {

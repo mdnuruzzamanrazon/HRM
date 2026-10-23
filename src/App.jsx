@@ -32,6 +32,7 @@ import WorkplaceLocations from './pages/locations/WorkplaceLocations';
 import RiskRegister from './pages/risk/RiskRegister';
 import ComplaintsRegister from './pages/complaints/ComplaintsRegister';
 import EventTracker from './pages/events/EventTracker';
+import BeneficiaryManagement from './pages/beneficiaries/BeneficiaryManagement';
 
 // Employee Portal Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
@@ -114,6 +115,8 @@ function App() {
               <Route path="/complaints" element={<ComplaintsRegister />} />
               <Route path="/event-tracker" element={<EventTracker />} />
               <Route path="/events" element={<EventTracker />} />
+              <Route path="/beneficiaries" element={<BeneficiaryManagement />} />
+              <Route path="/beneficiary-information" element={<BeneficiaryManagement />} />
             </Route>
           </Route>
 

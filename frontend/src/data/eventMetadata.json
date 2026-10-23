@@ -1,0 +1,287 @@
+{
+  "eventTypes": [
+    "Training",
+    "Orientation",
+    "Induction",
+    "Learning Session",
+    "Exposure/Exchange Visit",
+    "Demonstration",
+    "TOT",
+    "Mentoring",
+    "Peer Learning",
+    "Coaching",
+    "Community Yard meeting",
+    "Conference",
+    "Seminar",
+    "Workshop",
+    "Meeting",
+    "Campaign",
+    "Dialogue",
+    "Grievance Redressal",
+    "Inclusion Session",
+    "Support Service Provision",
+    "SGBV Support Service",
+    "Research Engagement",
+    "Thematic External Meeting/Workshop",
+    "Radio program",
+    "Community Radio Program",
+    "TV program",
+    "Social Media Post/Campaign",
+    "IEC Material distribution",
+    "Mass Gathering",
+    "Print media campaign/story/news/Article",
+    "Other"
+  ],
+  "eventThemes": [
+    "Governance",
+    "Accountability",
+    "Civic Engagement and Participation",
+    "Gender Equality",
+    "Social Inclusion",
+    "Capacity Development",
+    "Institutional Strengthening",
+    "Advocacy and Policy Reform",
+    "Research, Learning, and Knowledge Sharing",
+    "Innovation and Digital Transformation",
+    "MEAL",
+    "Service Delivery",
+    "Community Support",
+    "Leadership",
+    "Empowerment",
+    "Others (Specify)"
+  ],
+  "eventLevels": [
+    "Local (Union and Upzila)",
+    "Regional (District-Divison)",
+    "National"
+  ],
+  "govResponses": [
+    "Positive",
+    "Negative",
+    "Deferred",
+    "No Response",
+    "Not Applicable"
+  ],
+  "indirectReachChannels": [
+    "Facebook, YouTube, WhatsApp, etc (All social Media platform)",
+    "Online News outlet",
+    "Print News Outlet",
+    "TV News outlet",
+    "Mass gathering/Rally/Day observation/human chain (All mass gathering etc)",
+    "IEC Material",
+    "sharing with peers, friends, or household members.",
+    "Other (Specify in the next Colum)"
+  ],
+  "estimationSources": [
+    "Social Media Analytics",
+    "Google/Web Analysitcs",
+    "Circulation",
+    "Field estimate",
+    "Others -Specify in the next Colum"
+  ],
+  "implementingOrgs": [
+    "Abdul Momen Khan Memorial Foundation (Khan Foundation)",
+    "Abdul Momen Khan Memorial Foundation Khan Foundation",
+    "Ain o Salish Kendra (ASK)",
+    "Ain o Salish Kendra ASK",
+    "Aparajeyo Bangladesh AB",
+    "Aparajeyo-Bangladesh (AB)",
+    "Bandhu Social Welfare Society",
+    "Bangladesh Legal Aid and Service Trust (BLAST)",
+    "Bangladesh Legal Aid and Service Trust BLAST",
+    "Bangladesh NGOs \r\nNetwork for Radio \r\nand Communication \r\n(BNNRC)",
+    "Bangladesh NGOs Network for Radio and Communication BNNRC",
+    "Centre for Policy Dialogue (CPD)",
+    "Centre for Policy Dialogue CPD",
+    "DALIT",
+    "Democracywatch (DW)",
+    "Democracywatch DW",
+    "Dnet",
+    "Jhanjira Samaj Kallyan Sangstha (JSKS)",
+    "Jhanjira Samaj Kallyan Sangstha JSKS",
+    "Light House",
+    "Manabadhikar Shongskriti Foundation (msf)",
+    "Manabadhikar Shongskriti Foundation MSF",
+    "Manushr Jonno Foundation",
+    "Manushr Jonno Foundation MJF",
+    "Media Resources Development Initiative (MRDI)",
+    "Media Resources Development Initiative MRDI",
+    "Naria Unnayan Samity (NUSA)",
+    "Naria Unnayan Samity NUSA",
+    "SHEBA MANAB KALLYAN KENDRA (SMKK)",
+    "SHEBA MANAB KALLYAN KENDRA SMKK",
+    "Socio Health And Rehabilitation Program (SHARP)",
+    "Socio Health And Rehabilitation Program SHARP",
+    "Trinamul Unnayan Sangstha (TUS)",
+    "Trinamul Unnayan Sangstha TUS",
+    "WAVE Foundation"
+  ],
+  "spPartnersMap": {
+    "Abdul Momen Khan Memorial Foundation (Khan Foundation)": [],
+    "Abdul Momen Khan Memorial Foundation Khan Foundation": [
+      "Access toward Livelihood and Welfare Organization (ALWO)",
+      "Ancholic Polli Unnayan Sangstha (APUS)",
+      "Ensure Legal Support through Local Movement and Action (ELLMA)",
+      "PULSE Bangladesh",
+      "Samata Nari Kallyan Sangstha (SNKS)"
+    ],
+    "Ain o Salish Kendra (ASK)": [
+      "Association for Community Development",
+      "Association for Socio-Economic Development ( ASED)",
+      "Association of Voluntary Actions for Society (AVAS)",
+      "Manab Mukti Sangstha (MMS)",
+      "Organization of Women Development in Bangladesh (OWDEB)",
+      "SoDESH, Satkhira\r\nRaycharan Road\r\nKatia (Umtala More)"
+    ],
+    "Ain o Salish Kendra ASK": [
+      "Association for Community Development",
+      "Association for Socio-Economic Development ( ASED)",
+      "Association of Voluntary Actions for Society (AVAS)",
+      "Manab Mukti Sangstha (MMS)",
+      "Organization of Women Development in Bangladesh (OWDEB)",
+      "SoDESH, Satkhira\r\nRaycharan Road\r\nKatia (Umtala More)"
+    ],
+    "Aparajeyo Bangladesh AB": [
+      "Chandradip Development Society (CDS).",
+      "JugantorSamaj Unnayan Sangstha (JSUS)",
+      "Manob Sheba O Shamajik Unnayan Shangstha (MSSUS)",
+      "Reliant Women Development Organization (RWDO)"
+    ],
+    "Aparajeyo-Bangladesh (AB)": [
+      "Chandradip Development Society (CDS).",
+      "JugantorSamaj Unnayan Sangstha (JSUS)",
+      "Manob Sheba O Shamajik Unnayan Shangstha (MSSUS)",
+      "Reliant Women Development Organization (RWDO)"
+    ],
+    "Bandhu Social Welfare Society": [],
+    "Bangladesh Legal Aid and Service Trust (BLAST)": [],
+    "Bangladesh Legal Aid and Service Trust BLAST": [],
+    "Bangladesh NGOs \r\nNetwork for Radio \r\nand Communication \r\n(BNNRC)": [],
+    "Bangladesh NGOs Network for Radio and Communication BNNRC": [],
+    "Centre for Policy Dialogue (CPD)": [
+      "Efforts for Rural Advancement (ERA)",
+      "Gram Unnayan Karma (GUK)",
+      "Indigenous Peoples Development Services (IPDS)",
+      "Participatory Research and Action Network (PRAAN)"
+    ],
+    "Centre for Policy Dialogue CPD": [
+      "Efforts for Rural Advancement (ERA)",
+      "Gram Unnayan Karma (GUK)",
+      "Indigenous Peoples Development Services (IPDS)",
+      "Participatory Research and Action Network (PRAAN)"
+    ],
+    "DALIT": [],
+    "Democracywatch (DW)": [
+      "Gram Bikash Kendra (GBK",
+      "Sinnomul Mohila Samity (SMS)",
+      "Social Equality for Effective Development (SEED)",
+      "Udayankur Seba Sangstha (USS)"
+    ],
+    "Democracywatch DW": [
+      "Gram Bikash Kendra (GBK",
+      "Sinnomul Mohila Samity (SMS)",
+      "Social Equality for Effective Development (SEED)",
+      "Udayankur Seba Sangstha (USS)"
+    ],
+    "Dnet": [
+      "Jana Kalyan Kendra (JKK)",
+      "Nishwa Shahayak Shangstha (NSS)",
+      "Prochesta",
+      "Progati Samaj Unnayn Sanghtha (PSUS)"
+    ],
+    "Jhanjira Samaj Kallyan Sangstha (JSKS)": [],
+    "Jhanjira Samaj Kallyan Sangstha JSKS": [],
+    "Light House": [
+      "Agrani Mohila Unnayan Songstha (AMUS)",
+      "Shimanto Unnayon Foundation (SUF)",
+      "Social Development Services (SDS)"
+    ],
+    "Manabadhikar Shongskriti Foundation (msf)": [
+      "Banchte Chai Samaj Unnayan Samity",
+      "Basic Organization Network for Development and Humanitarian Aid for Nation (Bondhan)",
+      "NEDA Society",
+      "National Development Programme (NDP)",
+      "Sabalamby Unnayan Samity",
+      "Unnayan Sangha (US)",
+      "Welfare Efforts (WE)"
+    ],
+    "Manabadhikar Shongskriti Foundation MSF": [
+      "Banchte Chai Samaj Unnayan Samity",
+      "Basic Organization Network for Development and Humanitarian Aid for Nation (Bondhan)",
+      "NEDA Society",
+      "National Development Programme (NDP)",
+      "Sabalamby Unnayan Samity",
+      "Unnayan Sangha (US)",
+      "Welfare Efforts (WE)"
+    ],
+    "Manushr Jonno Foundation": [
+      "WE CAN"
+    ],
+    "Manushr Jonno Foundation MJF": [
+      "WE CAN"
+    ],
+    "Media Resources Development Initiative (MRDI)": [],
+    "Media Resources Development Initiative MRDI": [],
+    "Naria Unnayan Samity (NUSA)": [
+      "Development Organization of the Rural Poor (DORP)",
+      "Village Education Resource Centre (VERC)"
+    ],
+    "Naria Unnayan Samity NUSA": [
+      "Development Organization of the Rural Poor (DORP)",
+      "Village Education Resource Centre (VERC)"
+    ],
+    "SHEBA MANAB KALLYAN KENDRA (SMKK)": [
+      "AID Organization",
+      "Anirban Samaj Unnayon Sangstha (ASUS)"
+    ],
+    "SHEBA MANAB KALLYAN KENDRA SMKK": [
+      "AID Organization",
+      "Anirban Samaj Unnayon Sangstha (ASUS)"
+    ],
+    "Socio Health And Rehabilitation Program (SHARP)": [],
+    "Socio Health And Rehabilitation Program SHARP": [],
+    "Trinamul Unnayan Sangstha (TUS)": [
+      "Ashika Development Associates  (Ashika)",
+      "Gram Unnayon Sangathon (GRAUS)"
+    ],
+    "Trinamul Unnayan Sangstha TUS": [
+      "Ashika Development Associates  (Ashika)",
+      "Gram Unnayon Sangathon (GRAUS)"
+    ],
+    "WAVE Foundation": [
+      "Barendrabhumi Samaj Unnayan Sangstha (BSDO)",
+      "DASCOH",
+      "Jago Nari",
+      "Nazrul Smriti Sangsad-NSS"
+    ]
+  },
+  "instructions": {
+    "General Instruction (English)": "This tool is designed to record all CEF-supported events organised by SPs/Grantees and their consortium partners. With this single tool, we can track several CEF performance indicators, understand how each event contributes to different themes, and document participation. It will capture the number of community members, CSO members, and government or local government representatives who joined the event. It also records the reflections/voces of community members on civic issues during the event, as well as the responses of government representatives to those issues. Another important purpose of this tool is to capture any indirect reach generated by the event, if applicable.\r\n\r\nWhen using this tool, please follow the instructions for each data field carefully and make sure to keep proper supporting documents. For example, if an event involves direct participants, you must preserve the attendance or participant registration sheet, where participant data is collected according to the Direct Reach MEAL Tool data requirements. Data can be collected using either digital platforms, such as KOBO or Google Forms, or hardcopy tools. If using digital tools, save all files securely in the project laptop, preferably with the MEAL person. If using hardcopies, keep a separate file named “Event Tracker Supporting Data.” For each event, arrange the documents together in order—first the agenda, then a short event report including the objective, theme, issues discussed, participants, and government participation or responses, followed by the attendance sheet. Each set of supporting data must be kept together in one bundle. On the Top Sheet of every bundle, you must clearly write the Event ID (see the Event ID instruction section below).\r\n\r\nIf the event generates indirect reach, you must also keep supporting evidence such as photos, videos, and calculation notes. All data provided through this tool must be backed by proper documentation. To help you understand better to use this tool, each section of the tool has its own instructions that explain what information is required and how to record it correctly.",
+    "General Instruction (Bangla)": "এই টুলটি তৈরি করা হয়েছে SP/Grantee এবং তাদের consortium partner দ্বারা আয়োজনকৃত সব CEF supported events রেকর্ড করার জন্য। এই এক টুল দিয়েই আমরা একাধিক CEF performance indicators ট্র্যাক করতে পারব, প্রতিটি event কিভাবে বিভিন্ন থিমে অবদান রাখছে তা বুঝতে পারব, এবং অংশগ্রহণকারীদের তথ্য ডকুমেন্ট করতে পারব। এখানে community members, CSO members, এবং government বা local government representatives কতজন অংশগ্রহণ করেছে তা রেকর্ড করা হবে। একই সঙ্গে event চলাকালে community participants-এর মতামত/Voice এবং সেই বিষয়ে government representatives কী প্রতিক্রিয়া দিয়েছে সেটিও এখানে documentation হবে। এই টুলের আরেকটি গুরুত্বপূর্ণ উদ্দেশ্য হলো, যদি কোনো event থেকে Indirect Reach তৈরি হয় তবে সেটিও capture করা।\r\n\r\nএই টুল ব্যবহার করার সময় প্রতিটি data field-এর নির্দেশনা ভালোভাবে অনুসরণ করতে হবে এবং অবশ্যই প্রয়োজনীয় Means of Verification (Supporting Documents) রাখতে হবে। উদাহরণস্বরূপ, যদি event-এ direct participants থাকে, তাহলে অবশ্যই attendance sheet বা participant registration sheet সংরক্ষণ করতে হবে, যেখানে participant's data Direct Reach MEAL Tool অনুযায়ী সংগ্রহ করা হবে। ডাটা সংগ্রহ করা যেতে পারে digital platform (যেমন KOBO, Google Form) ব্যবহার করে, অথবা hardcopy format-এ। Digital format হলে, সব ফাইল নিরাপদভাবে project-এর laptop-এ (অগ্রাধিকার ভিত্তিতে project MEAL person-এর laptop-এ) রাখতে হবে। Hardcopy হলে, আলাদা একটি ফাইল করতে হবে যার নাম হবে “Event Tracker Supporting Data.” প্রতিটি event-এর supporting documents সাজাতে হবে: প্রথমে agenda, তারপর একটি ছোট event report (যেখানে থাকবে objective, theme, আলোচিত বিষয়, অংশগ্রহণকারীর, government participation ও তাদের প্রতিক্রিয়া), এরপর attendance sheet। প্রতিটি event-এর supporting data একসাথে bundle করে রাখতে হবে। এই bundle-এর উপরে একটি Top Sheet থাকতে হবে। সেই Top Sheet-এ অবশ্যই Event ID উল্লেখ করতে হবে (Event ID কিভাবে হবে তা নিচের Event ID Instruction অংশে দেওয়া আছে)।\r\n\r\nযদি event থেকে Indirect Reach তৈরি হয়, তবে অবশ্যই তার supporting evidence যেমন ছবি, ভিডিও, এবং হিসাবের নোট সংরক্ষণ করতে হবে। এই টুলে দেওয়া প্রতিটি data অবশ্যই proper documentation-এর মাধ্যমে সমর্থিত হতে হবে। ব্যবহার আরও সহজ করার জন্য, টুলের প্রতিটি সেকশনের নিচে আলাদা নির্দেশনা দেওয়া আছে যেখানে ব্যাখ্যা করা হয়েছে কী তথ্য দিতে হবে এবং কিভাবে তা সঠিকভাবে রেকর্ড করতে হবে।",
+    "Event/Activity ID": "প্রতিটি ইভেন্টের জন্য একটি আলাদা Event ID থাকতে হবে। এই Event ID খুবই গুরুত্বপূর্ণ, কারণ এর মাধ্যমে আমরা প্রতিটি ইভেন্ট ট্র্যাক করতে পারব, এবং একই সাথে এই ইভেন্টকে Direct Reach Tool-এর ডেটার সাথে যুক্ত করতে পারব। একই Event ID ব্যবহার করলে সহজেই দেখা যাবে কোন ইভেন্টে কোন অংশগ্রহণকারী অংশ নিয়েছে, কতজন কোন গ্রুপ থেকে অংশ নিয়েছে, এবং একজন অংশগ্রহণকারী কতগুলো ইভেন্টে যোগ দিয়েছে।\r\nEvent ID তৈরির নিয়ম:\r\nEvent ID = বছর (YYYY) + মাস (MM) + প্রতিষ্ঠানের প্রথম দুই অক্ষর + ইভেন্ট টাইপ (দুই অক্ষর) + ইভেন্টের ক্রমিক নম্বর (দুই অঙ্কে)\r\nউদাহরণ: যদি Light House সেপ্টেম্বর ২০২৫-এ প্রথম Training ইভেন্ট করে → 202509LITR01; একই মাসে যদি Orientation ইভেন্ট হয় এবং এটি দ্বিতীয় ইভেন্ট হয় → 202509LIOR02\r\n প্রতিষ্ঠানের নামের প্রথম দুই অক্ষর ব্যবহারের নিয়ম:\r\nযদি ইমপ্লিমেন্টিং অর্গানাইজেশন (যারা সরাসরি কার্যক্রম পরিচালনা করে) SP/Grantee হয়, তবে সেই SP/Grantee প্রতিষ্ঠানের নামের প্রথম দুই অক্ষর ব্যবহার করতে হবে। যদি ইভেন্টটি Consortium Partner দ্বারা পরিচালিত হয়, তবে সেই Consortium Partner প্রতিষ্ঠানের নামের প্রথম দুই অক্ষর ব্যবহার করতে হবে।\r\nসবসময় মনে রাখবেন:\r\nপ্রতিটি ইভেন্টের Event ID হবে একক (unique) — একই ID কখনও দুই ইভেন্টের জন্য ব্যবহার করা যাবে না। একই Event ID অবশ্যই সেই ইভেন্টের অংশগ্রহণকারীদের Direct Reach Tool-এ ব্যবহার করতে হবে।\r\n👉 এতে ইভেন্ট ও অংশগ্রহণকারীর তথ্য সহজে মিলানো যাবে এবং রেকর্ড সঠিক ও নির্ভরযোগ্য থাকবে।",
+    "Date from": "তারিখটি এই ফরম্যাটে লিখুন: YYYY/MM/DD। যদি এটি এক দিনের অনুষ্ঠান বা কার্যক্রম হয়, তাহলে শুধু Date From ঘরটি পূরণ করুন এবং Date To ঘরটি ফাঁকা রাখুন। আর যদি এটি একাধিক দিনের অনুষ্ঠান বা কার্যক্রম হয়, তাহলে প্রথম দিনের তারিখটি Date From ঘরে লিখুন এবং শেষ দিনের তারিখটি Date To ঘরে লিখুন। \r\n\r\nযদি কোনো ইভেন্ট বা অ্যাক্টিভিটি শুধু Indirect Reach তৈরি করে এবং সেটা একই মাসে বিভিন্ন তারিখে হয়ে থাকে, তাহলে সেই মাসের Start Date এবং End Date দুইটিই দিতে হবে। যেমন, আপনার প্রজেক্ট যদি একই মাসে বিভিন্ন তারিখে IEC materials বিতরণ করে, তাহলে Date From সেলে প্রথম বিতরণের তারিখ লিখবেন এবং Date To সেলে শেষ বিতরণের তারিখ লিখবেন।",
+    "Date to": "",
+    "Implementing Ogrnization's Name (SP/Grantee)": "ডাটা সেলে কনসোর্টিয়াম বা প্রজেক্টের প্রতিনিধিত্বকারী SP/Grantee-এর নাম বেছে নিন। ড্রপডাউন তালিকা থেকে নামটি নির্বাচন করুন।",
+    "If Implementing Organization is Consortium Partner": "যদি কার্যক্রমটি SP/Grantee-এর কনসোর্টিয়াম পার্টনার আয়োজন করে, তবে ড্রপডাউন তালিকা থেকে আয়োজক প্রতিষ্ঠানের নাম নির্বাচন করুন। আর যদি কার্যক্রমটি SP/Grantee নিজেরা আয়োজন করে, তাহলে এই ঘরটি ফাঁকা রাখুন।",
+    "Number of participants from Community/CBO/CSO": "এই ঘরে ইভেন্টে অংশগ্রহণকারী মোট সিএসও (CSO) এবং কমিউনিটি সদস্যদের সংখ্যা লিখুন। প্রতিটি সারি একটি ইভেন্টের জন্য। উপস্থিতির তালিকা দেখে সিএসও সদস্য এবং কমিউনিটি সদস্যদের গুনে সংখ্যা লিখুন। এসপি/গ্র্যান্টির যেসব স্টাফ বেতন পান, তাদের গণনা করবেন না। শুধু যারা বেতন পান না, তাদের সিএসও সদস্য হিসেবে গণনা করবেন।",
+    "Event Type": "এই সেলে একটি Drop-down list আছে যেখানে বিভিন্ন Event Type দেওয়া আছে। প্রতিটি Event Type-এর নির্দিষ্ট Definition আছে। ইভেন্টের ধরন অনুযায়ী নিচের তালিকা থেকে সঠিকটি সিলেক্ট করুন। নিচে প্রতিটি Event Type-এর সংজ্ঞা (Definition) দেওয়া আছে—দয়া করে এগুলো ভালোভাবে পড়ুন। ডাটা এন্ট্রি করার সময় এই সেলে অবশ্যই সেই Event Type সিলেক্ট করবেন যা নিচে দেওয়া সংজ্ঞার সাথে মিলে যায়। এতে প্রতিটি ইভেন্ট সঠিকভাবে শ্রেণিবদ্ধ হবে এবং Supporting Documents দিয়ে যাচাই করা যাবে। নোট: যদি ইভেন্ট টাইপ Inception Event হয়, তবে এটি CEF ইভেন্ট হিসেবে গণ্য হবে না—কারণ এটি কেবল প্রকল্পের সূচনা/পরিচয়ধর্মী অনুষ্ঠান এবং স্বাভাবিকভাবে কোনো CEF সূচকে (indicator) অবদান রাখে না। সুতরাং Inception Event ইভেন্ট ট্র্যাকার শিটে তালিকাভুক্ত করার প্রয়োজন নেই।\r\nCapacity Development Events:\r\nTraining: নির্দিষ্ট কারিকুলাম, সময়কাল এবং শেখার লক্ষ্যসহ প্রশিক্ষণ। উপস্থিতির তালিকা, মডিউল ও সেশনের Agenda রাখতে হবে As Supporting Document (MoV) । Orientation: নতুন অংশগ্রহণকারীদের জন্য সংক্ষিপ্ত পরিচিতি সেশন (CEF এর থিম, outcome, প্রক্রিয়া, inclusion, human rights, governance ইত্যাদি )। Induction: নতুন স্টাফ বা পার্টনারদের সিস্টেম, Process  ও different tools and Templets এর সাথে পরিচিত করার জন্য ফরমাল সেশন। সাধারণত একবারই হয়।  Learning Session: অংশগ্রহণকারীদের মধ্যে জ্ঞান ও অভিজ্ঞতা শেয়ারের ইন্টারেক্টিভ সেশন। MoV for this:  এজেন্ডা ও আলোচনার নোট সংরক্ষণ করতে হবে। Exposure/Exchange Visit: অন্য প্রকল্প এলাকা বা সংস্থায় গিয়ে শেখার ভিজিট। ইটিনেরারি, হোস্টিং অর্গানাইজেশন ও রিপোর্ট লাগবে। Demonstration: কোনো মেথড/টুল প্র্যাকটিক্যালি দেখানোর ইভেন্ট। পরিকল্পনা, MoV for this:  উপস্থিতি এবং ফলো-আপ রাখতে হবে। TOT (Training of Trainers): নির্বাচিত অংশগ্রহণকারীদের প্রশিক্ষণ যারা পরে অন্যদের প্রশিক্ষণ দেবে। MoV for this:  কাসকেড ট্রেনিং-এর প্রমাণ থাকতে হবে (Event report, Agenda and attandance/registration sheet)। Mentoring: Organisation to Organisation ছোট গ্রুপকে নিয়মিত গাইড করা। MoV for this:  মেন্টরিং নোট ও ফ্রিকোয়েন্সি রেকর্ড/Documentation রাখতে হবে। Peer Learning: একই ব্যাকগ্রাউন্ড বা ভূমিকার অংশগ্রহণকারীদের মধ্যে শেখা-শেখি। MoV for this:  সেশনের সংখ্যা, আলোচনার বিষয় এবং আউটপুট রাখতে হবে (Documentation)। Coaching: ব্যক্তিগত স্কিল ডেভেলপমেন্টের জন্য সরাসরি পর্যবেক্ষণ ও ফিডব্যাক। MoV for this:  নির্ধারিত লক্ষ্য ও রেকর্ড থাকতে হবে (Documentation)।\r\nCommunity & Advocacy Events:\r\nCommunity Yard Meeting: কমিউনিটি/ইয়ার্ড পর্যায়ের অনানুষ্ঠানিক মিটিং (অধিকার, সেবা বা নাগরিক বিষয় নিয়ে আলোচনা)। Dialogue: সরকার বা অন্য স্টেকহোল্ডারের সাথে ফরমাল আলোচনা/সংলাপ। এজেন্ডা, আলোচিত বিষয় ও সরকারের প্রতিক্রিয়া নথিভুক্ত করতে হবে। Conference: বড় আকারের ফরমাল ইভেন্ট যেখানে সরকার, CSO, ডোনার, মিডিয়া বা একাডেমিয়া অংশ নেয়। MoV for this:  এজেন্ডা, রিপোর্ট ও কভারেজ লাগবে।\r\nSeminar: নির্দিষ্ট টপিকে একাডেমিক/Formal স্টাইল সেশন, প্রেজেন্টেশনসহ। MoV for this:  রিপোর্ট ও Attandance/Participant's registration তালিকা রাখতে হবে। Workshop: হ্যান্ডস-অন ইভেন্ট যেখানে আউটপুট (e.g. common understanding, co-creation, Action plan etc).  MoV for this: Event report, Attandance/Partcicipant's registration ডকুমেন্টেড আউটপুট থাকতে হবে।\r\nMeeting: প্ল্যানিং, কো-অর্ডিনেশন বা সিদ্ধান্তের জন্য মিটিং। MoV for this:  মিটিং মিনিটস রাখতে হবে। Campaign: মেসেজ ছড়ানোর কার্যক্রম (সোশ্যাল মিডিয়া, রেডিও, ইয়ার্ড মিটিং ইত্যাদি চ্যানেলে)। Grievance Redressal: অভিযোগ বা সমস্যা গ্রহণ ও সমাধানের ইভেন্ট। MoV for this:  Documentation- অভিযোগ লিস্ট ও প্রতিক্রিয়া রেকর্ড করতে হবে। Inclusion Session: নারী, PWDs, সংখ্যালঘু ইত্যাদি প্রান্তিক গোষ্ঠীর অংশগ্রহণ নিশ্চিত করার সেশন। MoV for this:  এজেন্ডা ও ডিসঅ্যাগ্রিগেটেড ডেটা রাখতে হবে। Support Service Provision: সরাসরি সেবা দেওয়া (লিগ্যাল এইড, কাউন্সেলিং ইত্যাদি)। MoV for this:  সার্ভিস রেকর্ড রাখতে হবে। SGBV Support Service: লিঙ্গভিত্তিক সহিংসতার (SGBV) সার্ভাইভারদের জন্য বিশেষায়িত সহায়তা। MoV for this:  কনফিডেনশিয়ালিটি ও কেস রেকর্ড জরুরি। Research Engagement: রিসার্চ, ডেটা সংগ্রহ বা ফাইন্ডিং শেয়ারের কার্যক্রম। Thematic External Meeting/Workshop: বাইরের স্টেকহোল্ডারদের (যেমন সরকার, মিডিয়া) সাথে নির্দিষ্ট ইস্যু নিয়ে মিটিং/ওয়ার্কশপ।\r\nMedia & Outreach Events:\r\nRadio Program: সিভিক ইস্যু/CEF থিম নিয়ে রেডিওতে সম্প্রচার। MoV for this:  ব্রডকাস্ট সার্টিফিকেট বা রেকর্ডিং লাগবে। Community Radio Program: লোকাল রেডিওতে সম্প্রচারিত প্রোগ্রাম। MoV for this:  স্ক্রিপ্ট ও স্টেশন সার্টিফিকেট লাগবে। TV Program: টেলিভিশনে সম্প্রচারিত প্রোগ্রাম। MoV for this:  ক্লিপ/record ও সার্টিফিকেট রাখতে হবে। Social Media Post/Campaign: অনলাইনে পোস্ট বা ক্যাম্পেইন। MoV for this:  ভিউ, লাইক, শেয়ার ইত্যাদি এনগেজমেন্ট ডেটা নিতে হবে। IEC Material Distribution: লিফলেট, পোস্টার, বুকলেট ইত্যাদি বিতরণ। MoV for this:  স্যাম্পল ও ডিস্ট্রিবিউশন রেকর্ড লাগবে। Mass Gathering: বড় আকারের জনসমাগম (যেমন র‍্যালি, সাংস্কৃতিক অনুষ্ঠান)। ২০০ জনের বেশি হলে MoV for this:  headcount sampling ব্যবহার করতে হবে। Print Media Campaign/Story/News/Article: সংবাদপত্র/ম্যাগাজিনে প্রকাশিত কনটেন্ট। MoV for this:  অফলাইন হলে circulation data এবং অনলাইন হলে view/share data নিতে হবে।",
+    "Event Theme": "প্রতিটি ইভেন্টের জন্য ডাটা সেলে ড্রপডাউন তালিকা থেকে শুধুমাত্র একটি থিম নির্বাচন করুন। থিম সিলেক্ট করার আগে ইভেন্টের উদ্দেশ্য খুব ভালোভাবে পর্যালোচনা করুন — যেমন এজেন্ডা বা সংশ্লিষ্ট অন্যান্য নথি দেখে নিন, এবং প্রয়োজনে সংশ্লিষ্ট প্রোগ্রাম টিমের সদস্যদের সঙ্গে পরামর্শ করুন। যদি ইভেন্ট গভর্নেন্স সিস্টেম বা প্রক্রিয়া উন্নয়ন বা শক্তিশালীকরণ সম্পর্কিত হয়, তাহলে Governance বাছাই করুন। ইভেন্ট যদি দায়বদ্ধতা, স্বচ্ছতা বা জবাবদিহিতা নিশ্চিত করার জন্য হয়, তাহলে Accountability নির্বাচন করুন। নাগরিক অংশগ্রহণ বা কমিউনিটির সক্রিয় ভূমিকা বাড়ানোর ক্ষেত্রে Civic Engagement and Participation নির্বাচন করতে হবে। নারী, পুরুষ বা তৃতীয় লিঙ্গসহ সকলের সমান অধিকার ও সুযোগ নিশ্চিত করার উদ্যোগ থাকলে Gender Equality সিলেক্ট করুন। যদি ইভেন্ট দক্ষতা বৃদ্ধি, সিস্টেম উন্নয়ন বা প্রশিক্ষণ বিষয়ক হয়, তবে Capacity Development বেছে নিন। সংগঠনের কাঠামো, নীতি বা প্রক্রিয়া শক্তিশালীকরণ হলে Institutional Strengthening নির্বাচন করুন। কোনো ইভেন্ট যদি নীতি পরিবর্তন, সংস্কার বা নতুন নীতি প্রস্তাবের জন্য অ্যাডভোকেসি করে, তাহলে Advocacy and Policy Reform বেছে নিন। গবেষণা, Learning বা Knowledge Sharing (যেমন সার্ভে, লার্নিং সেশন, রিপোর্ট শেয়ার) সম্পর্কিত হলে Research, Learning, and Knowledge Sharing নির্বাচন করুন। নতুন ধারণা, উদ্ভাবনী সমাধান বা ডিজিটাল টুল ব্যবহারের ক্ষেত্রে Innovation and Digital Transformation বেছে নিন। মনিটরিং, মূল্যায়ন, জবাবদিহিতা বা শেখার কার্যক্রম হলে MEAL নির্বাচন করুন। যদি ইভেন্ট সরাসরি সেবা প্রদান বা সেবার গুণগত মান পর্যবেক্ষণ করে, তাহলে Service Delivery নির্বাচন করতে হবে। কমিউনিটিকে সহায়তা, উদ্বুদ্ধকরণ বা সংগঠিত করার ইভেন্ট হলে Community Support বেছে নিন। নেতৃত্ব গড়ে তোলা বা প্রদর্শন বিষয়ক হলে Leadership এবং আত্মবিশ্বাস, দক্ষতা বা সিদ্ধান্ত গ্রহণের ক্ষমতা বৃদ্ধির ক্ষেত্রে Empowerment বেছে নিন। যদি ইভেন্টের জন্য তালিকায় উপযুক্ত কোনো থিম না থাকে, তাহলে Others নির্বাচন করুন এবং পাশের কলামে ৩-৫ শব্দে থিম লিখুন। প্রতিটি ইভেন্টের জন্য কেবল একটি প্রধান থিম বেছে নেওয়া বাধ্যতামূলক। যদি একাধিক থিম প্রযোজ্য হয়, তবে সবচেয়ে প্রাসঙ্গিক থিমটি নির্বাচন করুন এবং প্রয়োজনে পাশের কলামে অন্যান্য সম্পর্কিত থিম লিখে দিন।",
+    "District": "এই সেলে ইভেন্ট যেখানে অনুষ্ঠিত হয়েছে, সেই জেলা, উপজেলা এবং ইউনিয়ন ড্রপডাউন তালিকা থেকে নির্বাচন করুন।\r\n\r\nশুধু জেলা পর্যায়ের ইভেন্ট:\r\n\r\nকেবল জেলা সিলেক্ট করুন।\r\n\r\nউপজেলা ও ইউনিয়ন ঘর ফাঁকা রাখুন।\r\n\r\nউপজেলা পর্যায়ের ইভেন্ট:\r\n\r\nআগে জেলা সিলেক্ট করুন।\r\n\r\nএরপর উপজেলা সিলেক্ট করুন।\r\n\r\nইউনিয়ন ঘর ফাঁকা রাখুন।\r\n\r\nইউনিয়ন পর্যায়ের ইভেন্ট:\r\n\r\nআগে জেলা সিলেক্ট করুন।\r\n\r\nতারপর উপজেলা সিলেক্ট করুন।\r\n\r\nশেষে ইউনিয়ন সিলেক্ট করুন।\r\n\r\nজেলা সিলেক্ট করার পর পরের কলামে সেই জেলার উপজেলা তালিকা আসবে। সেখান থেকে উপজেলা নির্বাচন করুন। একইভাবে, উপজেলা সিলেক্ট করার পর পরের সেলে সেই উপজেলার ইউনিয়ন তালিকা দেখা যাবে — সেখান থেকে ইউনিয়ন নির্বাচন করুন। কলামের উপরের তিনটি সেলে এই ধাপগুলো সম্পন্ন করার পর নির্বাচিত নামগুলো কপি করে সংশ্লিষ্ট ডাটা সেলে পেস্ট করুন।\r\n\r\n🏙️ Pourashava / City Corporation ইভেন্টের জন্য বিশেষ নির্দেশনা:\r\n\r\nযদি ইভেন্ট Pourashava বা City Corporation এলাকায় অনুষ্ঠিত হয় এবং এর নিচের স্তর Ward হয় — এটি KIMS সিস্টেমে Ward পর্যন্ত ইনপুট দেওয়া সম্ভব। তবে Excel Sheet-এ, যদি ইভেন্ট Pourashava বা City Corporation এলাকায় হয়ে থাকে, তাহলে ডাটা Upazila/Thana পর্যন্ত ইনপুট করুন।  এরপর Remarks কলামে লিখুন: ➤ “এই ইভেন্টটি অনুষ্ঠিত হয়েছে XXX Pourashava/City Corporation-এর XX নং ওয়ার্ডে।”\r\n\r\nএভাবে ডাটা সঠিকভাবে শ্রেণিবদ্ধ থাকবে এবং ভবিষ্যতে KIMS সিস্টেমে সহজে হালনাগাদ করা যাবে।",
+    "Upazila": "",
+    "Union": "",
+    "Level of the event": "এই ডাটা সেলে ইভেন্টের লেভেল সিলেক্ট করুন ইভেন্টের অংশগ্রহণকারীদের ভিত্তিতে। যদি ইভেন্ট স্থানীয় পর্যায়ের স্টেকহোল্ডার বা অংশগ্রহণকারীদের (যেমন ইউনিয়ন থেকে উপজেলা পর্যায়) জন্য হয়, তাহলে Local সিলেক্ট করুন। যদি ইভেন্টে জেলা বা বিভাগীয় পর্যায়ের স্টেকহোল্ডার (যেমন সিএসও, সরকারি কর্মকর্তা বা অন্যান্য অংশগ্রহণকারী) থাকে, তাহলে Regional সিলেক্ট করুন। আর যদি ইভেন্টে জাতীয় পর্যায়ের স্টেকহোল্ডার বা জাতীয় গুরুত্বের বিষয় থাকে, তাহলে National সিলেক্ট করুন।",
+    "Government Representative Present": "এই ডাটা সেলে, যদি কোনো সরকারি প্রতিনিধি ইভেন্টে অংশ নেন, তাহলে ড্রপডাউন তালিকা থেকে Yes সিলেক্ট করুন। যদি কোনো সরকারি প্রতিনিধি অংশ না নেন, তাহলে No সিলেক্ট করুন। সরকারি প্রতিনিধি বলতে ইউনিয়ন পর্যায় থেকে জাতীয় পর্যায় পর্যন্ত সরকারি কর্মকর্তা এবং স্থানীয় সরকার প্রতিনিধিদের বোঝানো হয়েছে।",
+    "Government Response": "যদি কোনো সরকারি প্রতিনিধি কোনো প্রতিক্রিয়া দিয়ে থাকেন, তাহলে ডাটা সেলে ড্রপ-ডাউন তালিকা থেকে সেই প্রতিক্রিয়ার ধরন নির্বাচন করুন। এর জন্য ইভেন্ট রিপোর্ট, মিটিং মিনিটস বা অন্য যেকোনো নথি ভালোভাবে পর্যালোচনা করুন যেখানে সরকারি প্রতিনিধির প্রতিক্রিয়া লেখা আছে।\r\n\r\nশুধুমাত্র CEF-এর অগ্রাধিকারমূলক উদ্দেশ্য যেমন অন্তর্ভুক্তি (Inclusion), মানবাধিকার (Human Rights), লিঙ্গ সমতা (Gender Equality), নাগরিক অংশগ্রহণ (Citizen Participation) সম্পর্কিত প্রতিক্রিয়াগুলো বিবেচনা করুন। ড্রপ-ডাউন তালিকা থেকে সবচেয়ে সিনিয়র বা উচ্চপদস্থ প্রতিনিধির প্রতিক্রিয়ার সারসংক্ষেপ নির্বাচন করুন। মনে রাখবেন, অনেক প্রতিনিধির আলাদা আলাদা মতামত থাকতে পারে, কিন্তু এখানে সবচেয়ে গুরুত্বপূর্ণ বা চূড়ান্ত প্রতিক্রিয়া Consider হবে।\r\n\r\nPositive নির্বাচন করুন, যদি প্রতিনিধি উত্থাপিত বিষয়ে ইতিবাচক মন্তব্য করেন, স্বীকৃতি দেন বা সমর্থনমূলক আচরণ দেখান।\r\n\r\nNegative নির্বাচন করুন, যদি প্রতিনিধি মূল বিষয়গুলো অস্বীকার করেন, নেতিবাচকভাবে গ্রহণ করেন বা নেতিবাচক প্রতিক্রিয়া দেন।\r\n\r\nDeferred নির্বাচন করুন, যদি প্রতিনিধি স্পষ্ট ইতিবাচক বা নেতিবাচক প্রতিক্রিয়া না দিয়ে সম্পর্কহীন বিষয় যেমন রাজনীতি বা CEF অগ্রাধিকার বহির্ভূত বিষয় নিয়ে আলোচনা করেন।\r\n\r\nNo Response নির্বাচন করুন, যদি কোনো উল্লেখযোগ্য প্রতিক্রিয়া না পাওয়া যায়।\r\n\r\nNot Applicable নির্বাচন করুন, যদি কোনো সরকারি প্রতিনিধি ইভেন্টে উপস্থিত না থাকেন অথবা আগের প্রশ্নে ইতিমধ্যেই তাদের প্রতিক্রিয়া উল্লেখ No করে থাকেন।",
+    "What was the response \r\n(Within 250 Caracter)": "ডাটা সেলে সরকারি প্রতিনিধির প্রতিক্রিয়ার সংক্ষিপ্ত ও পরিষ্কার সারাংশ লিখুন, সর্বোচ্চ ২৫০ অক্ষরের মধ্যে। এটি তাদের সব প্রতিক্রিয়ার একটি সারসংক্ষেপ হবে।\r\n\r\nউদাহরণ:\r\nস্থানীয় সমস্যাগুলো সমাধানে সহযোগিতা করার প্রতিশ্রুতি দিয়েছেন এবং অন্তর্ভুক্তি, মানবাধিকার ও লিঙ্গ সমতা নিশ্চিত করতে পরবর্তী সভায় বিষয়গুলো আলোচনার আশ্বাস দিয়েছেন।",
+    "Summarise actions agreed during the event (Short text - max 250 characters)": "এই ডাটা সেলে ইভেন্টে সব পক্ষের মধ্যে যে কার্যকরী পদক্ষেপে একমত হয়েছে তার সারসংক্ষেপ লিখুন। এটি সরকারি প্রতিনিধির প্রতিক্রিয়া নয়, বরং সব পক্ষের সম্মত সিদ্ধান্ত। সারসংক্ষেপটি ২৫০ অক্ষরের মধ্যে রাখুন।\r\n\r\nসঠিকভাবে লেখার জন্য ইভেন্ট রিপোর্ট, মিটিং মিনিটস বা অন্য প্রাসঙ্গিক নথি ভালোভাবে পর্যালোচনা করুন।\r\n\r\nউদাহরণ:\r\nসব পক্ষ একমত হয়েছে যে আগামী মাসে যৌথ কর্মশালা আয়োজন করা হবে এবং অন্তর্ভুক্তি ও লিঙ্গ সমতার জন্য সচেতনতামূলক কার্যক্রম জোরদার করা হবে।",
+    "Does this event/activity contribute/Addresses Issues to prevent conflicts?": "এই ডাটা সেলে Yes বা No নির্বাচন করুন। ইভেন্ট রিপোর্ট, মিটিং মিনিটস বা অন্য নথি যেমন এজেন্ডা বা ইভেন্টের উদ্দেশ্য ভালোভাবে দেখে সিদ্ধান্ত নিন। যদি ইভেন্টে কনফ্লিক্ট প্রতিরোধ সম্পর্কিত বিষয় যেমন জেন্ডার-ভিত্তিক সহিংসতা, ন্যায়বিচারে প্রবেশাধিকার, কমিউনিটি সংহতি, শান্তি প্রতিষ্ঠা, অন্তর্ভুক্তিমূলক ও শান্তিপূর্ণ শাসনব্যবস্থা নিয়ে আলোচনা হয়ে থাকে, তাহলে Yes নির্বাচন করুন। না হলে No নির্বাচন করুন।",
+    "If yes, How (Within 250 Carecter)": "যদি ইভেন্টটি সংঘাত প্রতিরোধে ভূমিকা রাখে বা সংশ্লিষ্ট বিষয় নিয়ে আলোচনা করে, তাহলে এই ঘরে ২৫০ অক্ষরের মধ্যে সংক্ষিপ্ত সারাংশ লিখুন। এখানে কোন বিষয়গুলো আলোচনা হয়েছে (যেমন: জেন্ডার-ভিত্তিক সহিংসতা, ন্যায়বিচারে প্রবেশাধিকার, কমিউনিটি সংহতি) এবং কীভাবে আলোচনা বা কার্যক্রম বিষয়গুলোতে সহায়তা করেছে তা উল্লেখ করুন।\r\n\r\nউদাহরণ:\r\nইভেন্টে কমিউনিটি নেতারা ও সরকারি প্রতিনিধি একসাথে জেন্ডার-ভিত্তিক সহিংসতা প্রতিরোধ ও ন্যায়বিচারে প্রবেশাধিকার নিশ্চিত করার উপায় নিয়ে আলোচনা করেছেন, যা সচেতনতা ও সহযোগিতা বাড়াতে সহায়তা করেছে।",
+    "Does this event generate any indirect reach?": "যদি কোনো ইভেন্ট বা অ্যাক্টিভিটি থেকে Indirect Reach তৈরি হয়, তাহলে সেটা রেকর্ড করতে হবে। যেমন, ইভেন্টের পরে যদি প্রজেক্ট এই ইভেন্টের কনটেন্ট Social Media (Facebook, YouTube ইত্যাদি)-তে শেয়ার করে, অথবা ইভেন্টের পরে যদি অংশগ্রহণকারীরা মেসেজটি তাদের peer, family member বা neighbour-দের সাথে শেয়ার করে, তাহলে এগুলো Indirect Reach হিসেবে গণ্য হবে। এই ধরনের কিছু হলে Drop-down list থেকে “Yes” সিলেক্ট করতে হবে। যদি এমন কিছু না হয়, তাহলে “No” সিলেক্ট করতে হবে। “No” সিলেক্ট করলে এই সেকশনের অন্য data field পূরণ করার দরকার নেই। কিন্তু যদি “Yes” সিলেক্ট করেন, তাহলে পরের সব কলামে প্রয়োজনীয় ডেটা দিতে হবে।",
+    "If yes, through which channel or medium?": "প্রতিটি ডেটা এন্ট্রির জন্য সঠিক মাধ্যম/চ্যানেল নির্বাচন করুন। যদি মাধ্যম/চ্যানেল তালিকায় না থাকে, তাহলে Other নির্বাচন করুন এবং পরের কলামে ৩-৫ শব্দে সেই মাধ্যম/চ্যানেলের নাম লিখুন।",
+    "Description of the msg/content \r\n(Within 250 Carecter)": "এই ঘরে কার্যক্রমের (পোস্ট, প্রোগ্রাম বা সংবাদ) মূল বার্তাটি সংক্ষেপে লিখুন। লেখাটি খুব ছোট রাখুন এবং সর্বোচ্চ ২৫০ অক্ষরের মধ্যে লিখুন।",
+    "Est. Audience Reach": "এই ডেটা এন্ট্রি ঘরে আপনার হাতে থাকা পরোক্ষ পৌঁছানোর (indirect reach) ডকুমেন্ট অনুযায়ী মোট সংখ্যা লিখুন। যদি এটি প্রিন্ট সংবাদপত্র হয়, তাহলে তথ্য মন্ত্রণালয়ের অফিসিয়াল নথিতে থাকা সার্কুলেশন সংখ্যা ব্যবহার করুন। যদি এটি সোশ্যাল মিডিয়া পোস্ট হয়, তাহলে অ্যানালিটিক্স দেখে মোট রিচ লিখুন, যেখানে ভিউ, অরগানিক রিচ এবং পেইড রিচ সব একসাথে যোগ করতে হবে। যদি এটি ওয়েবসাইটে প্রকাশিত খবর হয়, তাহলে গুগল অ্যানালিটিক্স দেখুন বা যদি খবরটি প্রিন্ট মিডিয়াতেও প্রকাশিত হয়ে থাকে, তাহলে সেই সার্কুলেশন সংখ্যা ব্যবহার করুন। যদি এটি IEC উপকরণ বিতরণ (যেমন পোস্টার, ফ্লায়ার ইত্যাদি) হয়, তাহলে বিতরণকৃত উপকরণের সংখ্যা গুনে রিচ নির্ধারণ করুন। আর যদি এটি কমিউনিটি রেডিও প্রোগ্রাম হয়, তাহলে কমিউনিটি রেডিও পার্টনারকে ইমেইল বা সইকৃত প্রিন্ট কপিতে লিখিতভাবে রিচ সংখ্যা দিতে বলুন। ডাবল কাউন্টিং নিয়ে ভাবতে হবে না, প্রতিটি পোস্ট, সংবাদ বা বিতরণের মোট সংখ্যা লিখলেই যথেষ্ট।",
+    "Source of Estimation": "ড্রপ-ডাউন তালিকা থেকে শুধু একটি অপশন নির্বাচন করুন। যদি Indirect Reach-এর উৎস তালিকায় না থাকে, তাহলে Other অপশনটি নির্বাচন করুন এবং পরের কলামে ৩-৫ শব্দে Indirect Reach-এর উৎস লিখুন।",
+    "Rationale of reach count (250 Carecter)": "এই ঘরে স্পষ্টভাবে লিখতে হবে কীভাবে Indirect Reach হিসাব করা হয়েছে। যেমন, যদি ৩,০০০ পোস্টার বিতরণ করা হয় এবং ১৫,০০০ জনের কাছে পৌঁছানো হয়েছে ধরা হয়, তাহলে লিখুন যে প্রতিটি পোস্টার গড়ে ৫ জনের কাছে পৌঁছেছে ধরে হিসাব করা হয়েছে। যদি কার্যক্রমটি কমিউনিটি সচেতনতা অনুষ্ঠান হয়, তাহলে লিখুন যে প্রতিটি অংশগ্রহণকারী তার পরিবারের সাথে বার্তাটি শেয়ার করেছেন এবং গড়ে প্রতিটি পরিবারে ৪.৫ জন ধরে হিসাব করা হয়েছে। যদি কার্যক্রমটি সোশ্যাল মিডিয়ার মাধ্যমে হয়, তাহলে উল্লেখ করুন যে অ্যানালিটিক্স ডেটা ব্যবহার করা হয়েছে, যেখানে ভিউ, অর্গানিক রিচ, পেইড রিচ ইত্যাদির মোট সংখ্যা ধরা হয়েছে। যদি সংবাদপত্রে প্রকাশিত হয়ে থাকে, তাহলে সার্কুলেশন ডেটা ব্যবহার করুন, যেমন: “প্রতিদিন প্রথম আলোর সার্কুলেশন ৩,০০,০০০, তাই রিচ হিসাব করা হয়েছে ৩,০০,০০০।” কোনো বিভ্রান্তি থাকলে আমাদের সাথে যোগাযোগ করুন।",
+    "If any link, past it here": "যদি আপনার কার্যক্রম ভার্চুয়াল হয়, যেমন ফেসবুক পোস্ট বা ওয়েবসাইটে প্রকাশিত সংবাদ, তাহলে এই ঘরে সেই লিঙ্কটি পেস্ট করুন।"
+  }
+}

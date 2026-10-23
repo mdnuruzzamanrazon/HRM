@@ -5,7 +5,7 @@ import {
   LogOut, LayoutDashboard, Users, Clock, Calendar, CreditCard, 
   CalendarClock, Receipt, Calculator, MapPin, Megaphone, CheckSquare, 
   Bell, Shield, Menu, X, ChevronRight, UserCheck, Search, Sparkles, Building2,
-  ShieldAlert
+  ShieldAlert, FolderClock, CalendarDays, HeartHandshake
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -97,6 +97,9 @@ export default function AdminLayout() {
       group: 'Governance & Risk',
       items: [
         { name: 'Risk Register', href: '/risk-register', icon: ShieldAlert },
+        { name: 'Complaints & Feedback', href: '/complaints-register', icon: FolderClock },
+        { name: 'Event Tracker', href: '/event-tracker', icon: CalendarDays },
+        { name: 'Beneficiary Information', href: '/beneficiaries', icon: HeartHandshake },
       ]
     },
     {
