@@ -33,6 +33,7 @@ import RiskRegister from './pages/risk/RiskRegister';
 import ComplaintsRegister from './pages/complaints/ComplaintsRegister';
 import EventTracker from './pages/events/EventTracker';
 import BeneficiaryManagement from './pages/beneficiaries/BeneficiaryManagement';
+import AssetTracker from './pages/assets/AssetTracker';
 
 // Employee Portal Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
@@ -117,6 +118,8 @@ function App() {
               <Route path="/events" element={<EventTracker />} />
               <Route path="/beneficiaries" element={<BeneficiaryManagement />} />
               <Route path="/beneficiary-information" element={<BeneficiaryManagement />} />
+              <Route path="/assets" element={<AssetTracker />} />
+              <Route path="/asset-tracker" element={<AssetTracker />} />
             </Route>
           </Route>
 

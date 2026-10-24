@@ -1,0 +1,18 @@
+CBDP ASSET MANAGEMENT DASHBOARD,,,,,,,
+,,,,,,,
+Metric,Value,Meaning,,Summary,Active,Risk,Value
+Total Assets,30,Count of registered assets,,IT Equipment,5,2,"92,086"
+Active/In Use Assets,5,Assets currently available or assigned,,Office Furniture,0,0,0
+High/Critical Risk Assets,2,Needs immediate attention,,Field Equipment,0,0,0
+Audit Overdue,2,Next audit date already passed,,Vehicle,0,0,0
+Total Purchase Value,"332,880",Original purchase cost,,Safety Equipment,0,0,0
+Current Book Value,"92,086",Depreciated value,,Communication,0,0,0
+Average Vehicle KM/L,14.25,Fuel efficiency from logbook,,Other,0,0,0
+Workflow Delayed,3,Procurement/disposal records delayed,,,,,
+,,,,,,,
+Color Guide: Green = OK | Amber = Watch | Red = Overdue / Critical | Blue = In Progress,,,,,,,
+,,,,,,,
+Manager Use Notes,,,,,,,
+1. Enter assets in the Asset Audit Tracker; dashboard updates automatically.,,,,,,,
+"2. For QR codes, upload to Google Sheets and use the QR Asset System tab's generated IMAGE formula.",,,,,,,
+3. Use dropdowns and colored statuses to reduce data entry errors during field audits.,,,,,,,

@@ -37,6 +37,7 @@ import complaintRoutes from './routes/complaintRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import locationRoutes from './routes/locationRoutes.js';
 import beneficiaryRoutes from './routes/beneficiaryRoutes.js';
+import assetRoutes from './routes/assetRoutes.js';
 
 const app = express();
 
@@ -176,6 +177,8 @@ app.use('/api/v1/locations', locationRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/v1/beneficiaries', beneficiaryRoutes);
 app.use('/api/beneficiaries', beneficiaryRoutes);
+app.use('/api/v1/assets', assetRoutes);
+app.use('/api/assets', assetRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

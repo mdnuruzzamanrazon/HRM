@@ -1,0 +1,20 @@
+Asset Categories,Asset Status,Condition,Audit Result,Risk Level,Locations,Vehicles,Workflow Status,Project/Donor
+IT Equipment,Active,Excellent,Verified,Low,Head Office,CBDP-TVS-001,Not Started,Core 
+Office Furniture,In Use,Good,Mismatch,Medium,Amtoli Field Office,CBDP-Apache-002,In Progress,LLDRR
+Field Equipment,Under Maintenance,Fair,Missing,High,Warehouse,CBDP-Honda-003,Completed,FISHNET
+Vehicle,Transferred,Poor,Damaged,Critical,Taltali Program Office,CBDP-Auto-004,Delayed,NAGORIC
+Safety Equipment,Disposed,Damaged,Not Audited,,Hatchery Office,,On Hold,Plan International
+Communication,Lost,,,,Cox's Bazar Field,,Approved,Other
+Other,,,,,Barguna Field,,Rejected,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,51,,,,

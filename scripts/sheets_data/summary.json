@@ -1,0 +1,65 @@
+[
+  {
+    "gid": "1754930862",
+    "status": "ok",
+    "linesCount": 18,
+    "headerCandidate": "CBDP ASSET MANAGEMENT DASHBOARD,,,,,,,",
+    "line1": ",,,,,,,"
+  },
+  {
+    "gid": "1517243350",
+    "status": "ok",
+    "linesCount": 201,
+    "headerCandidate": "Asset ID,QR Code Text,Asset Name,Category,Project/Donor,p,Custodian,Purchase Date,Purchase Cost,Useful Life (Years),Annual Depreciation,Current Book Value,Condition,Status,Last Audit Date,Audit Result,Next Audit Due,Risk Flag,Remarks",
+    "line1": "CBDP-AST-Core-Lap-01,\"CBDP-AST-Core-Lap-01|Name:Asus vivo Book 15.6\"\" Core i3715|Location:Head Office|Custodian:FInance Officer\",\"Asus vivo Book 15.6\"\" Core i3715\",IT Equipment,Core ,Head Office,FInance Officer,02-24-2020,\"40,000\",6,\"6,667\",0,Good,Active,2026-09-01,Verified,2027-02-28,Low,Demo row: replace with actual data"
+  },
+  {
+    "gid": "861206349",
+    "status": "ok",
+    "linesCount": 39,
+    "headerCandidate": "Asset ID,QR Label Text,QR Image Formula for Google Sheets,Label Size,Print Status,Physical Tag Location,Last Printed Date,Notes",
+    "line1": "CBDP-AST-0001,CBDP-AST-0001 | CBDP | ,,50mm x 30mm,Ready,Top cover,,Paste formula into Google Sheets to render QR"
+  },
+  {
+    "gid": "1726563914",
+    "status": "ok",
+    "linesCount": 200,
+    "headerCandidate": "Item Code,Kit/Project,Equipment Name,Category,Location,Responsible Person,Opening Qty,Issued Qty,Returned Qty,Damaged Qty,Missing Qty,Available Qty,Minimum Stock,Stock Status,Last Physical Count,Remarks",
+    "line1": "KIT-001,FISHNET,Inflatable Life Jacket,Field Equipment,Taltali Program Office,Field Facilitator,50,12,5,1,0,42,10,OK,2026-04-10,"
+  },
+  {
+    "gid": "1510015205",
+    "status": "ok",
+    "linesCount": 2,
+    "headerCandidate": "Name ,Quantity,Handover To",
+    "line1": "A4 Paper,1,"
+  },
+  {
+    "gid": "1933684115",
+    "status": "ok",
+    "linesCount": 500,
+    "headerCandidate": "Date,Vehicle ID,Driver,Start KM,End KM,Trip KM,Purpose/Route,Fuel Liters,Fuel Cost,Cost/Liter,KM/Liter,Cost/KM,Odometer Check,Approved By,Remarks",
+    "line1": "2026-05-01,CBDP-Honda-003,Reajul Islam,24500,24620,120,Barguna-Taltali field visit,8.50,1105.00,130.00,14.12,9.21,OK,Admin,"
+  },
+  {
+    "gid": "2011906547",
+    "status": "ok",
+    "linesCount": 23,
+    "headerCandidate": "ASSET HANDOVER / RETURN FORM,,,,,,,",
+    "line1": ",,,,,,,"
+  },
+  {
+    "gid": "1017327203",
+    "status": "ok",
+    "linesCount": 300,
+    "headerCandidate": "Request ID,Asset/Item Name,Requesting Dept.,Budget Line,Requisition Date,Approval Date,RFQ/Tender Date,PO Date,Received Date,Tagged Date,Assigned To,Maintenance Date,Disposal Request Date,Disposal Approval Date,Disposal Date,Current Stage,Workflow Status,Lead Time Days,Remarks",
+    "line1": "REQ-001,Laptop,Program,IT Equipment,2026-04-01,2026-04-03,2026-04-05,2026-04-12,2026-04-20,2026-04-21,Program Officer,,,,,Tagged & Assigned,Delayed,19,"
+  },
+  {
+    "gid": "671339665",
+    "status": "ok",
+    "linesCount": 20,
+    "headerCandidate": "Asset Categories,Asset Status,Condition,Audit Result,Risk Level,Locations,Vehicles,Workflow Status,Project/Donor",
+    "line1": "IT Equipment,Active,Excellent,Verified,Low,Head Office,CBDP-TVS-001,Not Started,Core "
+  }
+]
