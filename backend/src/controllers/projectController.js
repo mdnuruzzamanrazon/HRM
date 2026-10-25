@@ -6,7 +6,7 @@ import EventRecord from '../models/EventRecord.js';
 import Beneficiary from '../models/Beneficiary.js';
 import { User } from '../models/User.js';
 import { isDemoMode } from '../config/db.js';
-import { mockData } from '../services/mockDataService.js';
+import { mockData, saveStoreToDisk } from '../services/mockDataService.js';
 import { runProjectMigration } from '../services/projectMigration.js';
 
 // Helper to calculate project stats across all 4 modules
@@ -320,6 +320,40 @@ export const getProjectDashboard = async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const project = (mockData.riskProjects || []).find(p => String(p._id) === String(id));
+      if (!project || project.isDeleted) {
+        return res.status(404).json({ success: false, message: 'Project not found' });
+      }
+      const summary = await calculateProjectStats(project._id);
+      return res.status(200).json({
+        success: true,
+        data: {
+          project,
+          summary: {
+            risks: { total: summary.risks.total, high: summary.risks.high, medium: summary.risks.medium, low: summary.risks.low, open: summary.risks.total, underReview: 0, mitigated: 0, avgScore: 14, avgTarget: 7 },
+            complaints: { total: summary.complaints.total, open: summary.complaints.open, closed: summary.complaints.closed, overdue: summary.complaints.overdue, appeals: 1, anonymous: 1 },
+            events: { total: summary.events.total, participants: summary.events.participants, reach: summary.events.participants * 3, govRepPresent: 2, conflictPrevention: 1 },
+            beneficiaries: { total: summary.beneficiaries.total, female: summary.beneficiaries.female, male: summary.beneficiaries.male, disability: 2, adibashi: 1, dalit: 1, crossForum: 1 }
+          },
+          distributions: {
+            risksByCategory: [{ _id: 'People', count: summary.risks.total }],
+            complaintsByCategory: [{ _id: 'Programme Quality & Delivery', count: summary.complaints.total }],
+            complaintsByChannel: [{ _id: 'Phone', count: summary.complaints.total }],
+            eventsByType: [{ _id: 'Community Dialogue', count: summary.events.total }],
+            eventsByDivision: [{ _id: 'Barishal', count: summary.events.total }],
+            beneficiariesByDivision: [{ _id: 'Barishal', count: summary.beneficiaries.total }]
+          },
+          recentActivities: {
+            risks: (mockData.riskRecords || []).filter(r => String(r.projectId) === String(id)).slice(0, 3),
+            complaints: (mockData.complaintRecords || []).filter(c => String(c.projectId) === String(id)).slice(0, 3),
+            events: (mockData.eventRecords || []).filter(e => String(e.projectId) === String(id)).slice(0, 3),
+            beneficiaries: (mockData.beneficiaries || []).filter(b => String(b.projectId) === String(id)).slice(0, 3)
+          }
+        }
+      });
+    }
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'Invalid Project ID' });
     }
@@ -554,6 +588,38 @@ export const createProject = async (req, res) => {
       details: `Project "${trimmedName}" (${finalCode}) created.`
     };
 
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      if (!mockData.riskProjects) mockData.riskProjects = [];
+      const newProject = {
+        _id: '6618d0987f83b1001a12' + Math.floor(1000 + Math.random() * 9000),
+        name: trimmedName,
+        code: finalCode,
+        officeResponsible: (officeResponsible || '').trim(),
+        location: (location || '').trim(),
+        period: (period || '').trim(),
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
+        projectManager: (projectManager || '').trim(),
+        responsiblePerson: (responsiblePerson || '').trim(),
+        reviewQuarter: (reviewQuarter || '').trim(),
+        endQuarter: (endQuarter || '').trim(),
+        description: (description || '').trim(),
+        status: status || 'ACTIVE',
+        assignedUsers: Array.isArray(assignedUsers) ? assignedUsers : [],
+        auditTrail: [auditEntry],
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      mockData.riskProjects.unshift(newProject);
+      saveStoreToDisk();
+      return res.status(201).json({
+        success: true,
+        message: 'Project created successfully',
+        data: newProject
+      });
+    }
+
     const newProject = await RiskProject.create({
       name: trimmedName,
       code: finalCode,
@@ -611,6 +677,18 @@ export const updateProject = async (req, res) => {
       description,
       status
     } = req.body;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const idx = (mockData.riskProjects || []).findIndex(p => String(p._id) === String(id));
+      if (idx === -1) return res.status(404).json({ success: false, message: 'Project not found' });
+      mockData.riskProjects[idx] = {
+        ...mockData.riskProjects[idx],
+        ...req.body,
+        updatedAt: new Date().toISOString()
+      };
+      saveStoreToDisk();
+      return res.status(200).json({ success: true, message: 'Project updated successfully', data: mockData.riskProjects[idx] });
+    }
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'Invalid Project ID' });
@@ -704,6 +782,14 @@ export const updateProjectStatus = async (req, res) => {
       });
     }
 
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const idx = (mockData.riskProjects || []).findIndex(p => String(p._id) === String(id));
+      if (idx === -1) return res.status(404).json({ success: false, message: 'Project not found' });
+      mockData.riskProjects[idx].status = status;
+      saveStoreToDisk();
+      return res.status(200).json({ success: true, message: `Project status successfully updated to ${status}`, data: mockData.riskProjects[idx] });
+    }
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'Invalid Project ID' });
     }
@@ -757,6 +843,14 @@ export const assignProjectUsers = async (req, res) => {
         success: false,
         message: 'assignedUsers must be an array of user assignment configurations'
       });
+    }
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const idx = (mockData.riskProjects || []).findIndex(p => String(p._id) === String(id));
+      if (idx === -1) return res.status(404).json({ success: false, message: 'Project not found' });
+      mockData.riskProjects[idx].assignedUsers = assignedUsers;
+      saveStoreToDisk();
+      return res.status(200).json({ success: true, message: 'Project user access assignments updated successfully', data: mockData.riskProjects[idx] });
     }
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -820,6 +914,15 @@ export const assignProjectUsers = async (req, res) => {
 export const deleteProject = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const idx = (mockData.riskProjects || []).findIndex(p => String(p._id) === String(id));
+      if (idx === -1) return res.status(404).json({ success: false, message: 'Project not found' });
+      mockData.riskProjects[idx].isDeleted = true;
+      mockData.riskProjects[idx].status = 'ARCHIVED';
+      saveStoreToDisk();
+      return res.status(200).json({ success: true, message: `Project "${mockData.riskProjects[idx].name}" archived successfully.` });
+    }
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ success: false, message: 'Invalid Project ID' });

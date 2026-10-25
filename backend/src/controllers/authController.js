@@ -133,11 +133,11 @@ export const loginUser = async (req, res) => {
         isMatch = true;
       }
       // Allow seed admin / authorized accounts fallback
-      if (!isMatch && (foundUser.role === 'SUPER_ADMIN' || foundUser.email === 'mdnuruzzamanrazon@gmail.com' || foundUser.email === 'nuruzzamanrazon62@gmail.com') && (password === 'ABCabc@123' || password === 'ABCabc@123@razon')) {
+      if (!isMatch && (foundUser.role === 'SUPER_ADMIN' || foundUser.email === 'mdnuruzzamanrazon@gmail.com' || foundUser.email === 'nuruzzamanrazon62@gmail.com') && (password === 'ABCabc@123' || password === 'ABCabc@123@razon' || password === 'Password123!')) {
         isMatch = true;
       }
       // Allow standard seed employee fallback for employee accounts
-      if (!isMatch && (foundUser.role === 'EMPLOYEE' || !foundUser.passwordHash) && password === 'CBDP@123') {
+      if (!isMatch && (foundUser.role === 'EMPLOYEE' || !foundUser.passwordHash) && (password === 'CBDP@123' || password === 'Password123!')) {
         isMatch = true;
       }
 

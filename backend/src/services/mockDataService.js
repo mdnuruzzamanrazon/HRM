@@ -659,13 +659,264 @@ export const mockData = {
       createdAt: '2026-02-15T00:00:00.000Z'
     }
   ],
+
+  riskProjects: [
+    {
+      _id: '6618d0987f83b1001a123901',
+      name: 'CBDP Women & Girls Empowerment Initiative',
+      code: 'PRJ-WGEI',
+      officeResponsible: 'Country Office / Safeguarding & HR Unit',
+      location: 'Dhaka & Regional Impact Zones',
+      period: 'Jan 2025 - Dec 2027',
+      reviewQuarter: 'Q1 2026',
+      endQuarter: 'Q4 2027',
+      description: 'Comprehensive multi-region human development and empowerment intervention.',
+      status: 'ACTIVE',
+      isDefault: false,
+      assignedUsers: [],
+      auditTrail: [
+        {
+          action: 'CREATED',
+          performedBy: 'System Administrator',
+          userEmail: 'mdnuruzzamanrazon@gmail.com',
+          role: 'SUPER_ADMIN',
+          timestamp: '2025-01-01T00:00:00.000Z',
+          details: 'Initial project setup'
+        }
+      ],
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2026-10-26T00:00:00.000Z'
+    },
+    {
+      _id: '6618d0987f83b1001a123902',
+      name: 'Community Based Development Project (CBDP)',
+      code: 'PRJ-CBDP',
+      officeResponsible: 'Country Office / Field Operations Unit',
+      location: 'Amtoli, Barguna, Barishal & Regional Centers',
+      period: 'Jan 2024 - Dec 2026',
+      reviewQuarter: 'Q2 2026',
+      endQuarter: 'Q4 2026',
+      description: 'Community-led development initiatives focusing on conflict mitigation, civic participation, and social resilience.',
+      status: 'ACTIVE',
+      isDefault: false,
+      assignedUsers: [],
+      auditTrail: [
+        {
+          action: 'CREATED',
+          performedBy: 'System Administrator',
+          userEmail: 'mdnuruzzamanrazon@gmail.com',
+          role: 'SUPER_ADMIN',
+          timestamp: '2024-01-01T00:00:00.000Z',
+          details: 'Initial project setup'
+        }
+      ],
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2026-10-26T00:00:00.000Z'
+    },
+    {
+      _id: '6618d0987f83b1001a123903',
+      name: 'NAGORIC Project',
+      code: 'PRJ-NAG',
+      officeResponsible: 'Amtoli Upazila / Union Civic Fora',
+      location: 'Amtoli Upazila & Union Civic Hubs, Barguna, Barishal',
+      period: 'Jan 2025 - Dec 2027',
+      reviewQuarter: 'Q1 2026',
+      endQuarter: 'Q4 2027',
+      description: 'Citizen empowerment, social inclusion, and rights-based civic forum mobilization.',
+      status: 'ACTIVE',
+      isDefault: true,
+      assignedUsers: [],
+      auditTrail: [
+        {
+          action: 'CREATED',
+          performedBy: 'System Administrator',
+          userEmail: 'mdnuruzzamanrazon@gmail.com',
+          role: 'SUPER_ADMIN',
+          timestamp: '2025-01-01T00:00:00.000Z',
+          details: 'Initial project setup'
+        }
+      ],
+      createdAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2026-10-26T00:00:00.000Z'
+    }
+  ],
+
+  riskRecords: [
+    {
+      _id: 'mock-risk-001',
+      projectId: '6618d0987f83b1001a123901',
+      riskNo: 1,
+      dateAdded: '2025-01-15T00:00:00.000Z',
+      category: 'People',
+      subCategory: 'Safeguarding',
+      description: 'Potential safeguarding risks during community level youth and women outreach programs.',
+      riskOwner: 'Safeguarding Specialist',
+      likelihood: 4,
+      impact: 5,
+      currentScore: 20,
+      targetScore: 6,
+      variance: 14,
+      mitigationAction: 'Mandatory safeguarding training and anonymous reporting hotlines deployed.',
+      riskRating: 'HIGH',
+      status: 'OPEN',
+      createdAt: '2025-01-15T00:00:00.000Z'
+    },
+    {
+      _id: 'mock-risk-002',
+      projectId: '6618d0987f83b1001a123901',
+      riskNo: 2,
+      dateAdded: '2025-02-10T00:00:00.000Z',
+      category: 'Finance & Services',
+      subCategory: 'Financial controls & Fraud',
+      description: 'Cash transfer grant distribution integrity in remote delta communities.',
+      riskOwner: 'Finance Lead',
+      likelihood: 2,
+      impact: 4,
+      currentScore: 8,
+      targetScore: 4,
+      variance: 4,
+      mitigationAction: 'Dual-signoff and mobile biometric verification on all cash disbursements.',
+      riskRating: 'MEDIUM',
+      status: 'MITIGATED',
+      createdAt: '2025-02-10T00:00:00.000Z'
+    },
+    {
+      _id: 'mock-risk-003',
+      projectId: '6618d0987f83b1001a123902',
+      riskNo: 1,
+      dateAdded: '2024-03-01T00:00:00.000Z',
+      category: 'Programme Delivery',
+      subCategory: 'Logistics',
+      description: 'Monsoon flooding could delay civic center construction in coastal Barguna.',
+      riskOwner: 'Operations Director',
+      likelihood: 3,
+      impact: 4,
+      currentScore: 12,
+      targetScore: 6,
+      variance: 6,
+      mitigationAction: 'Pre-position construction materials on elevated plinths before monsoon starts.',
+      riskRating: 'HIGH',
+      status: 'OPEN',
+      createdAt: '2024-03-01T00:00:00.000Z'
+    }
+  ],
+
+  complaintRecords: [
+    {
+      _id: 'mock-cfr-001',
+      projectId: '6618d0987f83b1001a123901',
+      projectName: 'CBDP Women & Girls Empowerment Initiative',
+      sNo: 'CFR-2026-0001',
+      seqNumber: 1,
+      dateReceived: new Date(Date.now() - 42 * 24 * 60 * 60 * 1000).toISOString(),
+      receivingChannel: 'Phone',
+      isAnonymous: false,
+      complainantName: 'Fatema Begum',
+      complaintCategory: 'Programme Quality & Delivery',
+      description: 'Beneficiaries reported a 2-week delay in hygiene kit distributions.',
+      status: 'Open',
+      partnerOrgName: 'Oxfam',
+      assignedFocalPerson: 'Field Officer',
+      hasAppeal: false,
+      createdAt: new Date(Date.now() - 42 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      _id: 'mock-cfr-002',
+      projectId: '6618d0987f83b1001a123901',
+      projectName: 'CBDP Women & Girls Empowerment Initiative',
+      sNo: 'CFR-2026-0002',
+      seqNumber: 2,
+      dateReceived: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+      receivingChannel: 'Phone',
+      isAnonymous: true,
+      complainantName: 'Anonymous Complainant',
+      complaintCategory: 'Staff Conduct & Safeguarding',
+      description: 'Anonymous report regarding disrespectful communication from enumerator.',
+      status: 'Closed',
+      partnerOrgName: 'CBDP Foundation',
+      assignedFocalPerson: 'Safeguarding Specialist',
+      hasAppeal: false,
+      createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()
+    }
+  ],
+
+  eventRecords: [
+    {
+      _id: 'mock-ev-001',
+      projectId: '6618d0987f83b1001a123902',
+      projectName: 'Community Based Development Project (CBDP)',
+      eventId: '202601CBEV01',
+      eventTitle: 'Community Civic Forum Dialogue on Conflict Mitigation',
+      eventType: 'Community Dialogue',
+      eventTheme: 'Conflict Mitigation & Social Resilience',
+      dateFrom: '2026-01-10T09:00:00.000Z',
+      dateTo: '2026-01-10T17:00:00.000Z',
+      division: 'Barishal',
+      district: 'Barguna',
+      upazila: 'Amtoli',
+      union: 'Amtoli Sadar',
+      implementingOrg: 'CBDP Foundation',
+      participantCountCommunity: 48,
+      estimatedAudienceReach: 250,
+      govRepresentativePresent: 'Yes',
+      conflictPrevention: 'Yes',
+      status: 'COMPLETED',
+      createdAt: '2026-01-10T00:00:00.000Z'
+    }
+  ],
+
+  beneficiaries: [
+    {
+      _id: 'mock-ben-001',
+      projectId: '6618d0987f83b1001a123903',
+      projectName: 'NAGORIC Project',
+      beneficiaryId: 'BEN-NAG-UPZ-0001',
+      name: 'Salma Akter',
+      sex: 'Female',
+      motherName: 'Halima Begum',
+      age: 28,
+      occupation: 'Handicraft Artisan',
+      contactNo: '01712345678',
+      division: 'Barishal',
+      district: 'Barguna',
+      upazila: 'Amtoli',
+      union: 'Amtoli Sadar',
+      forumName: 'Upazilla Nagoric Forum',
+      forumType: 'UPAZILA_FORUM',
+      status: 'ACTIVE',
+      isVerified: true,
+      createdAt: '2025-01-01T00:00:00.000Z'
+    },
+    {
+      _id: 'mock-ben-002',
+      projectId: '6618d0987f83b1001a123903',
+      projectName: 'NAGORIC Project',
+      beneficiaryId: 'BEN-NAG-UPZ-0002',
+      name: 'Mohammad Rafiqul Islam',
+      sex: 'Male',
+      motherName: 'Monowara Begum',
+      age: 35,
+      occupation: 'Community Teacher',
+      contactNo: '01812345678',
+      division: 'Barishal',
+      district: 'Barguna',
+      upazila: 'Amtoli',
+      union: 'Amtoli Sadar',
+      forumName: 'Upazilla Nagoric Forum',
+      forumType: 'UPAZILA_FORUM',
+      status: 'ACTIVE',
+      isVerified: true,
+      createdAt: '2025-01-01T00:00:00.000Z'
+    }
+  ]
 };
 
 export function saveStoreToDisk() {
   try {
     const data = {
       employees: mockData.employees,
-      users: mockData.users
+      users: mockData.users,
+      riskProjects: mockData.riskProjects,
     };
     fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf8');
   } catch (err) {
@@ -678,6 +929,10 @@ export function loadStoreFromDisk() {
     if (fs.existsSync(STORE_PATH)) {
       const content = fs.readFileSync(STORE_PATH, 'utf8');
       const parsed = JSON.parse(content);
+
+      if (Array.isArray(parsed.riskProjects) && parsed.riskProjects.length > 0) {
+        mockData.riskProjects = parsed.riskProjects;
+      }
       
       if (Array.isArray(parsed.employees) && parsed.employees.length > 0) {
         parsed.employees.forEach(diskEmp => {
