@@ -7,6 +7,7 @@ import Beneficiary from '../models/Beneficiary.js';
 import { User } from '../models/User.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
+import { runProjectMigration } from '../services/projectMigration.js';
 
 // Helper to calculate project stats across all 4 modules
 export const calculateProjectStats = async (projectId) => {
@@ -205,7 +206,7 @@ export const getProjects = async (req, res) => {
     const limitNum = Math.max(1, parseInt(limit, 10));
     const skip = (pageNum - 1) * limitNum;
 
-    const [total, rawProjects] = await Promise.all([
+    let [total, rawProjects] = await Promise.all([
       RiskProject.countDocuments(query),
       RiskProject.find(query)
         .sort(sort)
@@ -214,6 +215,23 @@ export const getProjects = async (req, res) => {
         .populate('assignedUsers.user', 'email role')
         .lean()
     ]);
+
+    // Failsafe auto-seeding if no projects exist in database yet
+    if (total === 0 && !search && (!status || status === 'ALL')) {
+      try {
+        console.log('[getProjects] No projects found in database. Running auto-migration...');
+        await runProjectMigration();
+        rawProjects = await RiskProject.find(query)
+          .sort(sort)
+          .skip(skip)
+          .limit(limitNum)
+          .populate('assignedUsers.user', 'email role')
+          .lean();
+        total = await RiskProject.countDocuments(query);
+      } catch (migErr) {
+        console.error('[projectController] Auto-migration error:', migErr.message);
+      }
+    }
 
     // Enrich each project with live statistics across all 4 modules
     const enrichedProjects = await Promise.all(
@@ -842,3 +860,25 @@ export const deleteProject = async (req, res) => {
     });
   }
 };
+
+/**
+ * Trigger Project Migration on demand (Super Admin / HR Admin)
+ */
+export const triggerProjectMigration = async (req, res) => {
+  try {
+    const result = await runProjectMigration();
+    return res.status(200).json({
+      success: true,
+      message: 'Project migration executed successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error in triggerProjectMigration:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to execute project migration',
+      error: error.message
+    });
+  }
+};
+

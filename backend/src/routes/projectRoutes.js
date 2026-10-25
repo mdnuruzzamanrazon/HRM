@@ -7,7 +7,8 @@ import {
   updateProject,
   updateProjectStatus,
   assignProjectUsers,
-  deleteProject
+  deleteProject,
+  triggerProjectMigration
 } from '../controllers/projectController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 import { checkProjectAccess } from '../middlewares/projectAuth.js';
@@ -19,6 +20,9 @@ const PROJECT_MANAGE_ROLES = ['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER'];
 
 // All routes require authentication
 router.use(authenticate);
+
+// Trigger project migration on demand
+router.post('/migrate', authorize(ADMIN_ROLES), triggerProjectMigration);
 
 // List all accessible projects
 router.get('/', getProjects);

@@ -9,8 +9,8 @@ export default async function handler(req, res) {
   try {
     await connectDB();
     if (!seeded) {
-      seedBeneficiariesIfEmpty().catch((e) => console.error('[api/index] Auto-seed error:', e.message));
-      runProjectMigration().catch((e) => console.error('[api/index] Project migration error:', e.message));
+      await seedBeneficiariesIfEmpty().catch((e) => console.error('[api/index] Auto-seed error:', e.message));
+      await runProjectMigration().catch((e) => console.error('[api/index] Project migration error:', e.message));
       seeded = true;
     }
   } catch (err) {

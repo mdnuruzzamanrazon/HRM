@@ -16,6 +16,14 @@ import Beneficiary from '../models/Beneficiary.js';
 import { connectDB, isDemoMode } from '../config/db.js';
 
 export const runProjectMigration = async () => {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectDB();
+    } catch (e) {
+      console.warn('[ProjectMigration] DB connect attempt error:', e.message);
+    }
+  }
+
   if (isDemoMode() || mongoose.connection.readyState !== 1) {
     console.log('[ProjectMigration] Running in Demo Mode or DB not ready. Skipping persistent migration.');
     return { success: true, message: 'Demo mode active' };
