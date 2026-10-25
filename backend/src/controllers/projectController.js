@@ -570,15 +570,6 @@ export const createProject = async (req, res) => {
     const trimmedName = name.trim();
     const finalCode = (code && code.trim()) ? code.trim().toUpperCase() : generateProjectCode(trimmedName);
 
-    // Check code uniqueness
-    const existingCode = await RiskProject.findOne({ code: finalCode, isDeleted: { $ne: true } });
-    if (existingCode) {
-      return res.status(400).json({
-        success: false,
-        message: `Project Code "${finalCode}" is already in use by another project.`
-      });
-    }
-
     const auditEntry = {
       action: 'CREATED',
       performedBy: req.user?.email || 'HR Administrator',
@@ -590,6 +581,13 @@ export const createProject = async (req, res) => {
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       if (!mockData.riskProjects) mockData.riskProjects = [];
+      const codeExists = mockData.riskProjects.some(p => p.code === finalCode && !p.isDeleted);
+      if (codeExists) {
+        return res.status(400).json({
+          success: false,
+          message: `Project Code "${finalCode}" is already in use by another project.`
+        });
+      }
       const newProject = {
         _id: '6618d0987f83b1001a12' + Math.floor(1000 + Math.random() * 9000),
         name: trimmedName,
@@ -617,6 +615,15 @@ export const createProject = async (req, res) => {
         success: true,
         message: 'Project created successfully',
         data: newProject
+      });
+    }
+
+    // Check code uniqueness in MongoDB
+    const existingCode = await RiskProject.findOne({ code: finalCode, isDeleted: { $ne: true } });
+    if (existingCode) {
+      return res.status(400).json({
+        success: false,
+        message: `Project Code "${finalCode}" is already in use by another project.`
       });
     }
 
