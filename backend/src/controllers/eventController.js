@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import EventRecord from '../models/EventRecord.js';
+import { RiskProject } from '../models/RiskProject.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -121,6 +122,7 @@ export const getEvents = async (req, res) => {
     await ensureSeeded();
 
     const {
+      projectId,
       search,
       division,
       district,
@@ -144,6 +146,13 @@ export const getEvents = async (req, res) => {
     } = req.query;
 
     const query = { isDeleted: false };
+
+    // Project Filter
+    if (projectId && projectId !== 'ALL') {
+      if (mongoose.Types.ObjectId.isValid(projectId)) {
+        query.projectId = new mongoose.Types.ObjectId(projectId);
+      }
+    }
 
     // Cascading Location Filters
     if (division && division !== 'ALL') {
@@ -255,8 +264,11 @@ export const getEventStats = async (req, res) => {
   try {
     await ensureSeeded();
 
-    const { division, district } = req.query;
+    const { division, district, projectId } = req.query;
     const baseMatch = { isDeleted: false };
+    if (projectId && projectId !== 'ALL' && mongoose.Types.ObjectId.isValid(projectId)) {
+      baseMatch.projectId = new mongoose.Types.ObjectId(projectId);
+    }
     if (division && division !== 'ALL') baseMatch.division = division;
     if (district && district !== 'ALL') baseMatch.district = district;
 
@@ -423,8 +435,18 @@ export const createEvent = async (req, res) => {
     const userEmail = req.user?.email || '';
     const role = req.user?.role || 'Admin';
 
+    let resolvedProjectName = payload.projectName || 'Community Based Development Project (CBDP)';
+    let resolvedProjectId = null;
+    if (payload.projectId && mongoose.Types.ObjectId.isValid(payload.projectId)) {
+      resolvedProjectId = new mongoose.Types.ObjectId(payload.projectId);
+      const prj = await RiskProject.findById(resolvedProjectId).select('name').lean();
+      if (prj?.name) resolvedProjectName = prj.name;
+    }
+
     const newEvent = new EventRecord({
       ...payload,
+      projectId: resolvedProjectId,
+      projectName: resolvedProjectName,
       sl: nextSl,
       eventId,
       dateFrom: payload.dateFrom ? new Date(payload.dateFrom) : new Date(),

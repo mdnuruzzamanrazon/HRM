@@ -20,16 +20,24 @@ import ComplaintDetailModal from './ComplaintDetailModal';
 import StatusUpdateModal from './StatusUpdateModal';
 import AppealModal from './AppealModal';
 import ComplaintsPrintView from './ComplaintsPrintView';
+import { useProject } from '../../context/ProjectContext';
 
 export default function ComplaintsRegister() {
   const { user } = useAuth();
+  const {
+    projects: contextProjects,
+    selectedProjectId: globalProjectId,
+    selectedProject,
+    switchProject,
+  } = useProject();
 
   // State: Subpage Navigation Tab
   const [activeTab, setActiveTab] = useState('register'); // 'register' | 'guidelines' | 'analytics'
 
   // State: Data
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('ALL');
+  const [localProjects, setLocalProjects] = useState([]);
+  const projects = contextProjects && contextProjects.length > 0 ? contextProjects : localProjects;
+  const [selectedProjectId, setSelectedProjectId] = useState(globalProjectId || 'ALL');
   const [complaints, setComplaints] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -104,6 +112,13 @@ export default function ComplaintsRegister() {
     fetchProjects();
     fetchStats();
   }, []);
+
+  // Sync selectedProjectId when global project context changes
+  useEffect(() => {
+    if (globalProjectId) {
+      setSelectedProjectId(globalProjectId);
+    }
+  }, [globalProjectId]);
 
   // Fetch complaints on filter / sort / page change
   useEffect(() => {
@@ -442,8 +457,10 @@ export default function ComplaintsRegister() {
               <select
                 value={selectedProjectId}
                 onChange={(e) => {
-                  setSelectedProjectId(e.target.value);
+                  const val = e.target.value;
+                  setSelectedProjectId(val);
                   setPage(1);
+                  if (val && val !== 'ALL') switchProject(val);
                 }}
                 className="w-full pl-8 pr-7 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-800 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer appearance-none truncate"
               >

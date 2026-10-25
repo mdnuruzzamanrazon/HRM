@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Calendar,
   Building,
+  Building2,
   MapPin,
   Users,
   ShieldCheck,
@@ -44,9 +45,16 @@ import EventDetailModal from './EventDetailModal';
 import EventInstructionsModal from './EventInstructionsModal';
 import EventPrintView from './EventPrintView';
 import metadata from '../../data/eventMetadata.json';
+import { useProject } from '../../context/ProjectContext';
 
 export default function EventTracker() {
   const { user } = useAuth();
+  const {
+    projects,
+    selectedProjectId,
+    selectedProject,
+    switchProject,
+  } = useProject();
 
   // State: Data
   const [events, setEvents] = useState([]);
@@ -109,7 +117,11 @@ export default function EventTracker() {
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      const res = await api.get('/events/stats');
+      const params = {};
+      if (selectedProjectId && selectedProjectId !== 'ALL') {
+        params.projectId = selectedProjectId;
+      }
+      const res = await api.get('/events/stats', { params });
       if (res.data?.success) {
         setStats(res.data.data);
       }
@@ -118,7 +130,7 @@ export default function EventTracker() {
     } finally {
       setStatsLoading(false);
     }
-  }, []);
+  }, [selectedProjectId]);
 
   // Fetch Events List with all active filters
   const fetchEvents = useCallback(async () => {
@@ -130,6 +142,7 @@ export default function EventTracker() {
         sortBy,
         sortOrder,
         search: searchQuery.trim() || undefined,
+        projectId: selectedProjectId && selectedProjectId !== 'ALL' ? selectedProjectId : undefined,
         division: locationFilter.division && locationFilter.division !== 'ALL' ? locationFilter.division : undefined,
         district: locationFilter.district && locationFilter.district !== 'ALL' ? locationFilter.district : undefined,
         upazila: locationFilter.upazila && locationFilter.upazila !== 'ALL' ? locationFilter.upazila : undefined,
@@ -161,6 +174,7 @@ export default function EventTracker() {
     sortBy,
     sortOrder,
     searchQuery,
+    selectedProjectId,
     locationFilter,
     eventTypeFilter,
     eventThemeFilter,
@@ -225,6 +239,7 @@ export default function EventTracker() {
       showToast('Preparing event register export...', 'info');
       const params = {
         limit: 2000,
+        projectId: selectedProjectId && selectedProjectId !== 'ALL' ? selectedProjectId : undefined,
         division: locationFilter.division || undefined,
         district: locationFilter.district || undefined,
         upazila: locationFilter.upazila || undefined,
@@ -330,17 +345,37 @@ export default function EventTracker() {
   };
 
   // Handle Event Saved (from Modal)
-  const handleEventSaved = (savedEvent) => {
+  const handleEventSaved = async (formData) => {
     setIsFormModalOpen(false);
-    setEditingEvent(null);
-    fetchEvents();
-    fetchStats();
-    showToast(
-      editingEvent
-        ? `Event ${savedEvent.eventId || ''} updated successfully`
-        : `New Event ${savedEvent.eventId || ''} recorded successfully!`,
-      'success'
-    );
+    try {
+      if (editingEvent?._id) {
+        const payload = {
+          ...formData,
+          projectId: selectedProjectId || undefined,
+          projectName: selectedProject?.name || undefined,
+        };
+        const res = await api.put(`/events/${editingEvent._id}`, payload);
+        if (res.data?.success) {
+          showToast(`Event ${formData.eventId || ''} updated successfully!`, 'success');
+        }
+      } else {
+        const payload = {
+          ...formData,
+          projectId: selectedProjectId || undefined,
+          projectName: selectedProject?.name || undefined,
+        };
+        const res = await api.post('/events', payload);
+        if (res.data?.success) {
+          showToast(`New Event ${formData.eventId || ''} recorded successfully!`, 'success');
+        }
+      }
+      setEditingEvent(null);
+      fetchEvents();
+      fetchStats();
+    } catch (err) {
+      console.error('Failed to save event:', err);
+      showToast(err.response?.data?.message || 'Failed to save event record', 'error');
+    }
   };
 
   // Handle Delete Confirmation
@@ -417,7 +452,7 @@ export default function EventTracker() {
                 </h1>
                 
                 <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
-                  CBDP Project Events
+                  {selectedProject ? `Project: ${selectedProject.name}` : 'CBDP Project Events'}
                 </span>
 
                 <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60">
@@ -439,6 +474,24 @@ export default function EventTracker() {
 
           {/* Right Action Toolbar */}
           <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
+            {/* Project Selector */}
+            <div className="relative min-w-[210px] flex-1 sm:flex-initial">
+              <Building2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <select
+                value={selectedProjectId || 'ALL'}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && val !== 'ALL') switchProject(val);
+                }}
+                className="w-full pl-8 pr-7 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-800 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer appearance-none truncate"
+              >
+                <option value="ALL">All Project Events</option>
+                {projects.map(p => (
+                  <option key={p._id} value={p._id}>{p.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
             {/* Official SOP & Guidelines */}
             <button
               type="button"
@@ -1204,6 +1257,7 @@ export default function EventTracker() {
           setEditingEvent(null);
         }}
         onSave={handleEventSaved}
+        eventRecord={editingEvent}
         eventToEdit={editingEvent}
       />
 

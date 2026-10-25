@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import Beneficiary from '../models/Beneficiary.js';
+import { RiskProject } from '../models/RiskProject.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData } from '../services/mockDataService.js';
 import XLSX from 'xlsx';
@@ -67,6 +68,7 @@ const matchesLocation = (itemVal, filterVal) => {
 export const getBeneficiaries = async (req, res) => {
   try {
     const {
+      projectId,
       search,
       division,
       district,
@@ -121,6 +123,9 @@ export const getBeneficiaries = async (req, res) => {
       }
       if (union && union !== 'ALL') {
         records = records.filter((b) => matchesLocation(b.union, union));
+      }
+      if (projectId && projectId !== 'ALL') {
+        records = records.filter((b) => String(b.projectId) === String(projectId));
       }
       if (forumName && forumName !== 'ALL') {
         records = records.filter((b) => b.forumName === forumName);
@@ -204,6 +209,9 @@ export const getBeneficiaries = async (req, res) => {
       if (unionRegex) query.union = unionRegex;
     }
 
+    if (projectId && projectId !== 'ALL' && mongoose.Types.ObjectId.isValid(projectId)) {
+      query.projectId = new mongoose.Types.ObjectId(projectId);
+    }
     if (forumName && forumName !== 'ALL') {
       query.forumName = forumName.trim();
     }
@@ -262,7 +270,7 @@ export const getBeneficiaries = async (req, res) => {
  */
 export const getBeneficiaryStats = async (req, res) => {
   try {
-    const { division, district, upazila, union, forumName, projectName } = req.query;
+    const { division, district, upazila, union, forumName, projectName, projectId } = req.query;
 
     const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
@@ -270,6 +278,9 @@ export const getBeneficiaryStats = async (req, res) => {
 
     if (!isDbConnected) {
       allMatching = getFallbackRecords().slice();
+      if (projectId && projectId !== 'ALL') {
+        allMatching = allMatching.filter((b) => String(b.projectId) === String(projectId));
+      }
       if (division && division !== 'ALL') {
         allMatching = allMatching.filter((b) => matchesLocation(b.division, division));
       }
@@ -290,6 +301,9 @@ export const getBeneficiaryStats = async (req, res) => {
       }
     } else {
       const filter = {};
+      if (projectId && projectId !== 'ALL' && mongoose.Types.ObjectId.isValid(projectId)) {
+        filter.projectId = new mongoose.Types.ObjectId(projectId);
+      }
       if (division && division !== 'ALL') filter.division = new RegExp(`^${division.trim()}$`, 'i');
       if (district && district !== 'ALL') filter.district = new RegExp(`^${district.trim()}$`, 'i');
       if (upazila && upazila !== 'ALL') {
@@ -456,6 +470,7 @@ export const getBeneficiaryById = async (req, res) => {
 export const createBeneficiary = async (req, res) => {
   try {
     const {
+      projectId,
       name,
       sex,
       forumName,
@@ -517,14 +532,36 @@ export const createBeneficiary = async (req, res) => {
       prefix = `BEN-${new Date().getFullYear()}`;
     }
 
-    const beneficiaryId = `${prefix}-${String(finalSl).padStart(4, '0')}`;
+    let finalBeneficiaryId = req.body.beneficiaryId?.trim();
+    if (!finalBeneficiaryId) {
+      finalBeneficiaryId = `${prefix}-${String(finalSl).padStart(4, '0')}`;
+      if (isDbConnected) {
+        const existingId = await Beneficiary.findOne({ beneficiaryId: finalBeneficiaryId });
+        if (existingId) {
+          finalBeneficiaryId = `${prefix}-${String(finalSl).padStart(4, '0')}-${Date.now().toString().slice(-4)}`;
+        }
+      }
+    }
+
+    const beneficiaryId = finalBeneficiaryId;
 
     let crossForumMember = false;
     let linkedForums = [forumName.trim()];
 
+    let resolvedProjectName = projectName ? projectName.trim() : 'NAGORIC Project';
+    let resolvedProjectId = null;
+    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
+      resolvedProjectId = new mongoose.Types.ObjectId(projectId);
+      if (isDbConnected) {
+        const prj = await RiskProject.findById(resolvedProjectId).select('name').lean();
+        if (prj?.name) resolvedProjectName = prj.name;
+      }
+    }
+
     const newObj = {
       _id: isDbConnected ? undefined : `mock-ben-${Date.now()}`,
       beneficiaryId,
+      projectId: resolvedProjectId,
       sl: finalSl,
       name: name.trim(),
       sex: sex || 'Female',
@@ -533,7 +570,7 @@ export const createBeneficiary = async (req, res) => {
       occupation: occupation.trim(),
       contactNo: cleanContact,
       alternativeContactNo: alternativeContactNo.trim(),
-      projectName: projectName.trim(),
+      projectName: resolvedProjectName,
       csoName: csoName.trim(),
       category: category.trim(),
       forumName: forumName.trim(),
@@ -684,13 +721,14 @@ export const deleteBeneficiary = async (req, res) => {
  */
 export const exportBeneficiaries = async (req, res) => {
   try {
-    const { forumName, division, district, upazila, union, search, format = 'json' } = req.query;
+    const { forumName, division, district, upazila, union, search, projectId, format = 'json' } = req.query;
     const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
     let beneficiaries = [];
 
     if (!isDbConnected) {
       beneficiaries = getFallbackRecords().slice();
+      if (projectId && projectId !== 'ALL') beneficiaries = beneficiaries.filter((b) => String(b.projectId) === String(projectId));
       if (forumName && forumName !== 'ALL') beneficiaries = beneficiaries.filter((b) => b.forumName === forumName);
       if (division && division !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.division, division));
       if (district && district !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.district, district));
@@ -698,6 +736,9 @@ export const exportBeneficiaries = async (req, res) => {
       if (union && union !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.union, union));
     } else {
       const query = {};
+      if (projectId && projectId !== 'ALL' && mongoose.Types.ObjectId.isValid(projectId)) {
+        query.projectId = new mongoose.Types.ObjectId(projectId);
+      }
       if (forumName && forumName !== 'ALL') query.forumName = forumName;
       if (division && division !== 'ALL') query.division = new RegExp(`^${division.trim()}$`, 'i');
       if (district && district !== 'ALL') query.district = new RegExp(`^${district.trim()}$`, 'i');
@@ -759,13 +800,27 @@ export const exportBeneficiaries = async (req, res) => {
  */
 export const batchImportBeneficiaries = async (req, res) => {
   try {
-    const { records, forumName: targetForum, overwriteDuplicates = false } = req.body;
+    const { records, forumName: targetForum, overwriteDuplicates = false, projectId, projectName } = req.body;
 
     if (!Array.isArray(records) || records.length === 0) {
       return res.status(400).json({ success: false, message: 'No records provided for import' });
     }
 
     const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
+
+    let projectObjectId = null;
+    let resolvedProjectName = projectName || null;
+    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
+      projectObjectId = new mongoose.Types.ObjectId(projectId);
+      if (!resolvedProjectName && isDbConnected) {
+        try {
+          const prj = await RiskProject.findById(projectObjectId).select('name');
+          if (prj) resolvedProjectName = prj.name;
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
 
     const summary = {
       totalReceived: records.length,
@@ -799,6 +854,8 @@ export const batchImportBeneficiaries = async (req, res) => {
         if (existing) {
           if (overwriteDuplicates) {
             existing.name = name;
+            if (projectObjectId) existing.projectId = projectObjectId;
+            if (resolvedProjectName) existing.projectName = resolvedProjectName;
             await existing.save();
             summary.updatedCount++;
           } else {
@@ -813,6 +870,8 @@ export const batchImportBeneficiaries = async (req, res) => {
 
         const newDoc = new Beneficiary({
           beneficiaryId,
+          projectId: projectObjectId || undefined,
+          projectName: resolvedProjectName || undefined,
           sl,
           name,
           sex: rec['Sex (Female/Male/Transgender)'] || rec.sex || 'Female',

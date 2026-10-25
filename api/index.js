@@ -1,6 +1,7 @@
 import app from '../backend/src/app.js';
 import { connectDB } from '../backend/src/config/db.js';
 import { seedBeneficiariesIfEmpty } from '../backend/src/services/beneficiarySeeder.js';
+import { runProjectMigration } from '../backend/src/services/projectMigration.js';
 
 let seeded = false;
 
@@ -9,6 +10,7 @@ export default async function handler(req, res) {
     await connectDB();
     if (!seeded) {
       seedBeneficiariesIfEmpty().catch((e) => console.error('[api/index] Auto-seed error:', e.message));
+      runProjectMigration().catch((e) => console.error('[api/index] Project migration error:', e.message));
       seeded = true;
     }
   } catch (err) {

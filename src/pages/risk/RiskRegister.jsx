@@ -21,13 +21,21 @@ import RiskGuidance from './RiskGuidance';
 import RiskSummary from './RiskSummary';
 import RiskCategoriesView from './RiskCategoriesView';
 import RiskValidationView from './RiskValidationView';
+import { useProject } from '../../context/ProjectContext';
 
 export default function RiskRegister() {
   const { user } = useAuth();
+  const {
+    projects: contextProjects,
+    selectedProjectId,
+    selectedProject,
+    switchProject,
+    refreshProjects,
+  } = useProject();
 
   // State: Data
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [localProjects, setLocalProjects] = useState([]);
+  const projects = contextProjects && contextProjects.length > 0 ? contextProjects : localProjects;
   const [risks, setRisks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState(null);
@@ -76,8 +84,8 @@ export default function RiskRegister() {
 
   // Find active project object
   const currentProject = useMemo(() => {
-    return projects.find(p => p._id === selectedProjectId) || projects[0] || null;
-  }, [projects, selectedProjectId]);
+    return selectedProject || projects.find(p => p._id === selectedProjectId) || projects[0] || null;
+  }, [selectedProject, projects, selectedProjectId]);
 
   // Initial load: Fetch Projects and Categories & Check URL Tab
   useEffect(() => {
@@ -112,19 +120,18 @@ export default function RiskRegister() {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [projRes, catRes] = await Promise.all([
-        api.get('/risk/projects'),
-        api.get('/risk/categories')
-      ]);
-
-      if (projRes.data?.success && projRes.data.data.length > 0) {
-        setProjects(projRes.data.data);
-        // Default to first project
-        setSelectedProjectId(projRes.data.data[0]._id);
-      }
-
+      const catRes = await api.get('/risk/categories');
       if (catRes.data?.success) {
         setCategories(catRes.data.data);
+      }
+      if (!contextProjects || contextProjects.length === 0) {
+        const projRes = await api.get('/risk/projects');
+        if (projRes.data?.success && projRes.data.data.length > 0) {
+          setLocalProjects(projRes.data.data);
+          if (!selectedProjectId) {
+            switchProject(projRes.data.data[0]._id);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to load initial risk data:', err);
@@ -240,15 +247,7 @@ export default function RiskRegister() {
         if (res.data?.success) {
           showToast(`Project deleted successfully`);
           setDeleteConfirmation({ isOpen: false, item: null, type: 'project' });
-          const projRes = await api.get('/risk/projects');
-          if (projRes.data?.success) {
-            setProjects(projRes.data.data);
-            if (projRes.data.data.length > 0) {
-              setSelectedProjectId(projRes.data.data[0]._id);
-            } else {
-              setSelectedProjectId('');
-            }
-          }
+          await refreshProjects();
         }
       }
     } catch (err) {
@@ -269,20 +268,16 @@ export default function RiskRegister() {
           showToast('Project information updated successfully');
           setIsProjectModalOpen(false);
           setEditingProject(null);
-          const projRes = await api.get('/risk/projects');
-          if (projRes.data?.success) {
-            setProjects(projRes.data.data);
-          }
+          await refreshProjects();
         }
       } else {
         const res = await api.post('/risk/projects', payload);
         if (res.data?.success) {
           showToast('New project created successfully');
           setIsProjectModalOpen(false);
-          const projRes = await api.get('/risk/projects');
-          if (projRes.data?.success) {
-            setProjects(projRes.data.data);
-            setSelectedProjectId(res.data.data._id);
+          await refreshProjects();
+          if (res.data?.data?._id) {
+            switchProject(res.data.data._id);
           }
         }
       }
@@ -750,7 +745,7 @@ export default function RiskRegister() {
                 <div className="relative flex-1 min-w-0 sm:w-64 lg:w-72">
                   <select
                     value={selectedProjectId}
-                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    onChange={(e) => switchProject(e.target.value)}
                     className="w-full appearance-none pl-3 pr-8 py-2 sm:py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 cursor-pointer shadow-xs truncate"
                   >
                     {projects.map(p => (

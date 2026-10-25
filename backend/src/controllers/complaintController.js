@@ -352,24 +352,33 @@ export const generateNextSNo = async () => {
     return `${prefix}${String(nextSeq).padStart(4, '0')}`;
   }
 
-  // Find latest in MongoDB
-  const latest = await ComplaintRecord.findOne({
+  // Find all existing sNo for this year to compute the true max sequence number
+  const existingDocs = await ComplaintRecord.find({
     sNo: new RegExp(`^${prefix}`)
-  }).sort({ seqNumber: -1, sNo: -1 }).lean();
+  }).select('sNo seqNumber').lean();
 
-  let nextSeq = 1;
-  if (latest) {
-    if (latest.seqNumber) {
-      nextSeq = latest.seqNumber + 1;
-    } else {
-      const match = latest.sNo?.match(/CFR-\d{4}-(\d+)/);
-      if (match) {
-        nextSeq = parseInt(match[1], 10) + 1;
-      }
+  let maxSeq = 0;
+  for (const doc of existingDocs) {
+    if (typeof doc.seqNumber === 'number' && doc.seqNumber > maxSeq) {
+      maxSeq = doc.seqNumber;
+    }
+    const match = doc.sNo?.match(/CFR-\d{4}-(\d+)/);
+    if (match) {
+      const val = parseInt(match[1], 10);
+      if (val > maxSeq) maxSeq = val;
     }
   }
 
-  return `${prefix}${String(nextSeq).padStart(4, '0')}`;
+  let nextSeq = maxSeq + 1;
+  let candidateSNo = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+
+  // Ensure collision-free
+  while (await ComplaintRecord.findOne({ sNo: candidateSNo })) {
+    nextSeq++;
+    candidateSNo = `${prefix}${String(nextSeq).padStart(4, '0')}`;
+  }
+
+  return candidateSNo;
 };
 
 // -------------------------------------------------------------

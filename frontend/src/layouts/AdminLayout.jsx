@@ -5,19 +5,24 @@ import {
   LogOut, LayoutDashboard, Users, Clock, Calendar, CreditCard, 
   CalendarClock, Receipt, Calculator, MapPin, Megaphone, CheckSquare, 
   Bell, Shield, Menu, X, ChevronRight, UserCheck, Search, Sparkles, Building2,
-  ShieldAlert, FolderClock, CalendarDays, HeartHandshake, Boxes
+  ShieldAlert, FolderClock, CalendarDays, HeartHandshake, Boxes, FolderKanban
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import ErrorBoundary from '../components/ErrorBoundary';
 import LogoutModal from '../components/LogoutModal';
+import { useProject } from '../context/ProjectContext';
+import ProjectSelector from '../components/common/ProjectSelector';
+import ProjectCreateModal from '../pages/projects/ProjectCreateModal';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
+  const { selectedProject, createProject } = useProject();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] = useState(false);
 
   // Close sidebar on route change on mobile
   useEffect(() => {
@@ -61,9 +66,25 @@ export default function AdminLayout() {
   // Semantic categorized navigation sections
   const navSections = [
     {
-      group: 'Core Management',
+      group: 'Project Management',
       items: [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'All Projects', href: '/projects', icon: FolderKanban },
+        { name: 'Project Dashboard', href: '/project-dashboard', icon: LayoutDashboard },
+      ]
+    },
+    {
+      group: 'Project Modules',
+      items: [
+        { name: 'Risk Register', href: '/risk-register', icon: ShieldAlert },
+        { name: 'Complaints & Feedback', href: '/complaints-register', icon: FolderClock },
+        { name: 'Event Tracker', href: '/event-tracker', icon: CalendarDays },
+        { name: 'Beneficiary Information', href: '/beneficiaries', icon: HeartHandshake },
+      ]
+    },
+    {
+      group: 'Core HR',
+      items: [
+        { name: 'Executive Dashboard', href: '/dashboard', icon: Sparkles },
         { name: 'Employees Directory', href: '/employees', icon: Users },
       ]
     },
@@ -91,15 +112,6 @@ export default function AdminLayout() {
         { name: 'Digital Notice Board', href: '/noticeboard', icon: Megaphone },
         { name: 'Task Management', href: '/task', icon: CheckSquare },
         { name: 'System Notifications', href: '/notifications', icon: Bell },
-      ]
-    },
-    {
-      group: 'Governance & Risk',
-      items: [
-        { name: 'Risk Register', href: '/risk-register', icon: ShieldAlert },
-        { name: 'Complaints & Feedback', href: '/complaints-register', icon: FolderClock },
-        { name: 'Event Tracker', href: '/event-tracker', icon: CalendarDays },
-        { name: 'Beneficiary Information', href: '/beneficiaries', icon: HeartHandshake },
       ]
     },
     {
@@ -276,8 +288,21 @@ export default function AdminLayout() {
             <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
               <span className="font-bold text-slate-500">CBDP HR</span>
               <span>/</span>
+              {selectedProject?.name && (
+                <>
+                  <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200/60 max-w-[150px] truncate" title={`Active Project: ${selectedProject.name}`}>
+                    {selectedProject.name}
+                  </span>
+                  <span>/</span>
+                </>
+              )}
               <span className="font-semibold text-slate-800">{currentTitle}</span>
             </div>
+          </div>
+
+          {/* Center-Top Project Selector */}
+          <div className="flex items-center">
+            <ProjectSelector onOpenCreateModal={() => setIsCreateProjectModalOpen(true)} />
           </div>
 
           {/* Top Right Actions & Profile */}
@@ -351,6 +376,15 @@ export default function AdminLayout() {
           </div>
         </main>
       </div>
+
+      {/* Project Quick Creation Modal */}
+      <ProjectCreateModal
+        isOpen={isCreateProjectModalOpen}
+        onClose={() => setIsCreateProjectModalOpen(false)}
+        onSave={async (formData) => {
+          await createProject(formData);
+        }}
+      />
 
       {/* Logout Confirmation Dialog */}
       <LogoutModal

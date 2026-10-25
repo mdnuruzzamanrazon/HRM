@@ -12,6 +12,7 @@ import {
   UploadCloud,
   MapPin,
   Building,
+  Building2,
   HeartHandshake,
   ShieldCheck,
   Eye,
@@ -22,6 +23,7 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ArrowUpDown,
   X,
   Check,
@@ -35,9 +37,16 @@ import LocationSelector from '../../components/common/LocationSelector';
 import BeneficiaryDetailModal from './BeneficiaryDetailModal';
 import BeneficiaryFormModal from './BeneficiaryFormModal';
 import BeneficiaryImportModal from './BeneficiaryImportModal';
+import { useProject } from '../../context/ProjectContext';
 
 export default function BeneficiaryManagement() {
   const { user } = useAuth();
+  const {
+    projects,
+    selectedProjectId,
+    selectedProject,
+    switchProject,
+  } = useProject();
   const canManage = ['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER', 'DEPT_MANAGER', 'FINANCE_OFFICER'].includes(user?.role);
   const canDelete = ['SUPER_ADMIN', 'HR_ADMIN'].includes(user?.role);
 
@@ -91,6 +100,7 @@ export default function BeneficiaryManagement() {
     try {
       setStatsLoading(true);
       const params = {};
+      if (selectedProjectId && selectedProjectId !== 'ALL') params.projectId = selectedProjectId;
       if (activeForumTab !== 'ALL') params.forumName = activeForumTab;
       if (locationFilter.division) params.division = locationFilter.division;
       if (locationFilter.district) params.district = locationFilter.district;
@@ -106,7 +116,7 @@ export default function BeneficiaryManagement() {
     } finally {
       setStatsLoading(false);
     }
-  }, [activeForumTab, locationFilter]);
+  }, [selectedProjectId, activeForumTab, locationFilter]);
 
   // 2. Fetch Beneficiaries List
   const fetchBeneficiaries = useCallback(async () => {
@@ -119,6 +129,7 @@ export default function BeneficiaryManagement() {
         sortOrder,
       };
 
+      if (selectedProjectId && selectedProjectId !== 'ALL') params.projectId = selectedProjectId;
       if (searchQuery.trim()) params.search = searchQuery.trim();
       if (activeForumTab !== 'ALL') params.forumName = activeForumTab;
       if (locationFilter.division) params.division = locationFilter.division;
@@ -147,6 +158,7 @@ export default function BeneficiaryManagement() {
     sortBy,
     sortOrder,
     searchQuery,
+    selectedProjectId,
     activeForumTab,
     locationFilter,
     sexFilter,
@@ -202,7 +214,12 @@ export default function BeneficiaryManagement() {
       setIsSubmitting(true);
       if (formInitialData && formInitialData._id) {
         // Update
-        const res = await api.put(`/beneficiaries/${formInitialData._id}`, formData);
+        const payload = {
+          ...formData,
+          projectId: selectedProjectId || undefined,
+          projectName: selectedProject?.name || undefined,
+        };
+        const res = await api.put(`/beneficiaries/${formInitialData._id}`, payload);
         if (res.data?.success) {
           showToast('Beneficiary record updated successfully!');
           setIsFormOpen(false);
@@ -212,7 +229,12 @@ export default function BeneficiaryManagement() {
         }
       } else {
         // Create
-        const res = await api.post('/beneficiaries', formData);
+        const payload = {
+          ...formData,
+          projectId: selectedProjectId || undefined,
+          projectName: selectedProject?.name || undefined,
+        };
+        const res = await api.post('/beneficiaries', payload);
         if (res.data?.success) {
           showToast('New beneficiary record added successfully!');
           setIsFormOpen(false);
@@ -247,7 +269,12 @@ export default function BeneficiaryManagement() {
   const handleImportConfirm = async (importPayload) => {
     try {
       setIsImporting(true);
-      const res = await api.post('/beneficiaries/import', importPayload);
+      const payload = {
+        ...importPayload,
+        projectId: selectedProjectId || undefined,
+        projectName: selectedProject?.name || undefined,
+      };
+      const res = await api.post('/beneficiaries/import', payload);
       if (res.data?.success) {
         showToast(res.data.message || 'Import successful!');
         setIsImportOpen(false);
@@ -267,6 +294,7 @@ export default function BeneficiaryManagement() {
     try {
       const params = new URLSearchParams();
       params.append('format', format);
+      if (selectedProjectId && selectedProjectId !== 'ALL') params.append('projectId', selectedProjectId);
       if (activeForumTab !== 'ALL') params.append('forumName', activeForumTab);
       if (locationFilter.division) params.append('division', locationFilter.division);
       if (locationFilter.district) params.append('district', locationFilter.district);
@@ -338,10 +366,15 @@ export default function BeneficiaryManagement() {
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-                Beneficiary Information
-              </h1>
-              <p className="text-xs text-slate-500 font-medium">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                  Beneficiary Information
+                </h1>
+                <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-mono">
+                  {selectedProject ? `Project: ${selectedProject.name}` : 'CBDP Beneficiaries'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-1">
                 Manage, search, and analyze project beneficiary records by project and administrative location.
               </p>
             </div>
@@ -350,6 +383,24 @@ export default function BeneficiaryManagement() {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Project Selector */}
+          <div className="relative min-w-[210px]">
+            <Building2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <select
+              value={selectedProjectId || 'ALL'}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val && val !== 'ALL') switchProject(val);
+              }}
+              className="w-full pl-8 pr-7 py-2.5 text-xs font-bold rounded-xl border border-slate-200 bg-white text-slate-800 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer appearance-none truncate"
+            >
+              <option value="ALL">All Beneficiary Records</option>
+              {projects.map(p => (
+                <option key={p._id} value={p._id}>{p.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
           <button
             onClick={() => {
               fetchBeneficiaries();

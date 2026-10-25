@@ -50,6 +50,11 @@ const beneficiarySchema = new mongoose.Schema(
     },
 
     // 3. Project & CSO Information (from Source Header)
+    projectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'RiskProject',
+      index: true,
+    },
     projectName: {
       type: String,
       trim: true,

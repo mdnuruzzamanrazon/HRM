@@ -34,6 +34,8 @@ import ComplaintsRegister from './pages/complaints/ComplaintsRegister';
 import EventTracker from './pages/events/EventTracker';
 import BeneficiaryManagement from './pages/beneficiaries/BeneficiaryManagement';
 import AssetTracker from './pages/assets/AssetTracker';
+import ProjectManagement from './pages/projects/ProjectManagement';
+import ProjectDashboard from './pages/projects/ProjectDashboard';
 
 // Employee Portal Pages
 import EmployeeDashboard from './pages/employee/EmployeeDashboard';
@@ -47,6 +49,7 @@ import EmployeeProfile from './pages/employee/EmployeeProfile';
 import EmployeeTasks from './pages/employee/EmployeeTasks';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ProjectProvider } from './context/ProjectContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function RootRedirect() {
@@ -64,7 +67,8 @@ function App() {
   return (
     <ErrorBoundary fallbackTitle="Application Error">
       <AuthProvider>
-        <Routes>
+        <ProjectProvider>
+          <Routes>
           {/* Public & Authentication Routes */}
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<Login />} />
@@ -120,12 +124,17 @@ function App() {
               <Route path="/beneficiary-information" element={<BeneficiaryManagement />} />
               <Route path="/assets" element={<AssetTracker />} />
               <Route path="/asset-tracker" element={<AssetTracker />} />
+              <Route path="/projects" element={<ProjectManagement />} />
+              <Route path="/projects/:id" element={<ProjectDashboard />} />
+              <Route path="/projects/:id/dashboard" element={<ProjectDashboard />} />
+              <Route path="/project-dashboard" element={<ProjectDashboard />} />
             </Route>
           </Route>
 
           {/* Catch-all fallback */}
           <Route path="*" element={<RootRedirect />} />
         </Routes>
+        </ProjectProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
