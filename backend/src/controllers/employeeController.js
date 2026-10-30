@@ -5,12 +5,13 @@ import { hashPassword } from '../utils/authUtils.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData, saveStoreToDisk, loadStoreFromDisk } from '../services/mockDataService.js';
 import { logAudit } from '../utils/auditLogger.js';
+import { buildEmployeeAssignmentsMap } from './employeeAssignmentController.js';
 
 
 // Get all non-deleted employees with user account status
 export const getEmployees = async (req, res) => {
   try {
-    const { includeDeleted, status } = req.query;
+    const { includeDeleted, status, assignedProjectId } = req.query;
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       loadStoreFromDisk();
@@ -29,6 +30,21 @@ export const getEmployees = async (req, res) => {
       if (status && status !== 'ALL') {
         list = list.filter(e => e.jobDetails?.status === status);
       }
+
+      const assignmentsMap = await buildEmployeeAssignmentsMap(list.map(e => e._id), false);
+      list = list.map(e => ({
+        ...e,
+        projectAssignments: assignmentsMap[String(e._id)] || [],
+      }));
+
+      if (assignedProjectId && assignedProjectId !== 'ALL') {
+        if (assignedProjectId === 'UNASSIGNED') {
+          list = list.filter(e => (e.projectAssignments || []).length === 0);
+        } else {
+          list = list.filter(e => (e.projectAssignments || []).some(a => String(a.projectId) === String(assignedProjectId)));
+        }
+      }
+
       return res.json({ 
         success: true, 
         data: list,
@@ -52,8 +68,11 @@ export const getEmployees = async (req, res) => {
 
     // Fetch linked user account info for complete synchronization
     const employeeIds = employees.map(e => e._id);
-    const users = await User.find({ employeeProfileId: { $in: employeeIds } })
-      .select('email role isActive mustChangePassword lastLoginAt employeeProfileId');
+    const [users, assignmentsMap] = await Promise.all([
+      User.find({ employeeProfileId: { $in: employeeIds } })
+        .select('email role isActive mustChangePassword lastLoginAt employeeProfileId'),
+      buildEmployeeAssignmentsMap(employeeIds, false)
+    ]);
 
     const userMap = {};
     users.forEach(u => {
@@ -101,6 +120,16 @@ export const getEmployees = async (req, res) => {
       plain.title = plain.title || plain.jobDetails?.title || '';
       plain.department = plain.department || plain.jobDetails?.department || '';
       plain.status = plain.status || plain.jobDetails?.status || 'ACTIVE';
+      plain.projectAssignments = assignmentsMap[emp._id.toString()] || [];
+
+      if (assignedProjectId && assignedProjectId !== 'ALL') {
+        if (assignedProjectId === 'UNASSIGNED') {
+          if (plain.projectAssignments.length > 0) continue;
+        } else if (!plain.projectAssignments.some(a => String(a.projectId) === String(assignedProjectId))) {
+          continue;
+        }
+      }
+
       enrichedEmployees.push(plain);
     }
 
@@ -114,8 +143,21 @@ export const getEmployees = async (req, res) => {
 export const getEmployeeById = async (req, res) => {
   try {
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      const emp = (mockData.employees || []).find(e => e._id === req.params.id) || mockData.employees[0];
-      return res.json({ success: true, data: emp, isDemoMode: true });
+      const emp = (mockData.employees || []).find(e => e._id === req.params.id);
+      if (!emp || emp.isDeleted) {
+        return res.status(404).json({ success: false, message: 'Employee record not found' });
+      }
+      const allMap = await buildEmployeeAssignmentsMap([emp._id], true);
+      const history = allMap[String(emp._id)] || [];
+      return res.json({
+        success: true,
+        data: {
+          ...emp,
+          projectAssignments: history.filter(a => a.status === 'ACTIVE'),
+          projectAssignmentHistory: history,
+        },
+        isDemoMode: true
+      });
     }
 
     const employee = await Employee.findById(req.params.id)
@@ -127,13 +169,19 @@ export const getEmployeeById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Employee record not found' });
     }
 
-    // Attach user account
-    const userAccount = await User.findOne({ employeeProfileId: employee._id })
-      .select('email role isActive mustChangePassword lastLoginAt createdAt');
+    // Attach user account & project assignments
+    const [userAccount, allMap] = await Promise.all([
+      User.findOne({ employeeProfileId: employee._id })
+        .select('email role isActive mustChangePassword lastLoginAt createdAt'),
+      buildEmployeeAssignmentsMap([employee._id], true)
+    ]);
 
     const plain = employee.toObject();
     plain.userAccount = userAccount || plain.userId || null;
     plain.email = plain.email || plain.personalDetails?.email || userAccount?.email;
+    const history = allMap[employee._id.toString()] || [];
+    plain.projectAssignments = history.filter(a => a.status === 'ACTIVE');
+    plain.projectAssignmentHistory = history;
 
     res.json({ success: true, data: plain });
   } catch (error) {

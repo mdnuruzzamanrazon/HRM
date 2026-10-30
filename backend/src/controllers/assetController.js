@@ -17,7 +17,7 @@ const officialAssetsPath = path.resolve(__dirname, '../data/officialAssets.json'
 // In-memory / JSON fallback store
 let fallbackStore = null;
 
-const getFallbackData = () => {
+export const getFallbackData = () => {
   if (!fallbackStore) {
     try {
       if (fs.existsSync(officialAssetsPath)) {
@@ -42,7 +42,7 @@ const getFallbackData = () => {
   return fallbackStore;
 };
 
-const saveFallbackData = () => {
+export const saveFallbackData = () => {
   if (fallbackStore) {
     try {
       fs.writeFileSync(officialAssetsPath, JSON.stringify(fallbackStore, null, 2), 'utf8');
@@ -262,6 +262,13 @@ export const getAssets = async (req, res) => {
       if (location && location !== 'ALL') query.location = location;
       if (riskFlag && riskFlag !== 'ALL') query.riskFlag = riskFlag;
       if (projectDonor && projectDonor !== 'ALL') query.projectDonor = projectDonor;
+      if (req.query.assignedProjectId && req.query.assignedProjectId !== 'ALL') {
+        if (req.query.assignedProjectId === 'UNASSIGNED') {
+          query['currentAssignment.projectId'] = null;
+        } else if (mongoose.Types.ObjectId.isValid(req.query.assignedProjectId)) {
+          query['currentAssignment.projectId'] = new mongoose.Types.ObjectId(req.query.assignedProjectId);
+        }
+      }
       if (condition && condition !== 'ALL') query.condition = condition;
       if (auditResult && auditResult !== 'ALL') query.auditResult = auditResult;
 
@@ -316,6 +323,13 @@ export const getAssets = async (req, res) => {
       }
       if (projectDonor && projectDonor !== 'ALL') {
         records = records.filter(a => String(a.projectDonor || '').toLowerCase() === projectDonor.toLowerCase());
+      }
+      if (req.query.assignedProjectId && req.query.assignedProjectId !== 'ALL') {
+        if (req.query.assignedProjectId === 'UNASSIGNED') {
+          records = records.filter(a => !a.currentAssignment?.projectId);
+        } else {
+          records = records.filter(a => String(a.currentAssignment?.projectId || '') === String(req.query.assignedProjectId));
+        }
       }
       if (condition && condition !== 'ALL') {
         records = records.filter(a => String(a.condition || '').toLowerCase() === condition.toLowerCase());

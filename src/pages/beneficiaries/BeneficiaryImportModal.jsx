@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   UploadCloud,
@@ -11,14 +11,20 @@ import {
   Database
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useProject } from '../../context/ProjectContext';
 
 export default function BeneficiaryImportModal({
   isOpen,
   onClose,
   onImportConfirm,
   activeForum = 'Upazilla Nagoric Forum',
+  projectId,
+  projectName = '',
   isImporting = false,
 }) {
+  const { selectedProject, registerUnsavedForm, unregisterUnsavedForm } = useProject();
+  const [lockedProjectId, setLockedProjectId] = useState(projectId);
+  const resolvedProjectName = projectName || selectedProject?.name || '';
   const [file, setFile] = useState(null);
   const [sheetNames, setSheetNames] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState('');
@@ -29,6 +35,16 @@ export default function BeneficiaryImportModal({
   const [overwriteDuplicates, setOverwriteDuplicates] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setLockedProjectId(projectId);
+      registerUnsavedForm('beneficiary-import-modal', 'Beneficiary Spreadsheet Import');
+    } else {
+      unregisterUnsavedForm('beneficiary-import-modal');
+    }
+    return () => unregisterUnsavedForm('beneficiary-import-modal');
+  }, [isOpen, projectId, registerUnsavedForm, unregisterUnsavedForm]);
 
   if (!isOpen) return null;
 
@@ -118,6 +134,11 @@ export default function BeneficiaryImportModal({
   };
 
   const handleConfirm = () => {
+    const effectiveProjectId = lockedProjectId || projectId;
+    if (!effectiveProjectId || (projectId && String(effectiveProjectId) !== String(projectId))) {
+      setErrorMsg('Active project changed while importer was open. Please reopen under the target project.');
+      return;
+    }
     if (parsedRows.length === 0) {
       setErrorMsg('No valid beneficiary records found to import.');
       return;
@@ -127,6 +148,8 @@ export default function BeneficiaryImportModal({
       records: parsedRows,
       forumName: targetForum,
       overwriteDuplicates,
+      projectId: effectiveProjectId,
+      projectName: resolvedProjectName,
     });
   };
 
@@ -138,7 +161,7 @@ export default function BeneficiaryImportModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
-      <div 
+      <div
         className="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -151,7 +174,7 @@ export default function BeneficiaryImportModal({
             <div>
               <h3 className="text-lg font-bold text-white tracking-tight">Import Beneficiary Spreadsheet</h3>
               <p className="text-xs text-emerald-200/80">
-                Official Google Sheets (.xlsx / .csv) batch importer
+                Target Project: <strong className="text-white">{resolvedProjectName || 'Active Project'}</strong>
               </p>
             </div>
           </div>

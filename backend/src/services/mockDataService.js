@@ -860,10 +860,15 @@ export const mockData = {
       estimatedAudienceReach: 250,
       govRepresentativePresent: 'Yes',
       conflictPrevention: 'Yes',
+      sl: 1,
+      isDeleted: false,
       status: 'COMPLETED',
       createdAt: '2026-01-10T00:00:00.000Z'
     }
   ],
+
+  employeeProjectAssignments: [],
+  assetAssignments: [],
 
   beneficiaries: [
     {
@@ -917,6 +922,12 @@ export function saveStoreToDisk() {
       employees: mockData.employees,
       users: mockData.users,
       riskProjects: mockData.riskProjects,
+      riskRecords: mockData.riskRecords,
+      complaintRecords: mockData.complaintRecords,
+      eventRecords: mockData.eventRecords,
+      beneficiaries: mockData.beneficiaries,
+      employeeProjectAssignments: mockData.employeeProjectAssignments,
+      assetAssignments: mockData.assetAssignments,
     };
     fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), 'utf8');
   } catch (err) {
@@ -932,6 +943,24 @@ export function loadStoreFromDisk() {
 
       if (Array.isArray(parsed.riskProjects) && parsed.riskProjects.length > 0) {
         mockData.riskProjects = parsed.riskProjects;
+      }
+      if (Array.isArray(parsed.riskRecords)) {
+        mockData.riskRecords = parsed.riskRecords;
+      }
+      if (Array.isArray(parsed.complaintRecords)) {
+        mockData.complaintRecords = parsed.complaintRecords;
+      }
+      if (Array.isArray(parsed.eventRecords)) {
+        mockData.eventRecords = parsed.eventRecords;
+      }
+      if (Array.isArray(parsed.beneficiaries)) {
+        mockData.beneficiaries = parsed.beneficiaries;
+      }
+      if (Array.isArray(parsed.employeeProjectAssignments)) {
+        mockData.employeeProjectAssignments = parsed.employeeProjectAssignments;
+      }
+      if (Array.isArray(parsed.assetAssignments)) {
+        mockData.assetAssignments = parsed.assetAssignments;
       }
       
       if (Array.isArray(parsed.employees) && parsed.employees.length > 0) {

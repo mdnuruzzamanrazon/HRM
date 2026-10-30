@@ -6,7 +6,7 @@ import {
   FolderKanban, ShieldAlert, FolderClock, CalendarDays, HeartHandshake,
   ArrowUpRight, Users, MapPin, Building2, Calendar, Clock, CheckCircle2,
   AlertTriangle, RefreshCw, Layers, TrendingUp, Sparkles, AlertCircle,
-  FileText, ExternalLink, Activity, ArrowLeft
+  FileText, ExternalLink, Activity, ArrowLeft, Boxes, Briefcase
 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -83,7 +83,7 @@ export default function ProjectDashboard() {
     );
   }
 
-  const { project, summary, distributions, recentActivities } = dashboardData;
+  const { project, summary, resourceAssignments, distributions, recentActivities } = dashboardData;
 
   // Chart transformations
   const riskCategoryChartData = (distributions?.risksByCategory || []).map(r => ({
@@ -334,6 +334,132 @@ export default function ProjectDashboard() {
             </div>
           </div>
         </Link>
+      </div>
+
+      {/* Independent Organizational Resource Assignments (Employees & Assets) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Panel 1: Assigned Core HR Employees */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs p-6 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200/80 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                <Briefcase className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-black text-slate-900">Assigned Core HR Employees</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    {resourceAssignments?.assignedEmployeesCount || 0} Active
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Separate Core HR project assignments (master employee records remain organization-wide)
+                </p>
+              </div>
+            </div>
+
+            <Link
+              to={`/employees?assignedProjectId=${project._id}`}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-colors whitespace-nowrap"
+            >
+              <span>Manage in Core HR</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {(resourceAssignments?.assignedEmployees || []).length === 0 ? (
+            <div className="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500">
+              No Core HR employees are currently assigned to {project.name}. Assign staff from the Core HR Employee Directory.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+              {resourceAssignments.assignedEmployees.map((item) => {
+                const emp = item.employee || {};
+                const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.email || 'Employee';
+                return (
+                  <div key={item._id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/employees/${emp._id}`}
+                        className="font-bold text-slate-900 hover:text-indigo-600 truncate block"
+                      >
+                        {fullName} {emp.employeeCode ? <span className="font-mono text-[10px] text-slate-400">({emp.employeeCode})</span> : null}
+                      </Link>
+                      <p className="text-[11px] text-slate-500 truncate">
+                        {item.roleInProject || emp.title || 'Project Staff'} &bull; {emp.department || 'HR'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {item.isPrimary && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Primary
+                        </span>
+                      )}
+                      <span className="px-2 py-0.5 rounded-lg font-mono font-bold text-[11px] bg-slate-100 text-slate-700">
+                        {item.allocationPercentage ?? 100}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Panel 2: Allocated Project Assets */}
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs p-6 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                <Boxes className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-black text-slate-900">Allocated Project Assets</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    {resourceAssignments?.assignedAssetsCount || 0} Allocated
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Equipment &amp; inventory currently allocated via Asset Tracker custody ledger
+                </p>
+              </div>
+            </div>
+
+            <Link
+              to={`/assets?assignedProjectId=${project._id}`}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-colors whitespace-nowrap"
+            >
+              <span>Manage in Asset Tracker</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {(resourceAssignments?.assignedAssets || []).length === 0 ? (
+            <div className="p-6 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-500">
+              No organizational assets are currently allocated to {project.name}. Allocate equipment from Asset Tracker.
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+              {resourceAssignments.assignedAssets.map((asset) => (
+                <div key={asset._id || asset.assetId} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 truncate">
+                      <span className="font-mono text-indigo-600 mr-1.5">{asset.assetId}</span>
+                      {asset.name}
+                    </p>
+                    <p className="text-[11px] text-slate-500 truncate">
+                      {asset.category} &bull; Custodian: {asset.currentAssignment?.custodianName || asset.custodian || 'Unassigned'} &bull; {asset.location || 'Field'}
+                    </p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 flex-shrink-0">
+                    {asset.status || 'Active'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Visual Analytics Charts Grid */}

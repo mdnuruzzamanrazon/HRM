@@ -13,6 +13,7 @@ import {
   IMPACT_LEVELS 
 } from '../../utils/riskCalculations.js';
 import { CBDP_STANDARD_CLASSIFICATIONS } from './RiskCategoriesView.jsx';
+import { useProject } from '../../context/ProjectContext';
 
 export default function RiskFormModal({
   isOpen,
@@ -21,11 +22,14 @@ export default function RiskFormModal({
   riskRecord = null,
   prefillData = null,
   projectId,
+  projectName = '',
   categories = [],
   onOpenCategoryModal,
   onOpenGuidance,
   isSubmitting = false
 }) {
+  const { selectedProject, registerUnsavedForm, unregisterUnsavedForm } = useProject();
+  const [lockedProjectId, setLockedProjectId] = useState(projectId);
   const [formData, setFormData] = useState({
     riskNo: '',
     dateAdded: new Date().toISOString().split('T')[0],
@@ -190,7 +194,14 @@ export default function RiskFormModal({
       });
     }
     setErrors({});
-  }, [riskRecord, prefillData, isOpen, categories]);
+    if (isOpen) {
+      setLockedProjectId(riskRecord?.projectId || projectId);
+      registerUnsavedForm('risk-form-modal', 'Risk Register Form');
+    } else {
+      unregisterUnsavedForm('risk-form-modal');
+    }
+    return () => unregisterUnsavedForm('risk-form-modal');
+  }, [riskRecord, prefillData, isOpen, categories, projectId, registerUnsavedForm, unregisterUnsavedForm]);
 
   // Update available subcategories when category changes
   useEffect(() => {
@@ -297,9 +308,15 @@ export default function RiskFormModal({
       return;
     }
 
+    const effectiveProjectId = lockedProjectId || projectId;
+    if (!effectiveProjectId || (projectId && String(effectiveProjectId) !== String(projectId))) {
+      setErrors({ category: 'Active project changed while form was open. Please reopen the form under the target project.' });
+      return;
+    }
+
     const payload = {
       ...formData,
-      projectId,
+      projectId: effectiveProjectId,
       categoryCode: formData.categoryCode,
       subCode: formData.subCode,
       ukDirector: formData.ukDirector,
@@ -353,7 +370,7 @@ export default function RiskFormModal({
                 {riskRecord ? `Edit Risk Record #${riskRecord.riskNo}` : 'Add New Risk Record'}
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 truncate">
-                Enterprise HR Project Risk Register entry and governance controls
+                Selected Project: <strong className="text-indigo-700">{projectName || selectedProject?.name || 'Active Project'}</strong>
               </p>
             </div>
           </div>

@@ -5,7 +5,9 @@ import mongoose from 'mongoose';
 import Beneficiary from '../models/Beneficiary.js';
 import { RiskProject } from '../models/RiskProject.js';
 import { isDemoMode } from '../config/db.js';
-import { mockData } from '../services/mockDataService.js';
+import { mockData, saveStoreToDisk } from '../services/mockDataService.js';
+import { authorizeRecordProjectAccess } from '../middlewares/projectAuth.js';
+import { AuditLog } from '../models/AuditLog.js';
 import XLSX from 'xlsx';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,21 +15,30 @@ const __dirname = path.dirname(__filename);
 
 // Helper to get fallback in-memory records
 const getFallbackRecords = () => {
-  if (!mockData.beneficiaries || mockData.beneficiaries.length === 0) {
+  const nagProj = (mockData.riskProjects || []).find(
+    (p) => p.code === 'PRJ-NAG' || p.name === 'NAGORIC Project'
+  );
+  if (!mockData.beneficiaries || mockData.beneficiaries.length <= 2) {
     try {
       const jsonPath = path.join(__dirname, '../data/officialBeneficiaries.json');
       if (fs.existsSync(jsonPath)) {
         const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-        mockData.beneficiaries = raw.map((b, idx) => ({
+        const existingIds = new Set((mockData.beneficiaries || []).map((b) => b.beneficiaryId));
+        const loaded = raw.map((b, idx) => ({
           ...b,
-          _id: b._id || `mock-ben-${idx + 1}`,
+          _id: b._id || `mock-ben-seed-${idx + 1}`,
+          projectId: b.projectId || (b.projectName === 'NAGORIC Project' && nagProj ? String(nagProj._id) : null),
           createdAt: b.createdAt || new Date().toISOString(),
           updatedAt: b.updatedAt || new Date().toISOString(),
         }));
+        mockData.beneficiaries = [
+          ...(mockData.beneficiaries || []),
+          ...loaded.filter((item) => !existingIds.has(item.beneficiaryId)),
+        ];
       }
     } catch (e) {
       console.warn('[BeneficiaryController] Fallback JSON read error:', e.message);
-      mockData.beneficiaries = [];
+      mockData.beneficiaries = mockData.beneficiaries || [];
     }
   }
   return mockData.beneficiaries || [];
@@ -88,6 +99,14 @@ export const getBeneficiaries = async (req, res) => {
       limit = 25,
     } = req.query;
 
+    const activeProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active Project ID is required to load Beneficiary Information records.',
+      });
+    }
+
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10) || 25));
     const skip = (pageNum - 1) * limitNum;
@@ -96,7 +115,7 @@ export const getBeneficiaries = async (req, res) => {
 
     if (!isDbConnected) {
       // Memory / Serverless fallback
-      let records = getFallbackRecords().slice();
+      let records = getFallbackRecords().filter((b) => String(b.projectId) === String(activeProjectId));
 
       if (search && search.trim()) {
         const q = search.trim().toLowerCase();
@@ -178,7 +197,12 @@ export const getBeneficiaries = async (req, res) => {
     }
 
     // MongoDB Connected Mode
-    const query = {};
+    if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+      return res.status(400).json({ success: false, message: 'Invalid Project ID format.' });
+    }
+    const query = {
+      projectId: new mongoose.Types.ObjectId(activeProjectId),
+    };
 
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -209,9 +233,6 @@ export const getBeneficiaries = async (req, res) => {
       if (unionRegex) query.union = unionRegex;
     }
 
-    if (projectId && projectId !== 'ALL' && mongoose.Types.ObjectId.isValid(projectId)) {
-      query.projectId = new mongoose.Types.ObjectId(projectId);
-    }
     if (forumName && forumName !== 'ALL') {
       query.forumName = forumName.trim();
     }
@@ -271,16 +292,20 @@ export const getBeneficiaries = async (req, res) => {
 export const getBeneficiaryStats = async (req, res) => {
   try {
     const { division, district, upazila, union, forumName, projectName, projectId } = req.query;
+    const activeProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active Project ID is required to load Beneficiary statistics.',
+      });
+    }
 
     const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
     let allMatching = [];
 
     if (!isDbConnected) {
-      allMatching = getFallbackRecords().slice();
-      if (projectId && projectId !== 'ALL') {
-        allMatching = allMatching.filter((b) => String(b.projectId) === String(projectId));
-      }
+      allMatching = getFallbackRecords().filter((b) => String(b.projectId) === String(activeProjectId));
       if (division && division !== 'ALL') {
         allMatching = allMatching.filter((b) => matchesLocation(b.division, division));
       }
@@ -300,10 +325,12 @@ export const getBeneficiaryStats = async (req, res) => {
         allMatching = allMatching.filter((b) => b.projectName === projectName);
       }
     } else {
-      const filter = {};
-      if (projectId && projectId !== 'ALL' && mongoose.Types.ObjectId.isValid(projectId)) {
-        filter.projectId = new mongoose.Types.ObjectId(projectId);
+      if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+        return res.status(400).json({ success: false, message: 'Invalid Project ID format.' });
       }
+      const filter = {
+        projectId: new mongoose.Types.ObjectId(activeProjectId),
+      };
       if (division && division !== 'ALL') filter.division = new RegExp(`^${division.trim()}$`, 'i');
       if (district && district !== 'ALL') filter.district = new RegExp(`^${district.trim()}$`, 'i');
       if (upazila && upazila !== 'ALL') {
@@ -432,18 +459,34 @@ export const getBeneficiaryById = async (req, res) => {
       if (!beneficiary) {
         return res.status(404).json({ success: false, message: 'Beneficiary not found' });
       }
+      const access = await authorizeRecordProjectAccess(req, beneficiary.projectId, 'BENEFICIARIES', 'VIEWER');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
       if (beneficiary.contactNo) {
         siblingRecords = getFallbackRecords().filter(
-          (b) => b.contactNo === beneficiary.contactNo && String(b._id) !== String(beneficiary._id)
+          (b) =>
+            String(b.projectId) === String(beneficiary.projectId) &&
+            b.contactNo === beneficiary.contactNo &&
+            String(b._id) !== String(beneficiary._id)
         );
       }
     } else {
-      beneficiary = await Beneficiary.findById(id).lean();
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        beneficiary = await Beneficiary.findOne({ beneficiaryId: id }).lean();
+      } else {
+        beneficiary = await Beneficiary.findById(id).lean();
+      }
       if (!beneficiary) {
         return res.status(404).json({ success: false, message: 'Beneficiary not found' });
       }
+      const access = await authorizeRecordProjectAccess(req, beneficiary.projectId, 'BENEFICIARIES', 'VIEWER');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
       if (beneficiary.contactNo) {
         siblingRecords = await Beneficiary.find({
+          projectId: beneficiary.projectId,
           contactNo: beneficiary.contactNo,
           _id: { $ne: beneficiary._id },
         })
@@ -497,6 +540,11 @@ export const createBeneficiary = async (req, res) => {
       sl,
     } = req.body;
 
+    const activeProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({ success: false, message: 'An active Project ID is required to create a beneficiary record.' });
+    }
+
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Beneficiary Name is required' });
     }
@@ -517,8 +565,13 @@ export const createBeneficiary = async (req, res) => {
     let finalSl = sl;
     if (!finalSl) {
       finalSl = isDbConnected
-        ? (await Beneficiary.countDocuments({ forumName: forumName.trim() })) + 1
-        : getFallbackRecords().filter((b) => b.forumName === forumName.trim()).length + 1;
+        ? (await Beneficiary.countDocuments({
+            projectId: new mongoose.Types.ObjectId(activeProjectId),
+            forumName: forumName.trim(),
+          })) + 1
+        : getFallbackRecords().filter(
+            (b) => String(b.projectId) === String(activeProjectId) && b.forumName === forumName.trim()
+          ).length + 1;
     }
 
     let prefix = 'BEN';
@@ -548,14 +601,13 @@ export const createBeneficiary = async (req, res) => {
     let crossForumMember = false;
     let linkedForums = [forumName.trim()];
 
-    let resolvedProjectName = projectName ? projectName.trim() : 'NAGORIC Project';
-    let resolvedProjectId = null;
-    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-      resolvedProjectId = new mongoose.Types.ObjectId(projectId);
-      if (isDbConnected) {
-        const prj = await RiskProject.findById(resolvedProjectId).select('name').lean();
-        if (prj?.name) resolvedProjectName = prj.name;
-      }
+    let resolvedProjectName = req.project?.name || (projectName ? projectName.trim() : '');
+    let resolvedProjectId = isDbConnected
+      ? new mongoose.Types.ObjectId(activeProjectId)
+      : String(activeProjectId);
+    if (!resolvedProjectName && isDbConnected) {
+      const prj = await RiskProject.findById(resolvedProjectId).select('name').lean();
+      if (prj?.name) resolvedProjectName = prj.name;
     }
 
     const newObj = {
@@ -607,6 +659,7 @@ export const createBeneficiary = async (req, res) => {
     if (!isDbConnected) {
       mockData.beneficiaries = mockData.beneficiaries || getFallbackRecords();
       mockData.beneficiaries.unshift(newObj);
+      saveStoreToDisk();
       return res.status(201).json({
         success: true,
         message: 'Beneficiary record created successfully (Demo Store)',
@@ -636,13 +689,24 @@ export const updateBeneficiary = async (req, res) => {
     const { id } = req.params;
     const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
+    const payload = { ...req.body };
+
     if (!isDbConnected) {
       const records = getFallbackRecords();
       const idx = records.findIndex((b) => String(b._id) === String(id) || b.beneficiaryId === id);
       if (idx === -1) {
         return res.status(404).json({ success: false, message: 'Beneficiary not found' });
       }
-      records[idx] = { ...records[idx], ...req.body, updatedAt: new Date() };
+      const access = await authorizeRecordProjectAccess(req, records[idx].projectId, 'BENEFICIARIES', 'EDITOR');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
+      delete payload.projectId;
+      delete payload.projectName;
+      delete payload._id;
+      delete payload.beneficiaryId;
+      records[idx] = { ...records[idx], ...payload, updatedAt: new Date() };
+      saveStoreToDisk();
       return res.json({
         success: true,
         message: 'Beneficiary updated successfully (Demo Store)',
@@ -650,14 +714,24 @@ export const updateBeneficiary = async (req, res) => {
       });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid Beneficiary ID' });
+    }
+
     const beneficiary = await Beneficiary.findById(id);
     if (!beneficiary) {
       return res.status(404).json({ success: false, message: 'Beneficiary not found' });
     }
 
-    Object.keys(req.body).forEach((k) => {
-      if (req.body[k] !== undefined && k !== '_id' && k !== 'beneficiaryId') {
-        beneficiary[k] = req.body[k];
+    const access = await authorizeRecordProjectAccess(req, beneficiary.projectId, 'BENEFICIARIES', 'EDITOR');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const immutableKeys = new Set(['_id', 'beneficiaryId', 'projectId', 'projectName']);
+    Object.keys(payload).forEach((k) => {
+      if (payload[k] !== undefined && !immutableKeys.has(k)) {
+        beneficiary[k] = payload[k];
       }
     });
 
@@ -691,18 +765,38 @@ export const deleteBeneficiary = async (req, res) => {
     const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
     if (!isDbConnected) {
+      const target = getFallbackRecords().find(
+        (b) => String(b._id) === String(id) || b.beneficiaryId === id
+      );
+      if (!target) {
+        return res.status(404).json({ success: false, message: 'Beneficiary not found' });
+      }
+      const access = await authorizeRecordProjectAccess(req, target.projectId, 'BENEFICIARIES', 'MANAGER');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
       mockData.beneficiaries = getFallbackRecords().filter(
         (b) => String(b._id) !== String(id) && b.beneficiaryId !== id
       );
+      saveStoreToDisk();
       return res.json({
         success: true,
         message: 'Beneficiary permanently deleted (Demo Store).',
       });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: 'Invalid Beneficiary ID' });
+    }
+
     const beneficiary = await Beneficiary.findById(id);
     if (!beneficiary) {
       return res.status(404).json({ success: false, message: 'Beneficiary not found' });
+    }
+
+    const access = await authorizeRecordProjectAccess(req, beneficiary.projectId, 'BENEFICIARIES', 'MANAGER');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
     }
 
     await Beneficiary.findByIdAndDelete(id);
@@ -722,23 +816,31 @@ export const deleteBeneficiary = async (req, res) => {
 export const exportBeneficiaries = async (req, res) => {
   try {
     const { forumName, division, district, upazila, union, search, projectId, format = 'json' } = req.query;
+    const activeProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active Project ID is required to export Beneficiary records.',
+      });
+    }
     const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
     let beneficiaries = [];
 
     if (!isDbConnected) {
-      beneficiaries = getFallbackRecords().slice();
-      if (projectId && projectId !== 'ALL') beneficiaries = beneficiaries.filter((b) => String(b.projectId) === String(projectId));
+      beneficiaries = getFallbackRecords().filter((b) => String(b.projectId) === String(activeProjectId));
       if (forumName && forumName !== 'ALL') beneficiaries = beneficiaries.filter((b) => b.forumName === forumName);
       if (division && division !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.division, division));
       if (district && district !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.district, district));
       if (upazila && upazila !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.upazila, upazila));
       if (union && union !== 'ALL') beneficiaries = beneficiaries.filter((b) => matchesLocation(b.union, union));
     } else {
-      const query = {};
-      if (projectId && projectId !== 'ALL' && mongoose.Types.ObjectId.isValid(projectId)) {
-        query.projectId = new mongoose.Types.ObjectId(projectId);
+      if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+        return res.status(400).json({ success: false, message: 'Invalid Project ID format.' });
       }
+      const query = {
+        projectId: new mongoose.Types.ObjectId(activeProjectId),
+      };
       if (forumName && forumName !== 'ALL') query.forumName = forumName;
       if (division && division !== 'ALL') query.division = new RegExp(`^${division.trim()}$`, 'i');
       if (district && district !== 'ALL') query.district = new RegExp(`^${district.trim()}$`, 'i');
@@ -806,13 +908,21 @@ export const batchImportBeneficiaries = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No records provided for import' });
     }
 
+    const activeProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({ success: false, message: 'An active Project ID is required for batch beneficiary import.' });
+    }
+
     const isDbConnected = !isDemoMode() && mongoose.connection.readyState === 1;
 
     let projectObjectId = null;
-    let resolvedProjectName = projectName || null;
-    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-      projectObjectId = new mongoose.Types.ObjectId(projectId);
-      if (!resolvedProjectName && isDbConnected) {
+    let resolvedProjectName = req.project?.name || projectName || null;
+    if (isDbConnected) {
+      if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+        return res.status(400).json({ success: false, message: 'Invalid Project ID format.' });
+      }
+      projectObjectId = new mongoose.Types.ObjectId(activeProjectId);
+      if (!resolvedProjectName) {
         try {
           const prj = await RiskProject.findById(projectObjectId).select('name');
           if (prj) resolvedProjectName = prj.name;
@@ -850,11 +960,12 @@ export const batchImportBeneficiaries = async (req, res) => {
       }
 
       if (isDbConnected) {
-        const existing = contactNo ? await Beneficiary.findOne({ forumName: forum, contactNo }) : null;
+        const existing = contactNo
+          ? await Beneficiary.findOne({ projectId: projectObjectId, forumName: forum, contactNo })
+          : null;
         if (existing) {
           if (overwriteDuplicates) {
             existing.name = name;
-            if (projectObjectId) existing.projectId = projectObjectId;
             if (resolvedProjectName) existing.projectName = resolvedProjectName;
             await existing.save();
             summary.updatedCount++;
@@ -866,11 +977,11 @@ export const batchImportBeneficiaries = async (req, res) => {
 
         const sl = parseInt(rec['Sl No.'] || rec.sl || i + 1, 10);
         const prefix = forum.toLowerCase().includes('amtoli') ? 'BEN-NAG-AMT' : 'BEN-NAG-UPZ';
-        const beneficiaryId = `${prefix}-${String(sl).padStart(4, '0')}-${Date.now().toString().slice(-4)}`;
+        const beneficiaryId = `${prefix}-${String(sl).padStart(4, '0')}-${Date.now().toString().slice(-4)}-${i}`;
 
         const newDoc = new Beneficiary({
           beneficiaryId,
-          projectId: projectObjectId || undefined,
+          projectId: projectObjectId,
           projectName: resolvedProjectName || undefined,
           sl,
           name,
@@ -884,7 +995,9 @@ export const batchImportBeneficiaries = async (req, res) => {
       } else {
         targetList.unshift({
           _id: `mock-ben-${Date.now()}-${i}`,
-          beneficiaryId: `BEN-IMP-${String(i + 1).padStart(4, '0')}`,
+          beneficiaryId: `BEN-IMP-${String(i + 1).padStart(4, '0')}-${Date.now().toString().slice(-4)}`,
+          projectId: String(activeProjectId),
+          projectName: resolvedProjectName || '',
           name,
           forumName: forum,
           union: union || 'Amtoli Sadar',
@@ -893,6 +1006,10 @@ export const batchImportBeneficiaries = async (req, res) => {
         });
         summary.importedCount++;
       }
+    }
+
+    if (!isDbConnected) {
+      saveStoreToDisk();
     }
 
     res.json({

@@ -133,6 +133,10 @@ const riskProjectSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    restrictAccess: {
+      type: Boolean,
+      default: false,
+    },
     assignedUsers: [assignedUserSchema],
     auditTrail: [auditTrailItemSchema],
     isDeleted: {
@@ -162,6 +166,9 @@ const riskProjectSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+riskProjectSchema.index({ isDeleted: 1, status: 1, createdAt: -1 });
+riskProjectSchema.index({ 'assignedUsers.user': 1, isDeleted: 1 });
 
 export const RiskProject = mongoose.models.RiskProject || mongoose.model('RiskProject', riskProjectSchema);
 export const Project = RiskProject;

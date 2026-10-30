@@ -5,6 +5,11 @@ import { ComplaintRecord } from '../models/ComplaintRecord.js';
 import EventRecord from '../models/EventRecord.js';
 import Beneficiary from '../models/Beneficiary.js';
 import { User } from '../models/User.js';
+import { EmployeeProjectAssignment } from '../models/EmployeeProjectAssignment.js';
+import Asset from '../models/Asset.js';
+import { AuditLog } from '../models/AuditLog.js';
+import { evaluateUserProjectPermission } from '../middlewares/projectAuth.js';
+import { getFallbackData } from './assetController.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData, saveStoreToDisk } from '../services/mockDataService.js';
 import { runProjectMigration } from '../services/projectMigration.js';
@@ -39,6 +44,14 @@ export const calculateProjectStats = async (projectId) => {
         total: beneficiaries.length,
         female: beneficiaries.filter(b => b.sex === 'Female').length,
         male: beneficiaries.filter(b => b.sex === 'Male').length,
+      },
+      resourceAssignments: {
+        assignedEmployees: (mockData.employeeProjectAssignments || []).filter(
+          a => String(a.projectId) === pIdStr && a.status === 'ACTIVE'
+        ).length,
+        assignedAssets: ((getFallbackData().assets || [])).filter(
+          a => !a.isDeleted && String(a.currentAssignment?.projectId || '') === pIdStr
+        ).length,
       }
     };
   }
@@ -46,7 +59,7 @@ export const calculateProjectStats = async (projectId) => {
   const pObjectId = new mongoose.Types.ObjectId(projectId);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [riskAgg, complaintAgg, eventAgg, benAgg] = await Promise.all([
+  const [riskAgg, complaintAgg, eventAgg, benAgg, assignedEmployeesCount, assignedAssetsCount] = await Promise.all([
     RiskRecord.aggregate([
       { $match: { projectId: pObjectId } },
       {
@@ -105,14 +118,20 @@ export const calculateProjectStats = async (projectId) => {
           dalit: { $sum: { $cond: [{ $eq: ['$dalit', 'Yes'] }, 1, 0] } }
         }
       }
-    ])
+    ]),
+    EmployeeProjectAssignment.countDocuments({ projectId: pObjectId, status: 'ACTIVE' }),
+    Asset.countDocuments({ isDeleted: { $ne: true }, 'currentAssignment.projectId': pObjectId })
   ]);
 
   return {
     risks: riskAgg[0] || { total: 0, high: 0, medium: 0, low: 0, avgScore: 0 },
     complaints: complaintAgg[0] || { total: 0, open: 0, closed: 0, overdue: 0, appeals: 0 },
     events: eventAgg[0] || { total: 0, participants: 0, reach: 0 },
-    beneficiaries: benAgg[0] || { total: 0, female: 0, male: 0, disability: 0, adibashi: 0, dalit: 0 }
+    beneficiaries: benAgg[0] || { total: 0, female: 0, male: 0, disability: 0, adibashi: 0, dalit: 0 },
+    resourceAssignments: {
+      assignedEmployees: assignedEmployeesCount || 0,
+      assignedAssets: assignedAssetsCount || 0
+    }
   };
 };
 
@@ -137,13 +156,13 @@ export const getProjects = async (req, res) => {
     const { search, status, page = 1, limit = 50, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      let list = (mockData.riskProjects || []).filter(p => !p.isDeleted);
+      let list = (mockData.riskProjects || []).filter(p => !p.isDeleted && evaluateUserProjectPermission(p, req.user).allowed);
       if (status && status !== 'ALL') {
         list = list.filter(p => p.status === status);
       }
       if (search && search.trim()) {
         const s = search.toLowerCase().trim();
-        list = list.filter(p => 
+        list = list.filter(p =>
           (p.name || '').toLowerCase().includes(s) ||
           (p.code || '').toLowerCase().includes(s) ||
           (p.description || '').toLowerCase().includes(s) ||
@@ -167,13 +186,21 @@ export const getProjects = async (req, res) => {
 
     const query = { isDeleted: { $ne: true } };
 
-    // Role-based filtering: If user is not Admin/SuperAdmin and has restricted assignments
+    // Role-based filtering: enforce exact project permission policy
     if (req.user && !['SUPER_ADMIN', 'HR_ADMIN'].includes(req.user.role)) {
-      query.$or = [
-        { 'assignedUsers.user': req.user._id },
-        { assignedUsers: { $size: 0 } },
-        { assignedUsers: { $exists: false } }
-      ];
+      if (req.user.role === 'EMPLOYEE') {
+        query.$or = [
+          { 'assignedUsers.user': req.user._id },
+          { 'assignedUsers.userEmail': (req.user.email || '').toLowerCase() }
+        ];
+      } else {
+        query.$or = [
+          { 'assignedUsers.user': req.user._id },
+          { 'assignedUsers.userEmail': (req.user.email || '').toLowerCase() },
+          { restrictAccess: { $ne: true }, assignedUsers: { $size: 0 } },
+          { restrictAccess: { $ne: true }, assignedUsers: { $exists: false } }
+        ];
+      }
     }
 
     if (status && status !== 'ALL') {
@@ -349,6 +376,16 @@ export const getProjectDashboard = async (req, res) => {
             complaints: (mockData.complaintRecords || []).filter(c => String(c.projectId) === String(id)).slice(0, 3),
             events: (mockData.eventRecords || []).filter(e => String(e.projectId) === String(id)).slice(0, 3),
             beneficiaries: (mockData.beneficiaries || []).filter(b => String(b.projectId) === String(id)).slice(0, 3)
+          },
+          resourceAssignments: {
+            assignedEmployeesCount: summary.resourceAssignments?.assignedEmployees || 0,
+            assignedAssetsCount: summary.resourceAssignments?.assignedAssets || 0,
+            assignedEmployees: (mockData.employeeProjectAssignments || []).filter(
+              a => String(a.projectId) === String(id) && a.status === 'ACTIVE'
+            ),
+            assignedAssets: ((getFallbackData().assets || [])).filter(
+              a => !a.isDeleted && String(a.currentAssignment?.projectId || '') === String(id)
+            )
           }
         }
       });
@@ -382,7 +419,9 @@ export const getProjectDashboard = async (req, res) => {
       recentRisks,
       recentComplaints,
       recentEvents,
-      recentBeneficiaries
+      recentBeneficiaries,
+      assignedEmployeeDocs,
+      assignedAssetDocs
     ] = await Promise.all([
       // 1. Risks Summary
       RiskRecord.aggregate([
@@ -501,8 +540,35 @@ export const getProjectDashboard = async (req, res) => {
       RiskRecord.find({ projectId: pObjectId }).sort({ createdAt: -1 }).limit(3).select('riskNo category description currentScore riskRating createdAt').lean(),
       ComplaintRecord.find({ projectId: pObjectId, isDeleted: { $ne: true } }).sort({ dateReceived: -1 }).limit(3).select('sNo complaintCategory status dateReceived complainantName').lean(),
       EventRecord.find({ projectId: pObjectId, isDeleted: { $ne: true } }).sort({ dateFrom: -1 }).limit(3).select('eventId eventTitle eventType dateFrom division').lean(),
-      Beneficiary.find({ projectId: pObjectId }).sort({ createdAt: -1 }).limit(3).select('beneficiaryId name sex division district forumName').lean()
+      Beneficiary.find({ projectId: pObjectId }).sort({ createdAt: -1 }).limit(3).select('beneficiaryId name sex division district forumName').lean(),
+      EmployeeProjectAssignment.find({ projectId: pObjectId, status: 'ACTIVE' })
+        .populate('employeeId', 'employeeCode personalDetails jobDetails email isDeleted')
+        .sort({ startDate: -1 })
+        .lean(),
+      Asset.find({ isDeleted: { $ne: true }, 'currentAssignment.projectId': pObjectId })
+        .sort({ assetId: 1 })
+        .select('assetId name category location custodian status condition currentAssignment')
+        .lean()
     ]);
+
+    const activeAssignedEmployees = (assignedEmployeeDocs || [])
+      .filter(a => a.employeeId && !a.employeeId.isDeleted)
+      .map(a => ({
+        _id: a._id,
+        roleInProject: a.roleInProject,
+        allocationPercentage: a.allocationPercentage,
+        startDate: a.startDate,
+        isPrimary: a.isPrimary,
+        employee: {
+          _id: a.employeeId._id,
+          employeeCode: a.employeeId.employeeCode,
+          firstName: a.employeeId.personalDetails?.firstName || '',
+          lastName: a.employeeId.personalDetails?.lastName || '',
+          email: a.employeeId.email || a.employeeId.personalDetails?.email || '',
+          title: a.employeeId.jobDetails?.title || '',
+          department: a.employeeId.jobDetails?.department || ''
+        }
+      }));
 
     return res.status(200).json({
       success: true,
@@ -513,6 +579,12 @@ export const getProjectDashboard = async (req, res) => {
           complaints: complaintStats[0] || { total: 0, open: 0, closed: 0, overdue: 0, appeals: 0, anonymous: 0 },
           events: eventStats[0] || { total: 0, participants: 0, reach: 0, govRepPresent: 0, conflictPrevention: 0 },
           beneficiaries: benStats[0] || { total: 0, female: 0, male: 0, disability: 0, adibashi: 0, dalit: 0, crossForum: 0 }
+        },
+        resourceAssignments: {
+          assignedEmployeesCount: activeAssignedEmployees.length,
+          assignedAssetsCount: (assignedAssetDocs || []).length,
+          assignedEmployees: activeAssignedEmployees,
+          assignedAssets: assignedAssetDocs || []
         },
         distributions: {
           risksByCategory,
@@ -560,6 +632,7 @@ export const createProject = async (req, res) => {
       endQuarter,
       description,
       status = 'ACTIVE',
+      restrictAccess = false,
       assignedUsers = []
     } = req.body;
 
@@ -603,6 +676,7 @@ export const createProject = async (req, res) => {
         endQuarter: (endQuarter || '').trim(),
         description: (description || '').trim(),
         status: status || 'ACTIVE',
+        restrictAccess: Boolean(restrictAccess),
         assignedUsers: Array.isArray(assignedUsers) ? assignedUsers : [],
         auditTrail: [auditEntry],
         isDeleted: false,
@@ -641,6 +715,7 @@ export const createProject = async (req, res) => {
       endQuarter: (endQuarter || '').trim(),
       description: (description || '').trim(),
       status: status || 'ACTIVE',
+      restrictAccess: Boolean(restrictAccess),
       assignedUsers: Array.isArray(assignedUsers) ? assignedUsers : [],
       auditTrail: [auditEntry],
       createdBy: req.user?._id,
@@ -735,6 +810,7 @@ export const updateProject = async (req, res) => {
     if (endQuarter !== undefined) project.endQuarter = endQuarter.trim();
     if (description !== undefined) project.description = description.trim();
     if (status !== undefined) project.status = status;
+    if (req.body.restrictAccess !== undefined) project.restrictAccess = Boolean(req.body.restrictAccess);
 
     project.updatedBy = req.user?._id;
 
@@ -856,6 +932,9 @@ export const assignProjectUsers = async (req, res) => {
       const idx = (mockData.riskProjects || []).findIndex(p => String(p._id) === String(id));
       if (idx === -1) return res.status(404).json({ success: false, message: 'Project not found' });
       mockData.riskProjects[idx].assignedUsers = assignedUsers;
+      if (req.body.restrictAccess !== undefined) {
+        mockData.riskProjects[idx].restrictAccess = Boolean(req.body.restrictAccess);
+      }
       saveStoreToDisk();
       return res.status(200).json({ success: true, message: 'Project user access assignments updated successfully', data: mockData.riskProjects[idx] });
     }
@@ -886,6 +965,9 @@ export const assignProjectUsers = async (req, res) => {
     }));
 
     project.assignedUsers = validatedAssignments;
+    if (req.body.restrictAccess !== undefined) {
+      project.restrictAccess = Boolean(req.body.restrictAccess);
+    }
     project.updatedBy = req.user?._id;
 
     project.auditTrail.push({
@@ -987,6 +1069,162 @@ export const triggerProjectMigration = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to execute project migration',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * GET /api/v1/projects/unassigned-records
+ * Retrieve any legacy records in the 4 project-linked modules that are unlinked or flagged for admin review
+ */
+export const getUnassignedRecords = async (req, res) => {
+  try {
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const risks = (mockData.riskRecords || []).filter(r => !r.projectId || r.needsProjectReview);
+      const complaints = (mockData.complaintRecords || []).filter(c => !c.isDeleted && (!c.projectId || c.needsProjectReview));
+      const events = (mockData.eventRecords || []).filter(e => !e.isDeleted && (!e.projectId || e.needsProjectReview));
+      const beneficiaries = (mockData.beneficiaries || []).filter(b => !b.projectId || b.needsProjectReview);
+      const total = risks.length + complaints.length + events.length + beneficiaries.length;
+      return res.status(200).json({
+        success: true,
+        data: { risks, complaints, events, beneficiaries, total }
+      });
+    }
+
+    const unlinkedFilter = { $or: [{ projectId: null }, { projectId: { $exists: false } }, { needsProjectReview: true }] };
+    const [risks, complaints, events, beneficiaries] = await Promise.all([
+      RiskRecord.find(unlinkedFilter).select('riskNo category description riskRating projectReviewNote createdAt').lean(),
+      ComplaintRecord.find({ ...unlinkedFilter, isDeleted: { $ne: true } }).select('sNo complaintCategory complainantName projectName projectReviewNote dateReceived').lean(),
+      EventRecord.find({ ...unlinkedFilter, isDeleted: { $ne: true } }).select('eventId eventTitle eventType projectName projectReviewNote dateFrom').lean(),
+      Beneficiary.find(unlinkedFilter).select('beneficiaryId name sex division district projectName projectReviewNote createdAt').lean()
+    ]);
+
+    const total = risks.length + complaints.length + events.length + beneficiaries.length;
+
+    return res.status(200).json({
+      success: true,
+      data: { risks, complaints, events, beneficiaries, total }
+    });
+  } catch (error) {
+    console.error('Error in getUnassignedRecords:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch unassigned records',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * POST /api/v1/projects/resolve-unassigned
+ * Explicitly link a flagged legacy record in one of the 4 modules to an authorized project
+ */
+export const resolveUnassignedRecord = async (req, res) => {
+  try {
+    const { module: targetModule, recordId, projectId } = req.body;
+    const normalizedModule = String(targetModule || '').toUpperCase().trim();
+
+    if (!['RISK', 'COMPLAINTS', 'EVENTS', 'BENEFICIARIES'].includes(normalizedModule)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid module. Expected RISK, COMPLAINTS, EVENTS, or BENEFICIARIES.'
+      });
+    }
+    if (!recordId || !projectId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Both recordId and projectId are required.'
+      });
+    }
+
+    if (isDemoMode() || mongoose.connection.readyState !== 1) {
+      const targetProject = (mockData.riskProjects || []).find(p => String(p._id) === String(projectId) && !p.isDeleted);
+      if (!targetProject) {
+        return res.status(404).json({ success: false, message: 'Target project not found.' });
+      }
+
+      const storeKeyMap = {
+        RISK: 'riskRecords',
+        COMPLAINTS: 'complaintRecords',
+        EVENTS: 'eventRecords',
+        BENEFICIARIES: 'beneficiaries'
+      };
+      const storeArr = mockData[storeKeyMap[normalizedModule]] || [];
+      const rec = storeArr.find(item => String(item._id) === String(recordId));
+      if (!rec) {
+        return res.status(404).json({ success: false, message: 'Record not found.' });
+      }
+
+      rec.projectId = targetProject._id;
+      if (normalizedModule !== 'RISK') {
+        rec.projectName = targetProject.name;
+      }
+      rec.needsProjectReview = false;
+      rec.projectReviewNote = '';
+      saveStoreToDisk();
+
+      return res.status(200).json({
+        success: true,
+        message: `Record successfully linked to "${targetProject.name}".`,
+        data: rec
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(projectId) || !mongoose.Types.ObjectId.isValid(recordId)) {
+      return res.status(400).json({ success: false, message: 'Invalid projectId or recordId format.' });
+    }
+
+    const targetProject = await RiskProject.findById(projectId).lean();
+    if (!targetProject || targetProject.isDeleted) {
+      return res.status(404).json({ success: false, message: 'Target project not found.' });
+    }
+
+    const modelMap = {
+      RISK: RiskRecord,
+      COMPLAINTS: ComplaintRecord,
+      EVENTS: EventRecord,
+      BENEFICIARIES: Beneficiary
+    };
+    const Model = modelMap[normalizedModule];
+    const updatePayload = {
+      projectId: targetProject._id,
+      needsProjectReview: false,
+      projectReviewNote: ''
+    };
+    if (normalizedModule !== 'RISK') {
+      updatePayload.projectName = targetProject.name;
+    }
+
+    const updated = await Model.findByIdAndUpdate(recordId, { $set: updatePayload }, { new: true });
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Record not found.' });
+    }
+
+    await AuditLog.create({
+      actor: req.user?._id,
+      action: 'ASSIGN',
+      entityType: normalizedModule,
+      entityId: updated._id,
+      projectId: targetProject._id,
+      metadata: {
+        resolvedLegacyRecord: true,
+        targetProjectCode: targetProject.code,
+        targetProjectName: targetProject.name
+      },
+      ipAddress: req.ip || '127.0.0.1'
+    }).catch(() => { });
+
+    return res.status(200).json({
+      success: true,
+      message: `Record successfully linked to "${targetProject.name}".`,
+      data: updated
+    });
+  } catch (error) {
+    console.error('Error in resolveUnassignedRecord:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to resolve unassigned record',
       error: error.message
     });
   }

@@ -174,6 +174,16 @@ const riskRecordSchema = new mongoose.Schema(
       default: 'OPEN',
       index: true,
     },
+    needsProjectReview: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    projectReviewNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -204,5 +214,9 @@ riskRecordSchema.pre('save', function () {
     this.assessmentRating = null;
   }
 });
+
+riskRecordSchema.index({ projectId: 1, riskNo: 1 });
+riskRecordSchema.index({ projectId: 1, status: 1, riskRating: 1 });
+riskRecordSchema.index({ projectId: 1, category: 1, createdAt: -1 });
 
 export const RiskRecord = mongoose.model('RiskRecord', riskRecordSchema);

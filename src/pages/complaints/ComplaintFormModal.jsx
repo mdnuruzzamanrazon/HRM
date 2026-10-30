@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  X, AlertTriangle, CheckCircle2, Calendar, Phone, 
-  User, Shield, FileText, Building2, Clock, Loader2, 
+import {
+  X, AlertTriangle, CheckCircle2, Calendar, Phone,
+  User, Shield, FileText, Building2, Clock, Loader2,
   HelpCircle, AlertCircle, Save, Info, Lock, Eye, EyeOff
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { useProject } from '../../context/ProjectContext';
 
 const RECEIVING_CHANNELS = [
   'Phone',
@@ -50,6 +51,8 @@ export default function ComplaintFormModal({
   isSubmitting = false
 }) {
   const isEditMode = Boolean(complaintRecord && complaintRecord._id);
+  const { registerUnsavedForm, unregisterUnsavedForm } = useProject();
+  const [lockedProjectId, setLockedProjectId] = useState(projectId);
 
   const [formData, setFormData] = useState({
     sNo: '',
@@ -165,7 +168,14 @@ export default function ComplaintFormModal({
     }
     setErrors({});
     setActiveTab('A');
-  }, [complaintRecord, isOpen, projectName, projectId]);
+    if (isOpen) {
+      setLockedProjectId(complaintRecord?.projectId || projectId);
+      registerUnsavedForm('complaint-form-modal', 'Complaint & Feedback Form');
+    } else {
+      unregisterUnsavedForm('complaint-form-modal');
+    }
+    return () => unregisterUnsavedForm('complaint-form-modal');
+  }, [complaintRecord, isOpen, projectName, projectId, registerUnsavedForm, unregisterUnsavedForm]);
 
   if (!isOpen) return null;
 
@@ -300,6 +310,12 @@ export default function ComplaintFormModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const effectiveProjectId = lockedProjectId || projectId;
+    if (!effectiveProjectId || (projectId && String(effectiveProjectId) !== String(projectId))) {
+      setErrors({ dateReceived: 'Active project changed while form was open. Please reopen the form under the target project.' });
+      setActiveTab('A');
+      return;
+    }
     if (!validate()) {
       // Find which section has error and switch tab
       if (errors.dateReceived || errors.receivingChannel || errors.receivingChannelOther) setActiveTab('A');
@@ -310,13 +326,17 @@ export default function ComplaintFormModal({
       return;
     }
 
-    onSave(formData);
+    onSave({
+      ...formData,
+      projectId: effectiveProjectId,
+      projectName,
+    });
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[94vh]">
-        
+
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 bg-slate-50 flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -350,11 +370,10 @@ export default function ComplaintFormModal({
           <button
             type="button"
             onClick={() => setActiveTab('A')}
-            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'A'
-                ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === 'A'
+              ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
           >
             <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px]">A</span>
             <span>Basic Info</span>
@@ -363,11 +382,10 @@ export default function ComplaintFormModal({
           <button
             type="button"
             onClick={() => setActiveTab('B')}
-            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'B'
-                ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === 'B'
+              ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
           >
             <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px]">B</span>
             <span>Complainant Details</span>
@@ -376,11 +394,10 @@ export default function ComplaintFormModal({
           <button
             type="button"
             onClick={() => setActiveTab('C')}
-            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'C'
-                ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === 'C'
+              ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
           >
             <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px]">C</span>
             <span>Classification &amp; Issue</span>
@@ -389,11 +406,10 @@ export default function ComplaintFormModal({
           <button
             type="button"
             onClick={() => setActiveTab('D')}
-            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'D'
-                ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === 'D'
+              ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
           >
             <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px]">D</span>
             <span>Response &amp; 30d Delay</span>
@@ -405,11 +421,10 @@ export default function ComplaintFormModal({
           <button
             type="button"
             onClick={() => setActiveTab('E')}
-            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-              activeTab === 'E'
-                ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
+            className={`px-3.5 py-2.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${activeTab === 'E'
+              ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+              }`}
           >
             <span className="w-4 h-4 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px]">E</span>
             <span>Status &amp; Appeal</span>
@@ -418,7 +433,7 @@ export default function ComplaintFormModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 custom-scrollbar space-y-6">
-          
+
           {/* Overdue Alert Banner if >30 days open */}
           {isOverdue30Days && (
             <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
@@ -427,8 +442,8 @@ export default function ComplaintFormModal({
                 <span className="font-bold block text-sm text-amber-900 mb-0.5">
                   Overdue Complaint Notice ({daysSinceReceived} days since received)
                 </span>
-                This complaint has remained open for more than 30 days. Per operational guidelines, documenting the 
-                <strong> Reason for Delay</strong> and confirming whether the 
+                This complaint has remained open for more than 30 days. Per operational guidelines, documenting the
+                <strong> Reason for Delay</strong> and confirming whether the
                 <strong> Complainant was Notified</strong> is mandatory under Section D.
               </div>
             </div>
@@ -478,9 +493,8 @@ export default function ComplaintFormModal({
                       value={formData.dateReceived}
                       onChange={handleChange}
                       required
-                      className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                        errors.dateReceived ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                      } focus:ring-2 focus:ring-indigo-500`}
+                      className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.dateReceived ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                        } focus:ring-2 focus:ring-indigo-500`}
                     />
                   </div>
                   {errors.dateReceived && (
@@ -522,9 +536,8 @@ export default function ComplaintFormModal({
                       value={formData.receivingChannelOther}
                       onChange={handleChange}
                       placeholder="e.g. Field community meeting, Townhall"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                        errors.receivingChannelOther ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                      } focus:ring-2 focus:ring-indigo-500`}
+                      className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.receivingChannelOther ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                        } focus:ring-2 focus:ring-indigo-500`}
                     />
                     {errors.receivingChannelOther && (
                       <span className="text-[11px] font-semibold text-rose-600 mt-1 block">{errors.receivingChannelOther}</span>
@@ -600,9 +613,8 @@ export default function ComplaintFormModal({
                     onChange={handleChange}
                     disabled={formData.isAnonymous}
                     placeholder={formData.isAnonymous ? 'Anonymous Complainant' : 'Full name of complainant'}
-                    className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                      errors.complainantName ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                    } ${formData.isAnonymous ? 'bg-slate-100 text-slate-500' : 'bg-white'} focus:ring-2 focus:ring-indigo-500`}
+                    className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.complainantName ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                      } ${formData.isAnonymous ? 'bg-slate-100 text-slate-500' : 'bg-white'} focus:ring-2 focus:ring-indigo-500`}
                   />
                   {errors.complainantName && (
                     <span className="text-[11px] font-semibold text-rose-600 mt-1 block">{errors.complainantName}</span>
@@ -714,9 +726,8 @@ export default function ComplaintFormModal({
                       value={formData.complaintCategoryOther}
                       onChange={handleChange}
                       placeholder="Specify custom category"
-                      className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                        errors.complaintCategoryOther ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                      } focus:ring-2 focus:ring-indigo-500`}
+                      className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.complaintCategoryOther ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                        } focus:ring-2 focus:ring-indigo-500`}
                     />
                     {errors.complaintCategoryOther && (
                       <span className="text-[11px] font-semibold text-rose-600 mt-1 block">{errors.complaintCategoryOther}</span>
@@ -753,9 +764,8 @@ export default function ComplaintFormModal({
                     value={formData.description}
                     onChange={handleChange}
                     placeholder="Provide a clear, objective, and detailed description of the feedback, complaint, allegation, or issue received..."
-                    className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                      errors.description ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                    } focus:ring-2 focus:ring-indigo-500 font-sans leading-relaxed`}
+                    className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.description ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                      } focus:ring-2 focus:ring-indigo-500 font-sans leading-relaxed`}
                   />
                   {errors.description && (
                     <span className="text-[11px] font-semibold text-rose-600 mt-1 block">{errors.description}</span>
@@ -905,9 +915,8 @@ export default function ComplaintFormModal({
               </div>
 
               {/* 13. Reason for Delay and Complainant Notification (> 30 days) */}
-              <div className={`p-4 rounded-xl border ${
-                isOverdue30Days ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/20' : 'bg-slate-50 border-slate-200'
-              } space-y-3.5`}>
+              <div className={`p-4 rounded-xl border ${isOverdue30Days ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/20' : 'bg-slate-50 border-slate-200'
+                } space-y-3.5`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Clock className={`w-4 h-4 ${isOverdue30Days ? 'text-amber-600' : 'text-slate-500'}`} />
@@ -933,9 +942,8 @@ export default function ComplaintFormModal({
                       value={formData.delayReason}
                       onChange={handleChange}
                       placeholder={isOverdue30Days ? 'Explain why the complaint could not be resolved within 30 days...' : 'Optional if within 30 days of intake'}
-                      className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                        errors.delayReason ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                      } bg-white focus:ring-2 focus:ring-indigo-500`}
+                      className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.delayReason ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                        } bg-white focus:ring-2 focus:ring-indigo-500`}
                     />
                     {errors.delayReason && (
                       <span className="text-[11px] font-semibold text-rose-600 mt-1 block">{errors.delayReason}</span>
@@ -950,9 +958,8 @@ export default function ComplaintFormModal({
                       name="isComplainantNotifiedOfDelay"
                       value={formData.isComplainantNotifiedOfDelay}
                       onChange={handleChange}
-                      className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                        errors.isComplainantNotifiedOfDelay ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                      } bg-white focus:ring-2 focus:ring-indigo-500 font-medium`}
+                      className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.isComplainantNotifiedOfDelay ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                        } bg-white focus:ring-2 focus:ring-indigo-500 font-medium`}
                     >
                       <option value="Not applicable">Not applicable (within 30 days)</option>
                       <option value="Yes">Yes (Complainant notified)</option>
@@ -1017,11 +1024,10 @@ export default function ComplaintFormModal({
                     14. Current Status <span className="text-rose-500">*</span>
                   </label>
                   <div className="flex gap-3">
-                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${
-                      formData.status === 'Open'
-                        ? 'bg-amber-50 border-amber-300 text-amber-800 ring-2 ring-amber-400/20 shadow-xs'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}>
+                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${formData.status === 'Open'
+                      ? 'bg-amber-50 border-amber-300 text-amber-800 ring-2 ring-amber-400/20 shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}>
                       <input
                         type="radio"
                         name="status"
@@ -1034,11 +1040,10 @@ export default function ComplaintFormModal({
                       <span>Open</span>
                     </label>
 
-                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${
-                      formData.status === 'Closed'
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-2 ring-emerald-400/20 shadow-xs'
-                        : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}>
+                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer font-bold text-xs transition-all ${formData.status === 'Closed'
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-2 ring-emerald-400/20 shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}>
                       <input
                         type="radio"
                         name="status"
@@ -1064,9 +1069,8 @@ export default function ComplaintFormModal({
                     value={formData.dateClosed}
                     onChange={handleChange}
                     disabled={formData.status !== 'Closed'}
-                    className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                      errors.dateClosed ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                    } ${formData.status !== 'Closed' ? 'bg-slate-100 text-slate-400' : 'bg-white'} focus:ring-2 focus:ring-indigo-500`}
+                    className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.dateClosed ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                      } ${formData.status !== 'Closed' ? 'bg-slate-100 text-slate-400' : 'bg-white'} focus:ring-2 focus:ring-indigo-500`}
                   />
                   {errors.dateClosed && (
                     <span className="text-[11px] font-semibold text-rose-600 mt-1 block">{errors.dateClosed}</span>
@@ -1103,9 +1107,8 @@ export default function ComplaintFormModal({
                       name="appealDate"
                       value={formData.appealDate}
                       onChange={handleChange}
-                      className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                        errors.appealDate ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                      } bg-white focus:ring-2 focus:ring-indigo-500`}
+                      className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.appealDate ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                        } bg-white focus:ring-2 focus:ring-indigo-500`}
                     />
                     {errors.appealDate && (
                       <span className="text-[11px] font-semibold text-rose-600 mt-1 block">{errors.appealDate}</span>
@@ -1156,9 +1159,8 @@ export default function ComplaintFormModal({
                       name="finalClosingDateAfterAppeal"
                       value={formData.finalClosingDateAfterAppeal}
                       onChange={handleChange}
-                      className={`w-full px-3 py-2 text-xs rounded-xl border ${
-                        errors.finalClosingDateAfterAppeal ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
-                      } bg-white focus:ring-2 focus:ring-indigo-500`}
+                      className={`w-full px-3 py-2 text-xs rounded-xl border ${errors.finalClosingDateAfterAppeal ? 'border-rose-400 bg-rose-50' : 'border-slate-300'
+                        } bg-white focus:ring-2 focus:ring-indigo-500`}
                     />
                     {errors.finalClosingDateAfterAppeal && (
                       <span className="text-[11px] font-semibold text-rose-600 mt-1 block">{errors.finalClosingDateAfterAppeal}</span>

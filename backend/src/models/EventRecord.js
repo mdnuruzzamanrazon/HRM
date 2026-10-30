@@ -314,6 +314,16 @@ const eventRecordSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    needsProjectReview: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    projectReviewNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     deletedAt: {
       type: Date,
       default: null,
@@ -325,6 +335,9 @@ const eventRecordSchema = new mongoose.Schema(
 );
 
 // Compound Indexes for fast cascading queries
+eventRecordSchema.index({ projectId: 1, isDeleted: 1, dateFrom: -1 });
+eventRecordSchema.index({ projectId: 1, isDeleted: 1, status: 1 });
+eventRecordSchema.index({ projectId: 1, division: 1, district: 1, upazila: 1 });
 eventRecordSchema.index({ division: 1, district: 1, upazila: 1 });
 eventRecordSchema.index({ eventType: 1, eventTheme: 1, dateFrom: -1 });
 eventRecordSchema.index({ implementingOrg: 1, dateFrom: -1 });

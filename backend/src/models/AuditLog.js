@@ -2,8 +2,13 @@ import mongoose from 'mongoose';
 
 const auditLogSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  action: { type: String, enum: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'EXPORT'], required: true },
-  module: { type: String, required: true },
+  action: {
+    type: String,
+    enum: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'EXPORT', 'IMPORT', 'ASSIGN', 'UNASSIGN', 'REASSIGN', 'ARCHIVE', 'ACCESS_DENIED'],
+    required: true
+  },
+  module: { type: String, required: true, index: true },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'RiskProject', default: null, index: true },
   resourceId: { type: mongoose.Schema.Types.ObjectId },
   previousState: { type: mongoose.Schema.Types.Mixed },
   newState: { type: mongoose.Schema.Types.Mixed },

@@ -22,6 +22,11 @@ import {
   updateReferences,
   syncFromGoogleSheets,
 } from '../controllers/assetController.js';
+import {
+  getAssetAssignmentHistory,
+  assignAsset,
+  unassignAsset,
+} from '../controllers/assetAssignmentController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 
 const router = express.Router();
@@ -78,7 +83,12 @@ router.get('/workflows', authorize(HR_READ_ROLES), getWorkflows);
 router.post('/workflows', authorize(HR_WRITE_ROLES), createWorkflow);
 router.put('/workflows/:id/stage', authorize(HR_WRITE_ROLES), updateWorkflowStage);
 
-// 9. Master Asset Register CRUD (Worksheet 2 / GID 1517243350)
+// 9. Explicit Asset -> Project / Department / Custodian Allocation APIs (Independent of Global Project Context)
+router.get('/:id/assignments', authorize(HR_READ_ROLES), getAssetAssignmentHistory);
+router.post('/:id/assign', authorize(HR_WRITE_ROLES), assignAsset);
+router.post('/:id/unassign', authorize(HR_WRITE_ROLES), unassignAsset);
+
+// 10. Master Asset Register CRUD (Worksheet 2 / GID 1517243350)
 router.get('/', authorize(HR_READ_ROLES), getAssets);
 router.get('/:id', authorize(HR_READ_ROLES), getAssetById);
 router.post('/', authorize(HR_WRITE_ROLES), createAsset);

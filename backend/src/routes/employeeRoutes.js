@@ -12,6 +12,12 @@ import {
   deleteEmployeeDocument,
   syncEmployees 
 } from '../controllers/employeeController.js';
+import {
+  getEmployeeProjectAssignments,
+  assignEmployeeToProject,
+  updateEmployeeProjectAssignment,
+  removeEmployeeProjectAssignment
+} from '../controllers/employeeAssignmentController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 
 const router = express.Router();
@@ -21,6 +27,14 @@ const adminRoles = ['SUPER_ADMIN', 'HR_ADMIN'];
 
 router.get('/', authenticate, getEmployees);
 router.post('/sync', authenticate, authorize(adminRoles), syncEmployees);
+
+// Explicit Core HR -> Project Assignment Relationship Endpoints (Independent of Global Project Context)
+router.get('/:id/projects', authenticate, getEmployeeProjectAssignments);
+router.post('/:id/projects', authenticate, authorize(hrRoles), assignEmployeeToProject);
+router.patch('/:id/projects/:assignmentId', authenticate, authorize(hrRoles), updateEmployeeProjectAssignment);
+router.put('/:id/projects/:assignmentId', authenticate, authorize(hrRoles), updateEmployeeProjectAssignment);
+router.delete('/:id/projects/:assignmentId', authenticate, authorize(hrRoles), removeEmployeeProjectAssignment);
+
 router.get('/:id', authenticate, getEmployeeById);
 router.post('/', authenticate, authorize(adminRoles), createEmployee);
 router.put('/:id', authenticate, authorize(hrRoles), updateEmployee);

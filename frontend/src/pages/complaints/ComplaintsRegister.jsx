@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -21,26 +21,26 @@ import StatusUpdateModal from './StatusUpdateModal';
 import AppealModal from './AppealModal';
 import ComplaintsPrintView from './ComplaintsPrintView';
 import { useProject } from '../../context/ProjectContext';
+import ActiveProjectBanner from '../../components/common/ActiveProjectBanner';
 
 export default function ComplaintsRegister() {
   const { user } = useAuth();
   const {
-    projects: contextProjects,
-    selectedProjectId: globalProjectId,
+    projects,
+    selectedProjectId,
     selectedProject,
-    switchProject,
+    projectSwitchVersion,
   } = useProject();
 
   // State: Subpage Navigation Tab
   const [activeTab, setActiveTab] = useState('register'); // 'register' | 'guidelines' | 'analytics'
 
   // State: Data
-  const [localProjects, setLocalProjects] = useState([]);
-  const projects = contextProjects && contextProjects.length > 0 ? contextProjects : localProjects;
-  const [selectedProjectId, setSelectedProjectId] = useState(globalProjectId || 'ALL');
   const [complaints, setComplaints] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const requestSeqRef = useRef(0);
+  const statsSeqRef = useRef(0);
 
   // State: Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,25 +107,38 @@ export default function ComplaintsRegister() {
     window.history.replaceState(null, '', url.pathname + url.search);
   };
 
-  // Initial load: Fetch Projects and initial data
+  // Reset stale records, invalid project-specific filters, and open modals when project switches
   useEffect(() => {
-    fetchProjects();
-    fetchStats();
-  }, []);
+    requestSeqRef.current += 1;
+    statsSeqRef.current += 1;
+    setComplaints([]);
+    setStats(null);
+    setTotalCount(0);
+    setTotalPages(1);
+    setPage(1);
+    setPartnerFilter('ALL');
+    setIsFormModalOpen(false);
+    setSelectedComplaint(null);
+    setIsDetailModalOpen(false);
+    setDetailComplaint(null);
+    setIsStatusModalOpen(false);
+    setStatusComplaint(null);
+    setIsAppealModalOpen(false);
+    setAppealComplaint(null);
+  }, [selectedProjectId, projectSwitchVersion]);
 
-  // Sync selectedProjectId when global project context changes
+  // Fetch complaints on project / filter / sort / page change
   useEffect(() => {
-    if (globalProjectId) {
-      setSelectedProjectId(globalProjectId);
+    if (!selectedProjectId) {
+      setLoading(false);
+      return;
     }
-  }, [globalProjectId]);
-
-  // Fetch complaints on filter / sort / page change
-  useEffect(() => {
+    const controller = new AbortController();
     if (activeTab === 'register' || activeTab === 'analytics') {
-      fetchComplaints();
-      fetchStats();
+      fetchComplaints(selectedProjectId, controller.signal);
+      fetchStats(selectedProjectId, controller.signal);
     }
+    return () => controller.abort();
   }, [
     selectedProjectId,
     statusFilter,
@@ -145,44 +158,42 @@ export default function ComplaintsRegister() {
 
   // Handle Search Debounce
   useEffect(() => {
+    if (!selectedProjectId) return;
+    const controller = new AbortController();
     const timer = setTimeout(() => {
       if (activeTab === 'register') {
-        fetchComplaints();
+        fetchComplaints(selectedProjectId, controller.signal);
       }
     }, 350);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [searchQuery]);
 
-  // Fetch projects from risk/projects endpoint to associate with register
-  const fetchProjects = async () => {
-    try {
-      const res = await api.get('/risk/projects');
-      if (res.data?.success && res.data.data) {
-        setProjects(res.data.data);
-      }
-    } catch (err) {
-      console.warn('Projects fetch note:', err.message);
-    }
-  };
-
   // Fetch Summary Stats
-  const fetchStats = async () => {
+  const fetchStats = async (targetProjectId = selectedProjectId, signal = undefined) => {
+    if (!targetProjectId) return;
+    const seq = ++statsSeqRef.current;
     try {
       const res = await api.get('/complaints/stats', {
-        params: {
-          projectId: selectedProjectId !== 'ALL' ? selectedProjectId : undefined
-        }
+        params: { projectId: targetProjectId },
+        signal,
       });
+      if (seq !== statsSeqRef.current) return;
       if (res.data?.success) {
         setStats(res.data.data);
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
       console.error('Failed to fetch complaint stats:', err);
     }
   };
 
   // Fetch Complaints List
-  const fetchComplaints = async () => {
+  const fetchComplaints = async (targetProjectId = selectedProjectId, signal = undefined) => {
+    if (!targetProjectId) return;
+    const seq = ++requestSeqRef.current;
     setLoading(true);
     try {
       const params = {
@@ -199,10 +210,11 @@ export default function ComplaintsRegister() {
         endDate: endDate || undefined,
         isOverdue: isOverdueFilter ? 'true' : undefined,
         hasAppeal: hasAppealFilter ? 'true' : undefined,
-        projectId: selectedProjectId !== 'ALL' ? selectedProjectId : undefined
+        projectId: targetProjectId
       };
 
-      const res = await api.get('/complaints', { params });
+      const res = await api.get('/complaints', { params, signal });
+      if (seq !== requestSeqRef.current) return;
       if (res.data?.success) {
         setComplaints(res.data.data || []);
         if (res.data.pagination) {
@@ -211,10 +223,14 @@ export default function ComplaintsRegister() {
         }
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
+      if (seq !== requestSeqRef.current) return;
       console.error('Failed to fetch complaints:', err);
       showToast(err.response?.data?.message || 'Failed to fetch complaints register.', 'error');
     } finally {
-      setLoading(false);
+      if (seq === requestSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -393,12 +409,12 @@ export default function ComplaintsRegister() {
     searchQuery.trim() !== ''
   ].filter(Boolean).length;
 
-  // Selected Project Object
+  // Selected Project Name
   const currentProjectName = useMemo(() => {
-    if (selectedProjectId === 'ALL') return 'All Operational Projects';
-    const found = projects.find(p => p._id === selectedProjectId);
-    return found ? found.name : 'CBDP Women & Girls Empowerment Initiative';
-  }, [projects, selectedProjectId]);
+    if (selectedProject?.name) return selectedProject.name;
+    const found = projects.find(p => String(p._id) === String(selectedProjectId));
+    return found ? found.name : 'No Project Selected';
+  }, [selectedProject, projects, selectedProjectId]);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -418,6 +434,9 @@ export default function ComplaintsRegister() {
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Shared Active Project Context Banner */}
+      <ActiveProjectBanner moduleName="Complaints & Feedback" />
 
       {/* ========================================================================= */}
       {/* TOP HEADER & MODULE SUBPAGE NAVIGATION CARD                               */}
@@ -451,32 +470,12 @@ export default function ComplaintsRegister() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
-            {/* Project Selector */}
-            <div className="relative min-w-[210px] flex-1 sm:flex-initial">
-              <Building2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <select
-                value={selectedProjectId}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedProjectId(val);
-                  setPage(1);
-                  if (val && val !== 'ALL') switchProject(val);
-                }}
-                className="w-full pl-8 pr-7 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-800 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer appearance-none truncate"
-              >
-                <option value="ALL">All Assigned Projects</option>
-                {projects.map(p => (
-                  <option key={p._id} value={p._id}>{p.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
-
             {/* Print / Export Sheet */}
             <button
               type="button"
+              disabled={!selectedProjectId}
               onClick={() => setIsPrintModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
             >
               <Printer className="w-3.5 h-3.5 text-slate-500" />
               <span>Monthly Register Sheet</span>
@@ -485,11 +484,12 @@ export default function ComplaintsRegister() {
             {/* Add Complaint / Feedback Button */}
             <button
               type="button"
+              disabled={!selectedProjectId}
               onClick={() => {
                 setSelectedComplaint(null);
                 setIsFormModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm shadow-indigo-600/25 transition-all cursor-pointer flex-shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs shadow-sm shadow-indigo-600/25 transition-all cursor-pointer flex-shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Add Complaint / Feedback</span>
@@ -1683,7 +1683,7 @@ export default function ComplaintsRegister() {
         onSave={handleSaveComplaint}
         complaintRecord={selectedComplaint}
         projectName={currentProjectName}
-        projectId={selectedProjectId !== 'ALL' ? selectedProjectId : null}
+        projectId={selectedProjectId || null}
         isSubmitting={isSubmitting}
       />
 

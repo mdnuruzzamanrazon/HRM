@@ -255,6 +255,16 @@ const complaintRecordSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    needsProjectReview: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    projectReviewNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     deletedAt: {
       type: Date,
     },
@@ -303,5 +313,9 @@ complaintRecordSchema.pre('save', function () {
     this.complainantName = 'Anonymous Complainant';
   }
 });
+
+complaintRecordSchema.index({ projectId: 1, isDeleted: 1, dateReceived: -1 });
+complaintRecordSchema.index({ projectId: 1, isDeleted: 1, status: 1 });
+complaintRecordSchema.index({ projectId: 1, isDeleted: 1, complaintCategory: 1 });
 
 export const ComplaintRecord = mongoose.model('ComplaintRecord', complaintRecordSchema);

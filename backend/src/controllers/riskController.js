@@ -10,7 +10,9 @@ import {
   IMPACT_LEVELS 
 } from '../utils/riskCalculations.js';
 import { isDemoMode } from '../config/db.js';
-import { mockData } from '../services/mockDataService.js';
+import { mockData, saveStoreToDisk } from '../services/mockDataService.js';
+import { authorizeRecordProjectAccess } from '../middlewares/projectAuth.js';
+import { AuditLog } from '../models/AuditLog.js';
 
 // Official Custom Category Sequence for Sorting and Lookups (1 to 6)
 export const CUSTOM_CATEGORY_ORDER = [
@@ -785,9 +787,11 @@ export const deleteProject = async (req, res) => {
       getMockStore();
       const idx = mockData.riskProjects.findIndex(p => String(p._id) === String(id));
       if (idx === -1) return res.status(404).json({ success: false, message: 'Project not found' });
-      mockData.riskProjects.splice(idx, 1);
-      mockData.riskRecords = mockData.riskRecords.filter(r => String(r.projectId) !== String(id));
-      return res.status(200).json({ success: true, message: 'Project and risk records removed successfully.' });
+      mockData.riskProjects[idx].status = 'ARCHIVED';
+      mockData.riskProjects[idx].isDeleted = true;
+      mockData.riskProjects[idx].deletedAt = new Date().toISOString();
+      saveStoreToDisk();
+      return res.status(200).json({ success: true, message: 'Project archived safely; associated risk records preserved.' });
     }
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -795,22 +799,25 @@ export const deleteProject = async (req, res) => {
     }
 
     const project = await RiskProject.findById(id);
-    if (!project) {
+    if (!project || project.isDeleted) {
       return res.status(404).json({ success: false, message: 'Project not found' });
     }
 
-    const deleteRecordsResult = await RiskRecord.deleteMany({ projectId: id });
-    await RiskProject.findByIdAndDelete(id);
+    project.status = 'ARCHIVED';
+    project.isDeleted = true;
+    project.deletedAt = new Date();
+    project.deletedBy = req.user?._id;
+    await project.save();
 
     return res.status(200).json({
       success: true,
-      message: `Project and ${deleteRecordsResult.deletedCount} risk records removed successfully.`
+      message: 'Project archived safely; associated records preserved.'
     });
   } catch (error) {
     console.error('Error in deleteProject:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to delete project',
+      message: 'Failed to archive project',
       error: error.message
     });
   }
@@ -840,11 +847,17 @@ export const getRiskRecords = async (req, res) => {
       limit = 50
     } = req.query;
 
+    const activeProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active Project ID is required to load Risk Register records.'
+      });
+    }
+
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       getMockStore();
-      let list = [...mockData.riskRecords];
-      const pId = projectId || mockData.riskProjects[0]?._id;
-      if (pId) list = list.filter(r => String(r.projectId) === String(pId));
+      let list = mockData.riskRecords.filter(r => String(r.projectId) === String(activeProjectId));
       if (category && category !== 'ALL') list = list.filter(r => r.category === category);
       if (subCategory && subCategory !== 'ALL') list = list.filter(r => r.subCategory === subCategory);
       if (riskOwner && riskOwner !== 'ALL') list = list.filter(r => (r.riskOwner || '').toLowerCase().includes(riskOwner.toLowerCase()));
@@ -861,25 +874,26 @@ export const getRiskRecords = async (req, res) => {
           (r.category || '').toLowerCase().includes(s)
         );
       }
+      const pageNum = Math.max(1, parseInt(page, 10));
+      const limitNum = Math.max(1, parseInt(limit, 10));
+      const total = list.length;
+      const paged = list.slice((pageNum - 1) * limitNum, pageNum * limitNum);
       return res.status(200).json({
         success: true,
-        data: list,
-        pagination: { total: list.length, page: 1, limit: 50, totalPages: 1 }
+        data: paged,
+        pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.max(1, Math.ceil(total / limitNum)) }
       });
     }
 
     await seedRiskDataIfEmpty();
 
-    const query = {};
-
-    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-      query.projectId = new mongoose.Types.ObjectId(projectId);
-    } else {
-      const defaultProj = await RiskProject.findOne().sort({ isDefault: -1, createdAt: 1 });
-      if (defaultProj) {
-        query.projectId = defaultProj._id;
-      }
+    if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+      return res.status(400).json({ success: false, message: 'Invalid Project ID format' });
     }
+
+    const query = {
+      projectId: new mongoose.Types.ObjectId(activeProjectId),
+    };
 
     if (category && category !== 'ALL') query.category = category;
     if (subCategory && subCategory !== 'ALL') query.subCategory = subCategory;
@@ -958,6 +972,8 @@ export const getRiskRecordById = async (req, res) => {
       getMockStore();
       const rec = mockData.riskRecords.find(r => String(r._id) === String(id));
       if (!rec) return res.status(404).json({ success: false, message: 'Risk record not found' });
+      const access = await authorizeRecordProjectAccess(req, rec.projectId?._id || rec.projectId, 'RISK', 'VIEWER');
+      if (!access.allowed) return res.status(access.status).json({ success: false, message: access.message });
       return res.status(200).json({ success: true, data: rec });
     }
 
@@ -968,6 +984,11 @@ export const getRiskRecordById = async (req, res) => {
     const record = await RiskRecord.findById(id).populate('projectId');
     if (!record) {
       return res.status(404).json({ success: false, message: 'Risk record not found' });
+    }
+
+    const access = await authorizeRecordProjectAccess(req, record.projectId?._id || record.projectId, 'RISK', 'VIEWER');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
     }
 
     return res.status(200).json({
@@ -1015,7 +1036,8 @@ export const createRiskRecord = async (req, res) => {
       status
     } = req.body;
 
-    if (!projectId) {
+    const resolvedProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!resolvedProjectId || resolvedProjectId === 'ALL') {
       return res.status(400).json({ success: false, message: 'Valid Project ID is required' });
     }
 
@@ -1064,7 +1086,7 @@ export const createRiskRecord = async (req, res) => {
 
       let assignedRiskNo = Number(riskNo);
       if (!assignedRiskNo || isNaN(assignedRiskNo)) {
-        const pRecords = mockData.riskRecords.filter(r => String(r.projectId) === String(projectId));
+        const pRecords = mockData.riskRecords.filter(r => String(r.projectId) === String(resolvedProjectId));
         const maxNo = pRecords.reduce((max, r) => Math.max(max, r.riskNo || 0), 0);
         assignedRiskNo = maxNo + 1;
       }
@@ -1091,7 +1113,7 @@ export const createRiskRecord = async (req, res) => {
 
       const newRec = {
         _id: 'risk-rec-' + Date.now(),
-        projectId,
+        projectId: resolvedProjectId,
         riskNo: assignedRiskNo,
         dateAdded: dateAdded ? new Date(dateAdded).toISOString() : new Date().toISOString(),
         category: category.trim(),
@@ -1123,12 +1145,13 @@ export const createRiskRecord = async (req, res) => {
         updatedAt: new Date().toISOString()
       };
       mockData.riskRecords.unshift(newRec);
+      saveStoreToDisk();
       return res.status(201).json({ success: true, message: 'Risk record created successfully', data: newRec });
     }
 
     let assignedRiskNo = Number(riskNo);
     if (!assignedRiskNo || isNaN(assignedRiskNo)) {
-      const highestRecord = await RiskRecord.findOne({ projectId }).sort({ riskNo: -1 });
+      const highestRecord = await RiskRecord.findOne({ projectId: resolvedProjectId }).sort({ riskNo: -1 });
       assignedRiskNo = highestRecord ? (highestRecord.riskNo + 1) : 1;
     }
 
@@ -1165,7 +1188,7 @@ export const createRiskRecord = async (req, res) => {
     }
 
     const newRecord = await RiskRecord.create({
-      projectId,
+      projectId: resolvedProjectId,
       riskNo: assignedRiskNo,
       dateAdded: dateAdded ? new Date(dateAdded) : new Date(),
       category: category.trim(),
@@ -1218,13 +1241,17 @@ export const createRiskRecord = async (req, res) => {
 export const updateRiskRecord = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = { ...req.body };
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       getMockStore();
       const idx = mockData.riskRecords.findIndex(r => String(r._id) === String(id));
       if (idx === -1) return res.status(404).json({ success: false, message: 'Risk record not found' });
       const rec = mockData.riskRecords[idx];
+      const access = await authorizeRecordProjectAccess(req, rec.projectId, 'RISK', 'EDITOR');
+      if (!access.allowed) return res.status(access.status).json({ success: false, message: access.message });
+      delete updates.projectId;
+      delete updates._id;
       Object.assign(rec, updates);
       rec.currentScore = calculateRiskScore(rec.likelihood, rec.impact);
       rec.riskRating = getRiskRating(rec.currentScore);
@@ -1237,6 +1264,7 @@ export const updateRiskRecord = async (req, res) => {
         rec.assessmentRating = null;
       }
       rec.updatedAt = new Date().toISOString();
+      saveStoreToDisk();
       return res.status(200).json({ success: true, message: 'Risk record updated successfully', data: rec });
     }
 
@@ -1248,6 +1276,13 @@ export const updateRiskRecord = async (req, res) => {
     if (!record) {
       return res.status(404).json({ success: false, message: 'Risk record not found' });
     }
+
+    const access = await authorizeRecordProjectAccess(req, record.projectId, 'RISK', 'EDITOR');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+    delete updates.projectId;
+    delete updates._id;
 
     if (updates.riskNo !== undefined) record.riskNo = Number(updates.riskNo);
     if (updates.dateAdded !== undefined) record.dateAdded = updates.dateAdded ? new Date(updates.dateAdded) : record.dateAdded;
@@ -1324,7 +1359,10 @@ export const deleteRiskRecord = async (req, res) => {
       getMockStore();
       const idx = mockData.riskRecords.findIndex(r => String(r._id) === String(id));
       if (idx === -1) return res.status(404).json({ success: false, message: 'Risk record not found' });
+      const access = await authorizeRecordProjectAccess(req, mockData.riskRecords[idx].projectId, 'RISK', 'MANAGER');
+      if (!access.allowed) return res.status(access.status).json({ success: false, message: access.message });
       const removed = mockData.riskRecords.splice(idx, 1)[0];
+      saveStoreToDisk();
       return res.status(200).json({ success: true, message: `Risk #${removed.riskNo} deleted successfully` });
     }
 
@@ -1332,10 +1370,17 @@ export const deleteRiskRecord = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid Risk Record ID' });
     }
 
-    const record = await RiskRecord.findByIdAndDelete(id);
-    if (!record) {
+    const existing = await RiskRecord.findById(id);
+    if (!existing) {
       return res.status(404).json({ success: false, message: 'Risk record not found' });
     }
+
+    const access = await authorizeRecordProjectAccess(req, existing.projectId, 'RISK', 'MANAGER');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const record = await RiskRecord.findByIdAndDelete(id);
 
     return res.status(200).json({
       success: true,
@@ -1783,12 +1828,17 @@ const computeRiskStatistics = (records) => {
 
 export const getRiskStats = async (req, res) => {
   try {
-    const { projectId } = req.query;
+    const activeProjectId = req.activeProjectId || req.query.projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active Project ID is required to retrieve Risk Register statistics.'
+      });
+    }
 
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       getMockStore();
-      const pId = projectId || mockData.riskProjects[0]?._id;
-      const records = pId ? mockData.riskRecords.filter(r => String(r.projectId) === String(pId)) : mockData.riskRecords;
+      const records = mockData.riskRecords.filter(r => String(r.projectId) === String(activeProjectId));
       const stats = computeRiskStatistics(records);
 
       return res.status(200).json({
@@ -1799,10 +1849,13 @@ export const getRiskStats = async (req, res) => {
 
     await seedRiskDataIfEmpty();
 
-    const match = {};
-    if (projectId && mongoose.Types.ObjectId.isValid(projectId)) {
-      match.projectId = new mongoose.Types.ObjectId(projectId);
+    if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+      return res.status(400).json({ success: false, message: 'Invalid Project ID format' });
     }
+
+    const match = {
+      projectId: new mongoose.Types.ObjectId(activeProjectId)
+    };
 
     const records = await RiskRecord.find(match);
     const stats = computeRiskStatistics(records);

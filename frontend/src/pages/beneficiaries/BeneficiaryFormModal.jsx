@@ -13,6 +13,7 @@ import {
   Info
 } from 'lucide-react';
 import LocationSelector from '../../components/common/LocationSelector';
+import { useProject } from '../../context/ProjectContext';
 
 export default function BeneficiaryFormModal({
   isOpen,
@@ -20,9 +21,14 @@ export default function BeneficiaryFormModal({
   onSubmit,
   initialData = null,
   activeForum = 'Upazilla Nagoric Forum',
+  projectId,
+  projectName = '',
   isSubmitting = false,
 }) {
   const isEditMode = Boolean(initialData && initialData._id);
+  const { selectedProject, registerUnsavedForm, unregisterUnsavedForm } = useProject();
+  const [lockedProjectId, setLockedProjectId] = useState(projectId);
+  const resolvedProjectName = projectName || selectedProject?.name || initialData?.projectName || '';
 
   const defaultFormState = {
     name: '',
@@ -32,7 +38,7 @@ export default function BeneficiaryFormModal({
     occupation: '',
     contactNo: '',
     alternativeContactNo: '',
-    projectName: 'NAGORIC Project',
+    projectName: resolvedProjectName,
     csoName: 'Community Based Development Project (CBDP)',
     category: 'Direct Beneficiary Information',
     forumName: activeForum && activeForum !== 'ALL' ? activeForum : 'Upazilla Nagoric Forum',
@@ -63,7 +69,7 @@ export default function BeneficiaryFormModal({
         occupation: initialData.occupation || '',
         contactNo: initialData.contactNo || '',
         alternativeContactNo: initialData.alternativeContactNo || '',
-        projectName: initialData.projectName || 'NAGORIC Project',
+        projectName: resolvedProjectName || initialData.projectName || '',
         csoName: initialData.csoName || 'Community Based Development Project (CBDP)',
         category: initialData.category || 'Direct Beneficiary Information',
         forumName: initialData.forumName || activeForum || 'Upazilla Nagoric Forum',
@@ -83,11 +89,19 @@ export default function BeneficiaryFormModal({
     } else {
       setFormData({
         ...defaultFormState,
+        projectName: resolvedProjectName,
         forumName: activeForum && activeForum !== 'ALL' ? activeForum : 'Upazilla Nagoric Forum',
       });
     }
     setErrors({});
-  }, [initialData, activeForum, isOpen]);
+    if (isOpen) {
+      setLockedProjectId(initialData?.projectId || projectId);
+      registerUnsavedForm('beneficiary-form-modal', 'Beneficiary Form');
+    } else {
+      unregisterUnsavedForm('beneficiary-form-modal');
+    }
+    return () => unregisterUnsavedForm('beneficiary-form-modal');
+  }, [initialData, activeForum, isOpen, projectId, resolvedProjectName, registerUnsavedForm, unregisterUnsavedForm]);
 
   if (!isOpen) return null;
 
@@ -144,10 +158,17 @@ export default function BeneficiaryFormModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const effectiveProjectId = lockedProjectId || projectId;
+    if (!effectiveProjectId || (projectId && String(effectiveProjectId) !== String(projectId))) {
+      setErrors({ name: 'Active project changed while form was open. Please reopen the form under the target project.' });
+      return;
+    }
     if (!validate()) return;
 
     const payload = {
       ...formData,
+      projectId: effectiveProjectId,
+      projectName: resolvedProjectName || formData.projectName,
       age: formData.age ? parseInt(formData.age, 10) : undefined,
       sl: formData.sl ? parseInt(formData.sl, 10) : undefined,
     };
@@ -178,7 +199,7 @@ export default function BeneficiaryFormModal({
                 {isEditMode ? 'Edit Beneficiary Record' : 'Add New Beneficiary'}
               </h3>
               <p className="text-xs text-indigo-200/80">
-                Official CBDP Project Beneficiary Registry
+                Selected Project: <strong className="text-white">{resolvedProjectName || 'Active Project'}</strong>
               </p>
             </div>
           </div>
@@ -224,14 +245,14 @@ export default function BeneficiaryFormModal({
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Project Name
+                  Active Project (Locked)
                 </label>
                 <input
                   type="text"
                   name="projectName"
-                  value={formData.projectName}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-slate-800 text-xs focus:ring-2 focus:ring-indigo-500 transition"
+                  value={resolvedProjectName || formData.projectName}
+                  readOnly
+                  className="w-full px-3 py-2 rounded-xl border border-indigo-200 bg-indigo-50/50 text-indigo-900 font-bold text-xs cursor-not-allowed"
                 />
               </div>
 

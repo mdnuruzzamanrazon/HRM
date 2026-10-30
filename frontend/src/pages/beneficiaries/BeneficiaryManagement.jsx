@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -38,14 +38,14 @@ import BeneficiaryDetailModal from './BeneficiaryDetailModal';
 import BeneficiaryFormModal from './BeneficiaryFormModal';
 import BeneficiaryImportModal from './BeneficiaryImportModal';
 import { useProject } from '../../context/ProjectContext';
+import ActiveProjectBanner from '../../components/common/ActiveProjectBanner';
 
 export default function BeneficiaryManagement() {
   const { user } = useAuth();
   const {
-    projects,
     selectedProjectId,
     selectedProject,
-    switchProject,
+    projectSwitchVersion,
   } = useProject();
   const canManage = ['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER', 'DEPT_MANAGER', 'FINANCE_OFFICER'].includes(user?.role);
   const canDelete = ['SUPER_ADMIN', 'HR_ADMIN'].includes(user?.role);
@@ -55,6 +55,8 @@ export default function BeneficiaryManagement() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
+  const requestSeqRef = useRef(0);
+  const statsSeqRef = useRef(0);
 
   // Tab & Filter states
   const [activeForumTab, setActiveForumTab] = useState('ALL'); // 'ALL' | 'Upazilla Nagoric Forum' | 'Amtoli Sadar Union Nagoric Forum' | 'Arpangasia Union Nagoric Forum'
@@ -95,31 +97,61 @@ export default function BeneficiaryManagement() {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  // Clear stale project records, invalid forum filter, and open modals when switching active project
+  useEffect(() => {
+    requestSeqRef.current += 1;
+    statsSeqRef.current += 1;
+    setBeneficiaries([]);
+    setStats(null);
+    setTotalCount(0);
+    setTotalPages(1);
+    setPage(1);
+    setActiveForumTab('ALL');
+    setIsFormOpen(false);
+    setFormInitialData(null);
+    setIsDetailOpen(false);
+    setSelectedBeneficiary(null);
+    setIsImportOpen(false);
+  }, [selectedProjectId, projectSwitchVersion]);
+
   // 1. Fetch Dynamic Stats
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (signal = undefined) => {
+    if (!selectedProjectId) {
+      setStatsLoading(false);
+      return;
+    }
+    const seq = ++statsSeqRef.current;
     try {
       setStatsLoading(true);
-      const params = {};
-      if (selectedProjectId && selectedProjectId !== 'ALL') params.projectId = selectedProjectId;
+      const params = { projectId: selectedProjectId };
       if (activeForumTab !== 'ALL') params.forumName = activeForumTab;
       if (locationFilter.division) params.division = locationFilter.division;
       if (locationFilter.district) params.district = locationFilter.district;
       if (locationFilter.upazila) params.upazila = locationFilter.upazila;
       if (locationFilter.union) params.union = locationFilter.union;
 
-      const res = await api.get('/beneficiaries/stats', { params });
+      const res = await api.get('/beneficiaries/stats', { params, signal });
+      if (seq !== statsSeqRef.current) return;
       if (res.data?.success) {
         setStats(res.data.data);
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
       console.error('Failed to fetch beneficiary stats:', err);
     } finally {
-      setStatsLoading(false);
+      if (seq === statsSeqRef.current) {
+        setStatsLoading(false);
+      }
     }
   }, [selectedProjectId, activeForumTab, locationFilter]);
 
   // 2. Fetch Beneficiaries List
-  const fetchBeneficiaries = useCallback(async () => {
+  const fetchBeneficiaries = useCallback(async (signal = undefined) => {
+    if (!selectedProjectId) {
+      setLoading(false);
+      return;
+    }
+    const seq = ++requestSeqRef.current;
     try {
       setLoading(true);
       const params = {
@@ -127,9 +159,9 @@ export default function BeneficiaryManagement() {
         limit,
         sortBy,
         sortOrder,
+        projectId: selectedProjectId,
       };
 
-      if (selectedProjectId && selectedProjectId !== 'ALL') params.projectId = selectedProjectId;
       if (searchQuery.trim()) params.search = searchQuery.trim();
       if (activeForumTab !== 'ALL') params.forumName = activeForumTab;
       if (locationFilter.division) params.division = locationFilter.division;
@@ -140,17 +172,22 @@ export default function BeneficiaryManagement() {
       if (disabilityFilter !== 'ALL') params.disability = disabilityFilter;
       if (crossForumOnly) params.crossForumOnly = 'true';
 
-      const res = await api.get('/beneficiaries', { params });
+      const res = await api.get('/beneficiaries', { params, signal });
+      if (seq !== requestSeqRef.current) return;
       if (res.data?.success) {
         setBeneficiaries(res.data.data || []);
         setTotalCount(res.data.total || 0);
         setTotalPages(res.data.totalPages || 1);
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
+      if (seq !== requestSeqRef.current) return;
       console.error('Failed to fetch beneficiaries:', err);
-      showToast('Failed to load beneficiary records', 'error');
+      showToast(err.response?.data?.message || 'Failed to load beneficiary records', 'error');
     } finally {
-      setLoading(false);
+      if (seq === requestSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, [
     page,
@@ -167,11 +204,15 @@ export default function BeneficiaryManagement() {
   ]);
 
   useEffect(() => {
-    fetchStats();
+    const controller = new AbortController();
+    fetchStats(controller.signal);
+    return () => controller.abort();
   }, [fetchStats]);
 
   useEffect(() => {
-    fetchBeneficiaries();
+    const controller = new AbortController();
+    fetchBeneficiaries(controller.signal);
+    return () => controller.abort();
   }, [fetchBeneficiaries]);
 
   // Handle Tab Switch
@@ -358,6 +399,9 @@ export default function BeneficiaryManagement() {
         </div>
       )}
 
+      {/* Shared Active Project Context Banner */}
+      <ActiveProjectBanner moduleName="Beneficiary Information" />
+
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
@@ -383,38 +427,22 @@ export default function BeneficiaryManagement() {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Project Selector */}
-          <div className="relative min-w-[210px]">
-            <Building2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <select
-              value={selectedProjectId || 'ALL'}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val && val !== 'ALL') switchProject(val);
-              }}
-              className="w-full pl-8 pr-7 py-2.5 text-xs font-bold rounded-xl border border-slate-200 bg-white text-slate-800 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 shadow-xs cursor-pointer appearance-none truncate"
-            >
-              <option value="ALL">All Beneficiary Records</option>
-              {projects.map(p => (
-                <option key={p._id} value={p._id}>{p.name}</option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          </div>
           <button
+            disabled={!selectedProjectId}
             onClick={() => {
               fetchBeneficiaries();
               fetchStats();
             }}
             title="Refresh database records"
-            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-xs"
+            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 transition shadow-xs"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
           <button
+            disabled={!selectedProjectId}
             onClick={() => handleExport('csv')}
-            className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition flex items-center gap-2 shadow-xs"
+            className="px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 font-semibold text-xs transition flex items-center gap-2 shadow-xs"
           >
             <Download className="w-4 h-4 text-slate-500" />
             <span>Export CSV</span>
@@ -422,8 +450,9 @@ export default function BeneficiaryManagement() {
 
           {canManage && (
             <button
+              disabled={!selectedProjectId}
               onClick={() => setIsImportOpen(true)}
-              className="px-3.5 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-indigo-700 font-semibold text-xs transition flex items-center gap-2 shadow-xs"
+              className="px-3.5 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 disabled:opacity-50 text-indigo-700 font-semibold text-xs transition flex items-center gap-2 shadow-xs"
             >
               <UploadCloud className="w-4 h-4 text-indigo-600" />
               <span>Import Sheet</span>
@@ -432,11 +461,12 @@ export default function BeneficiaryManagement() {
 
           {canManage && (
             <button
+              disabled={!selectedProjectId}
               onClick={() => {
                 setFormInitialData(null);
                 setIsFormOpen(true);
               }}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition flex items-center gap-2 shadow-sm shadow-indigo-600/30"
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs transition flex items-center gap-2 shadow-sm shadow-indigo-600/30"
             >
               <UserPlus className="w-4 h-4" />
               <span>+ Add Beneficiary</span>
@@ -1164,6 +1194,8 @@ export default function BeneficiaryManagement() {
         onSubmit={handleFormSubmit}
         initialData={formInitialData}
         activeForum={activeForumTab}
+        projectId={selectedProjectId}
+        projectName={selectedProject?.name || ''}
         isSubmitting={isSubmitting}
       />
 
@@ -1173,6 +1205,8 @@ export default function BeneficiaryManagement() {
         onClose={() => setIsImportOpen(false)}
         onImportConfirm={handleImportConfirm}
         activeForum={activeForumTab}
+        projectId={selectedProjectId}
+        projectName={selectedProject?.name || ''}
         isImporting={isImporting}
       />
 

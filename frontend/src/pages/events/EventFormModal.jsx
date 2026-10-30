@@ -6,15 +6,20 @@ import {
 } from 'lucide-react';
 import LocationSelector from '../../components/common/LocationSelector';
 import eventMetadata from '../../data/eventMetadata.json';
+import { useProject } from '../../context/ProjectContext';
 
 export default function EventFormModal({
   isOpen,
   onClose,
   onSave,
   eventRecord,
+  projectId,
+  projectName = '',
   isSubmitting = false,
 }) {
   const isEditing = Boolean(eventRecord && eventRecord._id);
+  const { selectedProject, registerUnsavedForm, unregisterUnsavedForm } = useProject();
+  const [lockedProjectId, setLockedProjectId] = useState(projectId);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -143,8 +148,13 @@ export default function EventFormModal({
         });
       }
       setValidationErrors({});
+      setLockedProjectId(eventRecord?.projectId || projectId);
+      registerUnsavedForm('event-form-modal', 'Event Tracker Form');
+    } else {
+      unregisterUnsavedForm('event-form-modal');
     }
-  }, [isOpen, eventRecord]);
+    return () => unregisterUnsavedForm('event-form-modal');
+  }, [isOpen, eventRecord, projectId, registerUnsavedForm, unregisterUnsavedForm]);
 
   if (!isOpen) return null;
 
@@ -226,10 +236,19 @@ export default function EventFormModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const effectiveProjectId = lockedProjectId || projectId;
+    if (!effectiveProjectId || (projectId && String(effectiveProjectId) !== String(projectId))) {
+      setValidationErrors({ eventTitle: 'Active project changed while form was open. Please reopen the form under the target project.' });
+      return;
+    }
     if (!validateForm()) {
       return;
     }
-    onSave(formData);
+    onSave({
+      ...formData,
+      projectId: effectiveProjectId,
+      projectName: projectName || selectedProject?.name || '',
+    });
   };
 
   return (
@@ -252,7 +271,7 @@ export default function EventFormModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Official CBDP Event Tracker data entry conforming to CEF performance indicators.
+                Selected Project: <strong className="text-indigo-700">{projectName || selectedProject?.name || 'Active Project'}</strong>
               </p>
             </div>
           </div>

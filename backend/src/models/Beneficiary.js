@@ -229,6 +229,16 @@ const beneficiarySchema = new mongoose.Schema(
     },
 
     // 10. Audit Trail
+    needsProjectReview: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    projectReviewNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     auditTrail: [auditTrailItemSchema],
   },
   {
@@ -237,6 +247,9 @@ const beneficiarySchema = new mongoose.Schema(
 );
 
 // Compound index for fast hierarchical search and filtering
+beneficiarySchema.index({ projectId: 1, status: 1, sl: 1 });
+beneficiarySchema.index({ projectId: 1, forumName: 1 });
+beneficiarySchema.index({ projectId: 1, division: 1, district: 1, upazila: 1, union: 1 });
 beneficiarySchema.index({ division: 1, district: 1, upazila: 1, union: 1 });
 beneficiarySchema.index({ projectName: 1, forumName: 1 });
 beneficiarySchema.index({ name: 'text', contactNo: 'text', occupation: 'text', village: 'text' });

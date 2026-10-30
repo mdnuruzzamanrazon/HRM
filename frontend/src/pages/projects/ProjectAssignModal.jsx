@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Users, UserCheck, Shield, Check, AlertCircle, Save } from 'lucide-react';
+import { X, Users, Shield, Check, AlertCircle, Save, Lock } from 'lucide-react';
 import api from '../../services/api';
 
 const AVAILABLE_MODULES = [
@@ -9,9 +9,24 @@ const AVAILABLE_MODULES = [
   { id: 'BENEFICIARIES', name: 'Beneficiary Information' },
 ];
 
+const resolveTargetUserId = (u) =>
+  u?.userAccount?._id || u?.userAccount || u?.userId?._id || u?.userId || u?._id;
+
+const resolveTargetEmail = (u) =>
+  u?.userAccount?.email || u?.email || u?.workEmail || u?.personalDetails?.email || '';
+
+const resolveDisplayName = (u) => {
+  if (u?.name) return u.name;
+  const fn = u?.firstName || u?.personalDetails?.firstName || '';
+  const ln = u?.lastName || u?.personalDetails?.lastName || '';
+  const full = `${fn} ${ln}`.trim();
+  return full || resolveTargetEmail(u) || 'Staff Member';
+};
+
 export default function ProjectAssignModal({ isOpen, onClose, onSave, project }) {
   const [users, setUsers] = useState([]);
   const [assignedUsers, setAssignedUsers] = useState([]);
+  const [restrictAccess, setRestrictAccess] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -19,6 +34,7 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
+      setRestrictAccess(Boolean(project?.restrictAccess));
       if (project?.assignedUsers) {
         setAssignedUsers(
           project.assignedUsers.map(a => ({
@@ -38,10 +54,11 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
   const fetchUsers = async () => {
     try {
       setLoadingUsers(true);
-      const res = await api.get('/employees');
-      // Also fetch users if possible, or build from employees
+      const res = await api.get('/employees', { params: { limit: 200 } });
       if (res.data?.data) {
-        setUsers(res.data.data.filter(e => e.email));
+        setUsers(
+          res.data.data.filter(e => Boolean(resolveTargetUserId(e)) && Boolean(resolveTargetEmail(e)))
+        );
       }
     } catch (err) {
       console.warn('Failed to load user list:', err.message);
@@ -53,20 +70,23 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
   if (!isOpen || !project) return null;
 
   const handleToggleUser = (userObj) => {
+    const targetUserId = resolveTargetUserId(userObj);
+    const targetEmail = resolveTargetEmail(userObj);
+
     const existingIndex = assignedUsers.findIndex(
-      a => String(a.user) === String(userObj._id) || a.userEmail?.toLowerCase() === userObj.email?.toLowerCase()
+      a =>
+        String(a.user) === String(targetUserId) ||
+        (targetEmail && a.userEmail?.toLowerCase() === targetEmail.toLowerCase())
     );
 
     if (existingIndex !== -1) {
-      // Remove
       setAssignedUsers(assignedUsers.filter((_, idx) => idx !== existingIndex));
     } else {
-      // Add
       setAssignedUsers([
         ...assignedUsers,
         {
-          user: userObj.userId || userObj._id,
-          userEmail: userObj.email,
+          user: targetUserId,
+          userEmail: targetEmail,
           role: 'EDITOR',
           modules: ['RISK', 'COMPLAINTS', 'EVENTS', 'BENEFICIARIES'],
         }
@@ -100,7 +120,7 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
 
     try {
       setSubmitting(true);
-      await onSave(project._id, assignedUsers);
+      await onSave(project._id, assignedUsers, restrictAccess);
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to update user assignments.');
@@ -123,7 +143,7 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
                 Manage Project Access: {project.name}
               </h3>
               <p className="text-xs text-slate-400">
-                Assign authorized personnel and specify module permissions ({project.code || 'PRJ'})
+                Assign authorized user accounts and module permissions ({project.code || 'PRJ'})
               </p>
             </div>
           </div>
@@ -147,25 +167,43 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
 
           <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 text-xs text-indigo-900 flex items-start gap-3">
             <Shield className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold">Project-Level Authorization Policy</p>
-              <p className="text-indigo-800/80 mt-0.5 leading-relaxed">
-                Super Admins and HR Admins have permanent system-wide access. For other roles, assigning members here limits record visibility, editing, and exports strictly to authorized projects and selected modules.
-              </p>
+            <div className="flex-1 space-y-2">
+              <div>
+                <p className="font-bold">Project-Level Authorization Policy</p>
+                <p className="text-indigo-800/80 mt-0.5 leading-relaxed">
+                  Super Admins and HR Admins retain system-wide governance access. Non-admin users only gain access according to their assigned project role and module permissions below.
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-2 pt-1 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={restrictAccess}
+                  onChange={(e) => setRestrictAccess(e.target.checked)}
+                  className="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="font-bold text-indigo-950 flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                  Restrict access strictly to explicitly listed users (even when list is empty)
+                </span>
+              </label>
             </div>
           </div>
 
           {/* Assigned Members Section */}
           <div className="space-y-3">
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-              Assigned Team Members ({assignedUsers.length})
+              Assigned User Permissions ({assignedUsers.length})
             </h4>
 
             {assignedUsers.length === 0 ? (
               <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs">
                 <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="font-semibold text-slate-600">No specific users assigned yet</p>
-                <p className="mt-1">All authorized HR staff currently have standard role-based access.</p>
+                <p className="font-semibold text-slate-600">No specific user permissions configured</p>
+                <p className="mt-1">
+                  {restrictAccess
+                    ? 'Restricted mode active: only Super Admins and HR Admins can access this project.'
+                    : 'Standard HR Manager/Officer roles have default workspace access until restricted.'}
+                </p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -174,14 +212,14 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
                     key={String(assignment.user)}
                     className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-3"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center">
                           {assignment.userEmail?.charAt(0).toUpperCase() || 'U'}
                         </div>
                         <div>
                           <p className="text-xs font-bold text-slate-900">{assignment.userEmail}</p>
-                          <span className="text-[10px] text-slate-400">Team Member</span>
+                          <span className="text-[10px] text-slate-400">Authorized Project Member</span>
                         </div>
                       </div>
 
@@ -213,7 +251,7 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
                     {/* Module permissions checkboxes */}
                     <div className="pt-2 border-t border-slate-200/70">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                        Permitted Modules:
+                        Permitted Project-Linked Modules:
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {AVAILABLE_MODULES.map((mod) => {
@@ -248,17 +286,22 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
           {/* Available Users to Add */}
           <div className="space-y-3 pt-2 border-t border-slate-200/80">
             <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-              Add Available Team Members
+              Add Staff Accounts from Directory
             </h4>
             <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-2xl divide-y divide-slate-100 custom-scrollbar">
               {loadingUsers ? (
                 <div className="p-4 text-center text-xs text-slate-400">Loading directory...</div>
               ) : users.length === 0 ? (
-                <div className="p-4 text-center text-xs text-slate-400">No other employees found.</div>
+                <div className="p-4 text-center text-xs text-slate-400">No linked user accounts found.</div>
               ) : (
                 users.map((u) => {
+                  const targetUserId = resolveTargetUserId(u);
+                  const targetEmail = resolveTargetEmail(u);
+                  const displayName = resolveDisplayName(u);
                   const isAssigned = assignedUsers.some(
-                    a => String(a.user) === String(u._id) || a.userEmail?.toLowerCase() === u.email?.toLowerCase()
+                    a =>
+                      String(a.user) === String(targetUserId) ||
+                      (targetEmail && a.userEmail?.toLowerCase() === targetEmail.toLowerCase())
                   );
                   return (
                     <div
@@ -267,11 +310,13 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
-                          {u.name?.charAt(0) || u.email?.charAt(0) || 'U'}
+                          {displayName.charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-800 truncate">{u.name || u.email}</p>
-                          <p className="text-[10px] text-slate-400 truncate">{u.email} &bull; {u.jobDetails?.designation || 'Staff'}</p>
+                          <p className="text-xs font-bold text-slate-800 truncate">{displayName}</p>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {targetEmail} &bull; {u.title || u.jobDetails?.title || u.jobDetails?.designation || 'Staff'}
+                          </p>
                         </div>
                       </div>
 
@@ -284,7 +329,7 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
                             : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xs'
                         }`}
                       >
-                        {isAssigned ? 'Remove' : '+ Assign'}
+                        {isAssigned ? 'Remove' : '+ Grant Access'}
                       </button>
                     </div>
                   );
@@ -309,7 +354,7 @@ export default function ProjectAssignModal({ isOpen, onClose, onSave, project })
               className="inline-flex items-center gap-2 px-5 py-2.2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              <span>{submitting ? 'Saving Assignments...' : 'Save Permissions'}</span>
+              <span>{submitting ? 'Saving Permissions...' : 'Save Permissions'}</span>
             </button>
           </div>
         </form>

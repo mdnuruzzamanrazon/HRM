@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { useProject } from '../../context/ProjectContext';
 import QRCode from 'qrcode';
 import {
   Boxes,
@@ -36,7 +38,9 @@ import {
   Building2,
   ExternalLink,
   SlidersHorizontal,
-  X
+  X,
+  FolderKanban,
+  ArrowRightLeft
 } from 'lucide-react';
 
 import {
@@ -55,6 +59,7 @@ import {
 
 import AssetDetailModal from './AssetDetailModal';
 import AssetFormModal from './AssetFormModal';
+import AssetAssignModal from './AssetAssignModal';
 import FieldKitModal from './FieldKitModal';
 import VehicleLogModal from './VehicleLogModal';
 import HandoverModal from './HandoverModal';
@@ -65,11 +70,17 @@ const COLORS = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'
 
 export default function AssetTracker() {
   const { user } = useAuth();
+  // Asset Tracker is an independent master inventory and NEVER automatically switches with Global Project Context (selectedProjectId).
+  // Only `projects` is read to populate optional local allocation filter dropdowns.
+  const { projects } = useProject();
+  const [searchParams, setSearchParams] = useSearchParams();
   const canManage = ['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER', 'DEPT_MANAGER', 'FINANCE_OFFICER'].includes(user?.role);
   const canDelete = ['SUPER_ADMIN', 'HR_ADMIN'].includes(user?.role);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'register' | 'qr-system' | 'field-kits' | 'handovers' | 'vehicle-log' | 'workflows' | 'references'
+  const [activeTab, setActiveTab] = useState(
+    () => (searchParams.get('assignedProjectId') ? 'register' : 'overview')
+  ); // 'overview' | 'register' | 'qr-system' | 'field-kits' | 'handovers' | 'vehicle-log' | 'workflows' | 'references'
 
   // Data States
   const [dashboardData, setDashboardData] = useState(null);
@@ -94,7 +105,12 @@ export default function AssetTracker() {
   const [locationFilter, setLocationFilter] = useState('ALL');
   const [riskFilter, setRiskFilter] = useState('ALL');
   const [donorFilter, setDonorFilter] = useState('ALL');
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [assignedProjectFilter, setAssignedProjectFilter] = useState(
+    () => searchParams.get('assignedProjectId') || 'ALL'
+  );
+  const [filtersOpen, setFiltersOpen] = useState(
+    () => Boolean(searchParams.get('assignedProjectId'))
+  );
 
   // Pagination & Sorting
   const [page, setPage] = useState(1);
@@ -106,6 +122,7 @@ export default function AssetTracker() {
 
   // Modals
   const [selectedAsset, setSelectedAsset] = useState(null);
+  const [assigningAsset, setAssigningAsset] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formInitialData, setFormInitialData] = useState(null);
@@ -160,6 +177,7 @@ export default function AssetTracker() {
       if (locationFilter !== 'ALL') params.location = locationFilter;
       if (riskFilter !== 'ALL') params.riskFlag = riskFilter;
       if (donorFilter !== 'ALL') params.projectDonor = donorFilter;
+      if (assignedProjectFilter !== 'ALL') params.assignedProjectId = assignedProjectFilter;
 
       const res = await api.get('/assets', { params });
       if (res.data?.success) {
@@ -173,7 +191,7 @@ export default function AssetTracker() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortBy, sortOrder, searchQuery, categoryFilter, statusFilter, locationFilter, riskFilter, donorFilter]);
+  }, [page, limit, sortBy, sortOrder, searchQuery, categoryFilter, statusFilter, locationFilter, riskFilter, donorFilter, assignedProjectFilter]);
 
   // 3. Fetch Supporting Data
   const fetchSupportingData = useCallback(async () => {
@@ -213,6 +231,15 @@ export default function AssetTracker() {
     setPage(1);
   };
 
+  useEffect(() => {
+    const queryProjectId = searchParams.get('assignedProjectId');
+    if (queryProjectId) {
+      setAssignedProjectFilter(queryProjectId);
+      setActiveTab('register');
+      setFiltersOpen(true);
+    }
+  }, [searchParams]);
+
   const handleClearFilters = () => {
     setSearchQuery('');
     setCategoryFilter('ALL');
@@ -220,6 +247,12 @@ export default function AssetTracker() {
     setLocationFilter('ALL');
     setRiskFilter('ALL');
     setDonorFilter('ALL');
+    setAssignedProjectFilter('ALL');
+    if (searchParams.has('assignedProjectId')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('assignedProjectId');
+      setSearchParams(next, { replace: true });
+    }
     setPage(1);
   };
 
@@ -944,10 +977,10 @@ export default function AssetTracker() {
                   }`}
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
-                  Filters {(categoryFilter !== 'ALL' || statusFilter !== 'ALL' || riskFilter !== 'ALL') ? '(Active)' : ''}
+                  Filters {(categoryFilter !== 'ALL' || statusFilter !== 'ALL' || riskFilter !== 'ALL' || assignedProjectFilter !== 'ALL') ? '(Active)' : ''}
                 </button>
 
-                {(searchQuery || categoryFilter !== 'ALL' || statusFilter !== 'ALL' || riskFilter !== 'ALL' || locationFilter !== 'ALL') && (
+                {(searchQuery || categoryFilter !== 'ALL' || statusFilter !== 'ALL' || riskFilter !== 'ALL' || locationFilter !== 'ALL' || assignedProjectFilter !== 'ALL') && (
                   <button
                     type="button"
                     onClick={handleClearFilters}
@@ -966,7 +999,35 @@ export default function AssetTracker() {
 
             {/* Collapsible Filter Panel */}
             {filtersOpen && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-3 border-t border-slate-100 animate-in fade-in duration-150">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 pt-3 border-t border-slate-100 animate-in fade-in duration-150">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Allocated Project</label>
+                  <select
+                    value={assignedProjectFilter}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      handleFilterChange(setAssignedProjectFilter, val);
+                      if (val === 'ALL') {
+                        if (searchParams.has('assignedProjectId')) {
+                          const next = new URLSearchParams(searchParams);
+                          next.delete('assignedProjectId');
+                          setSearchParams(next, { replace: true });
+                        }
+                      } else {
+                        setSearchParams({ assignedProjectId: val }, { replace: true });
+                      }
+                    }}
+                    className="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-lg bg-white"
+                  >
+                    <option value="ALL">All Master Assets</option>
+                    {(projects || []).map((p) => (
+                      <option key={p._id} value={p._id}>
+                        {p.projectCode ? `${p.projectCode} — ` : ''}{p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1">Category</label>
                   <select
@@ -1089,6 +1150,14 @@ export default function AssetTracker() {
                         <td className="py-3 px-3 text-slate-600">
                           <div className="font-medium text-slate-800">{asset.location}</div>
                           <div className="text-[11px] text-slate-400">{asset.custodian || 'Unassigned'}</div>
+                          {(asset.currentAssignment?.projectCode || asset.currentAssignment?.projectName) && (
+                            <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[10px] font-bold">
+                              <FolderKanban className="w-2.5 h-2.5 shrink-0" />
+                              <span className="truncate max-w-[130px]">
+                                {asset.currentAssignment.projectCode || asset.currentAssignment.projectName}
+                              </span>
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-right font-mono text-slate-700 whitespace-nowrap">
                           {Number(asset.purchaseCost || 0).toLocaleString()} BDT
@@ -1124,6 +1193,16 @@ export default function AssetTracker() {
                             >
                               <Eye className="w-4 h-4" />
                             </button>
+                            {canManage && (
+                              <button
+                                type="button"
+                                onClick={() => setAssigningAsset(asset)}
+                                className="p-1.5 text-slate-500 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition"
+                                title="Allocate / Transfer Project or Custody"
+                              >
+                                <ArrowRightLeft className="w-4 h-4" />
+                              </button>
+                            )}
                             {canManage && (
                               <button
                                 type="button"
@@ -1686,9 +1765,22 @@ export default function AssetTracker() {
           setFormInitialData(a);
           setIsFormOpen(true);
         }}
+        onAllocate={canManage ? (a) => setAssigningAsset(a) : undefined}
         onPrintSingle={(a) => {
           setSelectedQrAssetIds([a.assetId]);
           window.print();
+        }}
+      />
+
+      {/* Independent Asset Allocation & Custody Transfer Modal */}
+      <AssetAssignModal
+        isOpen={Boolean(assigningAsset)}
+        onClose={() => setAssigningAsset(null)}
+        asset={assigningAsset}
+        onUpdated={() => {
+          fetchAssets();
+          fetchDashboard();
+          showToast('Asset allocation & custody history updated');
         }}
       />
 

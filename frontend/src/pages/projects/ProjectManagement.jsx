@@ -1,14 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProject } from '../../context/ProjectContext';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import { 
   FolderKanban, Plus, Search, Filter, ShieldCheck, 
   MapPin, Calendar, Clock, ArrowUpRight, Users, Edit3, 
   Trash2, RefreshCw, Layers, CheckCircle2, AlertTriangle, 
   FileText, ShieldAlert, FolderClock, CalendarDays, HeartHandshake,
   LayoutGrid, Table as TableIcon, ExternalLink, Sparkles, Building2,
-  Lock, Check, AlertCircle, Eye, Archive
+  Lock, Check, AlertCircle, Eye, Archive, Boxes, Power, X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '../../utils/cn';
@@ -41,6 +42,10 @@ export default function ProjectManagement() {
   const [editingProject, setEditingProject] = useState(null);
   const [assigningProject, setAssigningProject] = useState(null);
   const [archiveConfirm, setArchiveConfirm] = useState(null);
+  const [unassignedData, setUnassignedData] = useState({ total: 0, risks: [], complaints: [], events: [], beneficiaries: [] });
+  const [isUnassignedModalOpen, setIsUnassignedModalOpen] = useState(false);
+  const [targetProjectMap, setTargetProjectMap] = useState({});
+  const [resolvingId, setResolvingId] = useState(null);
 
   // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -51,6 +56,42 @@ export default function ProjectManagement() {
 
   const canManage = ['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER'].includes(user?.role);
   const canArchive = ['SUPER_ADMIN', 'HR_ADMIN'].includes(user?.role);
+
+  const fetchUnassignedRecords = useCallback(async () => {
+    if (!canArchive) return;
+    try {
+      const res = await api.get('/projects/unassigned-records');
+      if (res.data?.success && res.data.data) {
+        setUnassignedData(res.data.data);
+      }
+    } catch (_) {}
+  }, [canArchive]);
+
+  useEffect(() => {
+    fetchUnassignedRecords();
+  }, [fetchUnassignedRecords]);
+
+  const handleResolveRecord = async (moduleKey, recordId) => {
+    const chosenProjectId = targetProjectMap[recordId] || selectedProjectId || projects[0]?._id;
+    if (!chosenProjectId) return;
+    try {
+      setResolvingId(recordId);
+      const res = await api.post('/projects/resolve-unassigned', {
+        module: moduleKey,
+        recordId,
+        projectId: chosenProjectId,
+      });
+      if (res.data?.success) {
+        showToast(res.data.message || 'Legacy record linked to project');
+        await fetchUnassignedRecords();
+        await refreshProjects();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to resolve record', 'error');
+    } finally {
+      setResolvingId(null);
+    }
+  };
 
   // Filter projects
   const filteredProjects = useMemo(() => {
@@ -194,6 +235,29 @@ export default function ProjectManagement() {
       </div>
 
       {/* Aggregate Overview Metrics */}
+      {canArchive && unassignedData.total > 0 && (
+        <div className="rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">
+                {unassignedData.total} Legacy Record{unassignedData.total === 1 ? '' : 's'} Flagged for Project Review
+              </p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Ambiguous legacy records are never guessed automatically. Review and explicitly link each record to its rightful project.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsUnassignedModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors cursor-pointer self-start sm:self-auto"
+          >
+            Review Flagged Records
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
         <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
           <p className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400">Total Projects</p>
@@ -443,6 +507,28 @@ export default function ProjectManagement() {
                   </div>
                 </div>
 
+                {/* Independent Resource Assignments Summary Strip */}
+                <div className="px-5 py-2 bg-indigo-50/40 border-b border-slate-100 flex items-center justify-between text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/employees?assignedProjectId=${p._id}`)}
+                    className="inline-flex items-center gap-1.5 font-semibold text-slate-600 hover:text-indigo-700 cursor-pointer"
+                    title="View Core HR staff assigned to this project"
+                  >
+                    <Users className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>{p.stats?.resourceAssignments?.assignedEmployees || 0} HR Staff Assigned</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/assets?assignedProjectId=${p._id}`)}
+                    className="inline-flex items-center gap-1.5 font-semibold text-slate-600 hover:text-indigo-700 cursor-pointer"
+                    title="View Assets allocated to this project"
+                  >
+                    <Boxes className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{p.stats?.resourceAssignments?.assignedAssets || 0} Assets Allocated</span>
+                  </button>
+                </div>
+
                 {/* Bottom Actions */}
                 <div className="p-4 bg-white flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
@@ -466,6 +552,14 @@ export default function ProjectManagement() {
                           title="Manage Access & Assign Users"
                         >
                           <Users className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(p)}
+                          className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors cursor-pointer"
+                          title={p.status === 'ACTIVE' ? 'Deactivate Project' : 'Activate Project'}
+                        >
+                          <Power className="w-4 h-4" />
                         </button>
                       </>
                     )}
@@ -624,6 +718,70 @@ export default function ProjectManagement() {
         onSave={assignUsers}
         project={assigningProject}
       />
+
+      {/* Archive Confirmation Dialog */}
+      {isUnassignedModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white max-w-3xl w-full rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh]">
+            <div className="px-6 py-4 bg-slate-950 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-black">Review Flagged Legacy Records ({unassignedData.total})</h3>
+                <p className="text-xs text-slate-400">Assign unlinked or ambiguous records to their verified project</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsUnassignedModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+              {[
+                { key: 'RISK', label: 'Risk Register', items: unassignedData.risks || [], titleFn: (r) => `Risk #${r.riskNo || '—'}: ${r.category || ''} — ${r.description || ''}` },
+                { key: 'COMPLAINTS', label: 'Complaints & Feedback', items: unassignedData.complaints || [], titleFn: (c) => `${c.sNo || 'Complaint'} — ${c.complaintCategory || ''} (${c.complainantName || 'Anonymous'})` },
+                { key: 'EVENTS', label: 'Event Tracker', items: unassignedData.events || [], titleFn: (e) => `${e.eventId || 'Event'} — ${e.eventTitle || ''}` },
+                { key: 'BENEFICIARIES', label: 'Beneficiary Information', items: unassignedData.beneficiaries || [], titleFn: (b) => `${b.beneficiaryId || 'Beneficiary'} — ${b.name || ''}` },
+              ].map((group) =>
+                group.items.length > 0 ? (
+                  <div key={group.key} className="space-y-2">
+                    <h4 className="font-extrabold uppercase tracking-wider text-slate-600">{group.label} ({group.items.length})</h4>
+                    {group.items.map((item) => (
+                      <div key={item._id} className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 truncate">{group.titleFn(item)}</p>
+                          {item.projectReviewNote && (
+                            <p className="text-[11px] text-amber-700 mt-0.5">{item.projectReviewNote}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <select
+                            value={targetProjectMap[item._id] || selectedProjectId || projects[0]?._id || ''}
+                            onChange={(e) => setTargetProjectMap((prev) => ({ ...prev, [item._id]: e.target.value }))}
+                            className="px-2.5 py-1.5 rounded-xl border border-slate-300 bg-white font-semibold text-xs"
+                          >
+                            {projects.map((p) => (
+                              <option key={p._id} value={p._id}>{p.name} ({p.code})</option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            disabled={resolvingId === item._id}
+                            onClick={() => handleResolveRecord(group.key, item._id)}
+                            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs cursor-pointer disabled:opacity-50"
+                          >
+                            {resolvingId === item._id ? 'Linking...' : 'Link Project'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Archive Confirmation Dialog */}
       {archiveConfirm && (

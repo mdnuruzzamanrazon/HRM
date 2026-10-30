@@ -4,6 +4,7 @@ import { RiskProject } from '../models/RiskProject.js';
 import { AuditLog } from '../models/AuditLog.js';
 import { isDemoMode } from '../config/db.js';
 import { mockData, saveStoreToDisk } from '../services/mockDataService.js';
+import { authorizeRecordProjectAccess } from '../middlewares/projectAuth.js';
 
 // Pre-configured channels matching project guidelines & standard humanitarian/NGO reporting channels
 export const DEFAULT_RECEIVING_CHANNELS = [
@@ -394,16 +395,19 @@ export const getComplaintStats = async (req, res) => {
   try {
     await seedComplaintDataIfEmpty();
 
-    const { projectId } = req.query;
+    const activeProjectId = req.activeProjectId || req.query.projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active Project ID is required to load Complaints & Feedback statistics.'
+      });
+    }
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     // If demo mode or disconnected DB
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
       let records = mockData.complaintRecords || [];
-      records = records.filter(r => !r.isDeleted);
-      if (projectId && projectId !== 'ALL') {
-        records = records.filter(r => r.projectId === projectId || r.projectName === projectId);
-      }
+      records = records.filter(r => !r.isDeleted && String(r.projectId) === String(activeProjectId));
 
       const totalRecords = records.length;
       const openComplaints = records.filter(r => r.status === 'Open').length;
@@ -446,14 +450,13 @@ export const getComplaintStats = async (req, res) => {
     }
 
     // Live MongoDB aggregation
-    const filter = { isDeleted: { $ne: true } };
-    if (projectId && projectId !== 'ALL') {
-      if (mongoose.Types.ObjectId.isValid(projectId)) {
-        filter.projectId = new mongoose.Types.ObjectId(projectId);
-      } else {
-        filter.projectName = projectId;
-      }
+    if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+      return res.status(400).json({ success: false, message: 'Invalid Project ID format.' });
     }
+    const filter = {
+      isDeleted: { $ne: true },
+      projectId: new mongoose.Types.ObjectId(activeProjectId)
+    };
 
     const [
       totalRecords,
@@ -555,13 +558,19 @@ export const getComplaints = async (req, res) => {
     const skipNum = (pageNum - 1) * limitNum;
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
+    const activeProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active Project ID is required to load Complaints & Feedback records.'
+      });
+    }
+
     // DEMO / MOCK DATA MODE
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      let list = (mockData.complaintRecords || []).filter(r => !r.isDeleted);
-
-      if (projectId && projectId !== 'ALL') {
-        list = list.filter(r => r.projectId === projectId || r.projectName === projectId);
-      }
+      let list = (mockData.complaintRecords || []).filter(
+        r => !r.isDeleted && String(r.projectId) === String(activeProjectId)
+      );
 
       if (status && status !== 'ALL') {
         list = list.filter(r => r.status?.toLowerCase() === status.toLowerCase());
@@ -643,15 +652,13 @@ export const getComplaints = async (req, res) => {
     }
 
     // MONGODB MODE
-    const query = { isDeleted: { $ne: true } };
-
-    if (projectId && projectId !== 'ALL') {
-      if (mongoose.Types.ObjectId.isValid(projectId)) {
-        query.projectId = new mongoose.Types.ObjectId(projectId);
-      } else {
-        query.projectName = projectId;
-      }
+    if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+      return res.status(400).json({ success: false, message: 'Invalid Project ID format.' });
     }
+    const query = {
+      isDeleted: { $ne: true },
+      projectId: new mongoose.Types.ObjectId(activeProjectId)
+    };
 
     if (status && status !== 'ALL') {
       query.status = status;
@@ -745,6 +752,10 @@ export const getComplaintById = async (req, res) => {
       if (!record) {
         return res.status(404).json({ success: false, message: 'Complaint record not found.' });
       }
+      const access = await authorizeRecordProjectAccess(req, record.projectId, 'COMPLAINTS', 'VIEWER');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
       return res.json({ success: true, data: record });
     }
 
@@ -758,6 +769,11 @@ export const getComplaintById = async (req, res) => {
     const record = await ComplaintRecord.findOne(query).populate('createdBy updatedBy', 'email role').lean();
     if (!record) {
       return res.status(404).json({ success: false, message: 'Complaint record not found.' });
+    }
+
+    const access = await authorizeRecordProjectAccess(req, record.projectId, 'COMPLAINTS', 'VIEWER');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
     }
 
     return res.json({ success: true, data: record });
@@ -809,6 +825,12 @@ export const createComplaint = async (req, res) => {
       priority,
       confidentialityLevel
     } = req.body;
+
+    const resolvedProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!resolvedProjectId || resolvedProjectId === 'ALL') {
+      return res.status(400).json({ success: false, message: 'An active Project ID is required to create a complaint record.' });
+    }
+    const resolvedProjectName = req.project?.name || projectName || '';
 
     // Minimum validation
     if (!dateReceived) {
@@ -933,8 +955,8 @@ export const createComplaint = async (req, res) => {
         _id: 'cfr-' + Date.now(),
         sNo,
         seqNumber: mockData.complaintRecords.length + 1,
-        projectId: projectId || 'risk-proj-001',
-        projectName: projectName || 'CBDP Women & Girls Empowerment Initiative',
+        projectId: resolvedProjectId,
+        projectName: resolvedProjectName,
         dateReceived: parsedReceived,
         receivingChannel,
         receivingChannelOther: receivingChannelOther || '',
@@ -989,8 +1011,8 @@ export const createComplaint = async (req, res) => {
 
     const complaint = new ComplaintRecord({
       sNo,
-      projectId: (projectId && mongoose.Types.ObjectId.isValid(projectId)) ? projectId : null,
-      projectName: projectName || 'CBDP Women & Girls Empowerment Initiative',
+      projectId: new mongoose.Types.ObjectId(resolvedProjectId),
+      projectName: resolvedProjectName,
       dateReceived: parsedReceived,
       receivingChannel,
       receivingChannelOther: receivingChannelOther || '',
@@ -1034,6 +1056,7 @@ export const createComplaint = async (req, res) => {
         userId: req.user?._id,
         action: 'CREATE',
         module: 'COMPLAINTS_REGISTER',
+        projectId: complaint.projectId,
         resourceId: complaint._id,
         newState: { sNo: complaint.sNo, status: complaint.status, category: complaint.complaintCategory },
         ipAddress: req.ip,
@@ -1076,6 +1099,12 @@ export const updateComplaint = async (req, res) => {
       }
 
       const existing = list[index];
+      const access = await authorizeRecordProjectAccess(req, existing.projectId, 'COMPLAINTS', 'EDITOR');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
+      delete updateData.projectId;
+      delete updateData._id;
 
       // Validate dates
       const received = updateData.dateReceived ? new Date(updateData.dateReceived) : new Date(existing.dateReceived);
@@ -1142,7 +1171,7 @@ export const updateComplaint = async (req, res) => {
       };
 
       list[index] = updated;
-      persistStoreToDisk();
+      saveStoreToDisk();
 
       return res.json({
         success: true,
@@ -1163,6 +1192,13 @@ export const updateComplaint = async (req, res) => {
     if (!complaint) {
       return res.status(404).json({ success: false, message: 'Complaint record not found.' });
     }
+
+    const access = await authorizeRecordProjectAccess(req, complaint.projectId, 'COMPLAINTS', 'EDITOR');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+    delete updateData.projectId;
+    delete updateData._id;
 
     const previousState = {
       status: complaint.status,
@@ -1257,8 +1293,6 @@ export const updateComplaint = async (req, res) => {
     if (updateData.delayNotificationNotes !== undefined) complaint.delayNotificationNotes = updateData.delayNotificationNotes;
     if (updateData.priority) complaint.priority = updateData.priority;
     if (updateData.confidentialityLevel) complaint.confidentialityLevel = updateData.confidentialityLevel;
-    if (updateData.projectName) complaint.projectName = updateData.projectName;
-    if (updateData.projectId && mongoose.Types.ObjectId.isValid(updateData.projectId)) complaint.projectId = updateData.projectId;
 
     complaint.updatedBy = req.user?._id || null;
 
@@ -1332,6 +1366,10 @@ export const updateComplaintStatus = async (req, res) => {
       if (!item) {
         return res.status(404).json({ success: false, message: 'Complaint record not found.' });
       }
+      const access = await authorizeRecordProjectAccess(req, item.projectId, 'COMPLAINTS', 'EDITOR');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
 
       item.status = status;
       if (status === 'Closed') {
@@ -1350,7 +1388,7 @@ export const updateComplaintStatus = async (req, res) => {
         timestamp: new Date(),
         details: `Status set to ${status}. ${closureNotes || ''}`
       });
-      persistStoreToDisk();
+      saveStoreToDisk();
 
       return res.json({ success: true, message: `Status updated to ${status}.`, data: item });
     }
@@ -1366,6 +1404,11 @@ export const updateComplaintStatus = async (req, res) => {
     const complaint = await ComplaintRecord.findOne(query);
     if (!complaint) {
       return res.status(404).json({ success: false, message: 'Complaint record not found.' });
+    }
+
+    const access = await authorizeRecordProjectAccess(req, complaint.projectId, 'COMPLAINTS', 'EDITOR');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
     }
 
     complaint.status = status;
@@ -1424,6 +1467,10 @@ export const manageComplaintAppeal = async (req, res) => {
       if (!item) {
         return res.status(404).json({ success: false, message: 'Complaint record not found.' });
       }
+      const access = await authorizeRecordProjectAccess(req, item.projectId, 'COMPLAINTS', 'EDITOR');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
 
       item.hasAppeal = true;
       item.appealDate = appealDate ? new Date(appealDate) : new Date();
@@ -1440,7 +1487,7 @@ export const manageComplaintAppeal = async (req, res) => {
         timestamp: new Date(),
         details: `Appeal recorded. Status: ${item.appealStatus}.`
       });
-      persistStoreToDisk();
+      saveStoreToDisk();
 
       return res.json({ success: true, message: 'Appeal details recorded successfully.', data: item });
     }
@@ -1456,6 +1503,11 @@ export const manageComplaintAppeal = async (req, res) => {
     const complaint = await ComplaintRecord.findOne(query);
     if (!complaint) {
       return res.status(404).json({ success: false, message: 'Complaint record not found.' });
+    }
+
+    const access = await authorizeRecordProjectAccess(req, complaint.projectId, 'COMPLAINTS', 'EDITOR');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
     }
 
     complaint.hasAppeal = true;
@@ -1526,11 +1578,15 @@ export const deleteComplaint = async (req, res) => {
       if (!item) {
         return res.status(404).json({ success: false, message: 'Complaint record not found.' });
       }
+      const access = await authorizeRecordProjectAccess(req, item.projectId, 'COMPLAINTS', 'MANAGER');
+      if (!access.allowed) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
 
       item.isDeleted = true;
       item.deletedAt = new Date().toISOString();
       item.deletedBy = deleterEmail;
-      persistStoreToDisk();
+      saveStoreToDisk();
 
       return res.json({ success: true, message: `Record ${item.sNo} deleted successfully.` });
     }
@@ -1546,6 +1602,11 @@ export const deleteComplaint = async (req, res) => {
     const complaint = await ComplaintRecord.findOne(query);
     if (!complaint) {
       return res.status(404).json({ success: false, message: 'Complaint record not found.' });
+    }
+
+    const access = await authorizeRecordProjectAccess(req, complaint.projectId, 'COMPLAINTS', 'MANAGER');
+    if (!access.allowed) {
+      return res.status(access.status).json({ success: false, message: access.message });
     }
 
     complaint.isDeleted = true;
@@ -1595,29 +1656,33 @@ export const deleteComplaint = async (req, res) => {
 export const exportComplaints = async (req, res) => {
   try {
     const { projectId, status, format = 'json' } = req.query;
-
-    const query = { isDeleted: { $ne: true } };
-    if (projectId && projectId !== 'ALL') {
-      if (mongoose.Types.ObjectId.isValid(projectId)) {
-        query.projectId = new mongoose.Types.ObjectId(projectId);
-      } else {
-        query.projectName = projectId;
-      }
-    }
-    if (status && status !== 'ALL') {
-      query.status = status;
+    const activeProjectId = req.activeProjectId || projectId || req.headers['x-project-id'];
+    if (!activeProjectId || activeProjectId === 'ALL') {
+      return res.status(400).json({
+        success: false,
+        message: 'An active Project ID is required to export Complaints & Feedback records.'
+      });
     }
 
     let records = [];
     if (isDemoMode() || mongoose.connection.readyState !== 1) {
-      records = (mockData.complaintRecords || []).filter(r => !r.isDeleted);
-      if (projectId && projectId !== 'ALL') {
-        records = records.filter(r => r.projectId === projectId || r.projectName === projectId);
-      }
+      records = (mockData.complaintRecords || []).filter(
+        r => !r.isDeleted && String(r.projectId) === String(activeProjectId)
+      );
       if (status && status !== 'ALL') {
         records = records.filter(r => r.status === status);
       }
     } else {
+      if (!mongoose.Types.ObjectId.isValid(activeProjectId)) {
+        return res.status(400).json({ success: false, message: 'Invalid Project ID format.' });
+      }
+      const query = {
+        isDeleted: { $ne: true },
+        projectId: new mongoose.Types.ObjectId(activeProjectId)
+      };
+      if (status && status !== 'ALL') {
+        query.status = status;
+      }
       records = await ComplaintRecord.find(query).sort({ sNo: 1 }).lean();
     }
 

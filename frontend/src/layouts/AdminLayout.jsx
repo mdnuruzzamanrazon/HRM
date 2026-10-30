@@ -73,7 +73,7 @@ export default function AdminLayout() {
       ]
     },
     {
-      group: 'Project Modules',
+      group: 'Project-Linked Modules',
       items: [
         { name: 'Risk Register', href: '/risk-register', icon: ShieldAlert },
         { name: 'Complaints & Feedback', href: '/complaints-register', icon: FolderClock },
@@ -132,6 +132,16 @@ export default function AdminLayout() {
   const allNavItems = navSections.flatMap(s => s.items);
   const currentItem = allNavItems.find(item => location.pathname === item.href || (item.href !== '/dashboard' && location.pathname.startsWith(item.href)));
   const currentTitle = currentItem?.name || 'HR Management Portal';
+
+  // Distinguish Project-Context routes from Independent Organization-Wide HR/Asset routes
+  const pathLower = location.pathname.toLowerCase();
+  const isProjectContextRoute =
+    pathLower.startsWith('/projects') ||
+    pathLower.startsWith('/project-dashboard') ||
+    pathLower.startsWith('/risk-register') ||
+    pathLower.startsWith('/complaints') ||
+    pathLower.startsWith('/event') ||
+    pathLower.startsWith('/beneficiar');
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
@@ -288,10 +298,25 @@ export default function AdminLayout() {
             <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
               <span className="font-bold text-slate-500">CBDP HR</span>
               <span>/</span>
-              {selectedProject?.name && (
+              {isProjectContextRoute ? (
+                selectedProject?.name && (
+                  <>
+                    <span
+                      className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200/60 max-w-[180px] truncate"
+                      title={`Selected Project Context: ${selectedProject.name}`}
+                    >
+                      {selectedProject.name}
+                    </span>
+                    <span>/</span>
+                  </>
+                )
+              ) : (
                 <>
-                  <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-200/60 max-w-[150px] truncate" title={`Active Project: ${selectedProject.name}`}>
-                    {selectedProject.name}
+                  <span
+                    className="font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/80"
+                    title="Organization-wide independent module (not filtered by Global Project Selector)"
+                  >
+                    Organization-Wide
                   </span>
                   <span>/</span>
                 </>

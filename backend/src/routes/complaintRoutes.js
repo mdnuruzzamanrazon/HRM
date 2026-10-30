@@ -11,6 +11,7 @@ import {
   exportComplaints
 } from '../controllers/complaintController.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
+import { checkProjectAccess } from '../middlewares/projectAuth.js';
 
 const router = express.Router();
 
@@ -26,23 +27,23 @@ const HR_MANAGEMENT_ROLES = [
 router.use(authenticate);
 
 // -------------------------------------------------------------
-// COMPLAINT REGISTER ROUTES
+// COMPLAINT REGISTER ROUTES (Mandatory Project Context)
 // -------------------------------------------------------------
 
 // Summary Statistics for KPI Dashboard Cards
-router.get('/stats', authorize(HR_MANAGEMENT_ROLES), getComplaintStats);
+router.get('/stats', authorize(HR_MANAGEMENT_ROLES), checkProjectAccess('COMPLAINTS', 'VIEWER', { requireProject: true }), getComplaintStats);
 
 // Export / Print Full Register
-router.get('/export', authorize(HR_MANAGEMENT_ROLES), exportComplaints);
+router.get('/export', authorize(HR_MANAGEMENT_ROLES), checkProjectAccess('COMPLAINTS', 'VIEWER', { requireProject: true }), exportComplaints);
 
 // List Complaints with search, filter, sort, pagination
-router.get('/', authorize(HR_MANAGEMENT_ROLES), getComplaints);
+router.get('/', authorize(HR_MANAGEMENT_ROLES), checkProjectAccess('COMPLAINTS', 'VIEWER', { requireProject: true }), getComplaints);
 
 // Single Record Details
 router.get('/:id', authorize(HR_MANAGEMENT_ROLES), getComplaintById);
 
 // Create Record
-router.post('/', authorize(HR_MANAGEMENT_ROLES), createComplaint);
+router.post('/', authorize(HR_MANAGEMENT_ROLES), checkProjectAccess('COMPLAINTS', 'EDITOR', { requireProject: true }), createComplaint);
 
 // Update Record
 router.put('/:id', authorize(HR_MANAGEMENT_ROLES), updateComplaint);
@@ -53,7 +54,7 @@ router.patch('/:id/status', authorize(HR_MANAGEMENT_ROLES), updateComplaintStatu
 // Manage Appeal Details
 router.post('/:id/appeal', authorize(HR_MANAGEMENT_ROLES), manageComplaintAppeal);
 
-// Soft Delete (Restricted to Super Admin & HR Admin)
+// Soft Delete (Restricted to Super Admin, HR Admin & HR Manager with project MANAGER access)
 router.delete('/:id', authorize(['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER']), deleteComplaint);
 
 export default router;

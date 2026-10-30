@@ -9,7 +9,7 @@ import {
 import { cn } from '../../utils/cn';
 
 export default function ProjectSelector({ onOpenCreateModal }) {
-  const { projects, selectedProject, selectedProjectId, setSelectedProjectId, loadingProjects } = useProject();
+  const { projects, selectedProject, selectedProjectId, switchProject, loadingProjects } = useProject();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef(null);
@@ -39,16 +39,20 @@ export default function ProjectSelector({ onOpenCreateModal }) {
   });
 
   const handleSelect = (id) => {
-    setSelectedProjectId(id);
-    setIsOpen(false);
-    setSearch('');
+    const switched = switchProject(id);
+    if (switched !== false) {
+      setIsOpen(false);
+      setSearch('');
+    }
   };
 
   const handleGoToDashboard = (e, id) => {
     e.stopPropagation();
-    setSelectedProjectId(id);
-    setIsOpen(false);
-    navigate(`/projects/${id}/dashboard`);
+    const switched = switchProject(id);
+    if (switched !== false) {
+      setIsOpen(false);
+      navigate(`/projects/${id}/dashboard`);
+    }
   };
 
   return (
@@ -72,7 +76,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
 
         <div className="flex flex-col min-w-0 max-w-[140px] sm:max-w-[210px] md:max-w-[280px]">
           <div className="flex items-center gap-1.5 text-[10px] uppercase font-extrabold tracking-wider text-slate-400">
-            <span>Current Project:</span>
+            <span>Selected Project:</span>
             {selectedProject?.code && (
               <span className="px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60">
                 {selectedProject.code}
@@ -200,6 +204,11 @@ export default function ProjectSelector({ onOpenCreateModal }) {
                 );
               })
             )}
+          </div>
+
+          {/* Scope Note */}
+          <div className="mx-3 mt-1 mb-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200/70 text-[10px] text-slate-500 leading-relaxed">
+            <span className="font-bold text-indigo-700">Shared Context:</span> Applies to Risk Register, Complaints &amp; Feedback, Event Tracker &amp; Beneficiaries. Core HR &amp; Assets remain independent.
           </div>
 
           {/* Footer Actions */}

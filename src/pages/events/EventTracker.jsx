@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -46,14 +46,14 @@ import EventInstructionsModal from './EventInstructionsModal';
 import EventPrintView from './EventPrintView';
 import metadata from '../../data/eventMetadata.json';
 import { useProject } from '../../context/ProjectContext';
+import ActiveProjectBanner from '../../components/common/ActiveProjectBanner';
 
 export default function EventTracker() {
   const { user } = useAuth();
   const {
-    projects,
     selectedProjectId,
     selectedProject,
-    switchProject,
+    projectSwitchVersion,
   } = useProject();
 
   // State: Data
@@ -61,6 +61,8 @@ export default function EventTracker() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
+  const requestSeqRef = useRef(0);
+  const statsSeqRef = useRef(0);
 
   // State: Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,27 +115,55 @@ export default function EventTracker() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // Reset stale project data and open modals when active project changes
+  useEffect(() => {
+    requestSeqRef.current += 1;
+    statsSeqRef.current += 1;
+    setEvents([]);
+    setStats(null);
+    setTotalCount(0);
+    setTotalPages(1);
+    setPage(1);
+    setIsFormModalOpen(false);
+    setEditingEvent(null);
+    setIsDetailModalOpen(false);
+    setSelectedEvent(null);
+  }, [selectedProjectId, projectSwitchVersion]);
+
   // Fetch Summary KPIs
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (signal = undefined) => {
+    if (!selectedProjectId) {
+      setStatsLoading(false);
+      return;
+    }
+    const seq = ++statsSeqRef.current;
     setStatsLoading(true);
     try {
-      const params = {};
-      if (selectedProjectId && selectedProjectId !== 'ALL') {
-        params.projectId = selectedProjectId;
-      }
-      const res = await api.get('/events/stats', { params });
+      const res = await api.get('/events/stats', {
+        params: { projectId: selectedProjectId },
+        signal,
+      });
+      if (seq !== statsSeqRef.current) return;
       if (res.data?.success) {
         setStats(res.data.data);
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
       console.warn('Stats fetch notice:', err.message);
     } finally {
-      setStatsLoading(false);
+      if (seq === statsSeqRef.current) {
+        setStatsLoading(false);
+      }
     }
   }, [selectedProjectId]);
 
   // Fetch Events List with all active filters
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async (signal = undefined) => {
+    if (!selectedProjectId) {
+      setLoading(false);
+      return;
+    }
+    const seq = ++requestSeqRef.current;
     setLoading(true);
     try {
       const params = {
@@ -142,7 +172,7 @@ export default function EventTracker() {
         sortBy,
         sortOrder,
         search: searchQuery.trim() || undefined,
-        projectId: selectedProjectId && selectedProjectId !== 'ALL' ? selectedProjectId : undefined,
+        projectId: selectedProjectId,
         division: locationFilter.division && locationFilter.division !== 'ALL' ? locationFilter.division : undefined,
         district: locationFilter.district && locationFilter.district !== 'ALL' ? locationFilter.district : undefined,
         upazila: locationFilter.upazila && locationFilter.upazila !== 'ALL' ? locationFilter.upazila : undefined,
@@ -154,19 +184,24 @@ export default function EventTracker() {
         dateTo: dateToFilter || undefined,
       };
 
-      const res = await api.get('/events', { params });
+      const res = await api.get('/events', { params, signal });
+      if (seq !== requestSeqRef.current) return;
       if (res.data?.success) {
         setEvents(res.data.data || []);
         if (res.data.pagination) {
           setTotalPages(res.data.pagination.totalPages || 1);
-          setTotalCount(res.data.pagination.totalEvents || 0);
+          setTotalCount(res.data.pagination.totalEvents ?? res.data.pagination.total ?? 0);
         }
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
+      if (seq !== requestSeqRef.current) return;
       console.error('Failed to load events:', err);
-      showToast('Failed to load events. Please try again.', 'error');
+      showToast(err.response?.data?.message || 'Failed to load events. Please try again.', 'error');
     } finally {
-      setLoading(false);
+      if (seq === requestSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, [
     page,
@@ -183,14 +218,18 @@ export default function EventTracker() {
     dateToFilter,
   ]);
 
-  // Initial Load
+  // Initial Load & Project Stats Sync
   useEffect(() => {
-    fetchStats();
+    const controller = new AbortController();
+    fetchStats(controller.signal);
+    return () => controller.abort();
   }, [fetchStats]);
 
-  // Fetch when filters/pagination change
+  // Fetch when filters/pagination/project change
   useEffect(() => {
-    fetchEvents();
+    const controller = new AbortController();
+    fetchEvents(controller.signal);
+    return () => controller.abort();
   }, [fetchEvents]);
 
   // Reset all filters
@@ -239,7 +278,7 @@ export default function EventTracker() {
       showToast('Preparing event register export...', 'info');
       const params = {
         limit: 2000,
-        projectId: selectedProjectId && selectedProjectId !== 'ALL' ? selectedProjectId : undefined,
+        projectId: selectedProjectId,
         division: locationFilter.division || undefined,
         district: locationFilter.district || undefined,
         upazila: locationFilter.upazila || undefined,
@@ -346,29 +385,34 @@ export default function EventTracker() {
 
   // Handle Event Saved (from Modal)
   const handleEventSaved = async (formData) => {
-    setIsFormModalOpen(false);
     try {
+      const targetProjectId = formData.projectId || selectedProjectId;
+      if (!targetProjectId) {
+        showToast('Please select an active project before saving an event.', 'error');
+        return;
+      }
       if (editingEvent?._id) {
         const payload = {
           ...formData,
-          projectId: selectedProjectId || undefined,
-          projectName: selectedProject?.name || undefined,
+          projectId: targetProjectId,
+          projectName: formData.projectName || selectedProject?.name || undefined,
         };
         const res = await api.put(`/events/${editingEvent._id}`, payload);
         if (res.data?.success) {
-          showToast(`Event ${formData.eventId || ''} updated successfully!`, 'success');
+          showToast(`Event ${res.data.data?.eventId || formData.eventId || ''} updated successfully!`, 'success');
         }
       } else {
         const payload = {
           ...formData,
-          projectId: selectedProjectId || undefined,
-          projectName: selectedProject?.name || undefined,
+          projectId: targetProjectId,
+          projectName: formData.projectName || selectedProject?.name || undefined,
         };
         const res = await api.post('/events', payload);
         if (res.data?.success) {
-          showToast(`New Event ${formData.eventId || ''} recorded successfully!`, 'success');
+          showToast(`New Event ${res.data.data?.eventId || formData.eventId || ''} recorded successfully!`, 'success');
         }
       }
+      setIsFormModalOpen(false);
       setEditingEvent(null);
       fetchEvents();
       fetchStats();
@@ -433,6 +477,9 @@ export default function EventTracker() {
         </div>
       )}
 
+      {/* Shared Active Project Context Banner */}
+      <ActiveProjectBanner moduleName="Event Tracker" />
+
       {/* ========================================================================= */}
       {/* 1. TOP HEADER & PRIMARY ACTIONS (MATCHING BLUE / INDIGO THEME)           */}
       {/* ========================================================================= */}
@@ -474,24 +521,6 @@ export default function EventTracker() {
 
           {/* Right Action Toolbar */}
           <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap w-full lg:w-auto">
-            {/* Project Selector */}
-            <div className="relative min-w-[210px] flex-1 sm:flex-initial">
-              <Building2 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <select
-                value={selectedProjectId || 'ALL'}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val && val !== 'ALL') switchProject(val);
-                }}
-                className="w-full pl-8 pr-7 py-2 text-xs font-bold rounded-xl border border-slate-300 bg-white text-slate-800 hover:border-indigo-400 focus:ring-2 focus:ring-indigo-500 shadow-2xs cursor-pointer appearance-none truncate"
-              >
-                <option value="ALL">All Project Events</option>
-                {projects.map(p => (
-                  <option key={p._id} value={p._id}>{p.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            </div>
             {/* Official SOP & Guidelines */}
             <button
               type="button"
@@ -506,8 +535,9 @@ export default function EventTracker() {
             {/* Export Register CSV */}
             <button
               type="button"
+              disabled={!selectedProjectId}
               onClick={handleExportCSV}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
               title="Export Register as CSV"
             >
               <Download className="w-3.5 h-3.5 text-indigo-600" />
@@ -517,13 +547,14 @@ export default function EventTracker() {
             {/* Refresh Data */}
             <button
               type="button"
+              disabled={!selectedProjectId}
               onClick={() => {
                 fetchEvents();
                 fetchStats();
                 showToast('Refreshed events list');
               }}
               title="Refresh Records"
-              className="p-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer shadow-2xs"
+              className="p-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-600 transition-colors cursor-pointer shadow-2xs"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-600' : ''}`} />
             </button>
@@ -531,11 +562,12 @@ export default function EventTracker() {
             {/* Add New Event Primary Button (Consistent Indigo Theme) */}
             <button
               type="button"
+              disabled={!selectedProjectId}
               onClick={() => {
                 setEditingEvent(null);
                 setIsFormModalOpen(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm shadow-indigo-600/25 transition-all cursor-pointer flex-shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs shadow-sm shadow-indigo-600/25 transition-all cursor-pointer flex-shrink-0"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>+ Add New Event</span>
@@ -1259,6 +1291,8 @@ export default function EventTracker() {
         onSave={handleEventSaved}
         eventRecord={editingEvent}
         eventToEdit={editingEvent}
+        projectId={selectedProjectId}
+        projectName={selectedProject?.name || ''}
       />
 
       {/* Event Details Comprehensive Modal */}

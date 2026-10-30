@@ -5,7 +5,7 @@ const auditTrailItemSchema = new mongoose.Schema(
     action: {
       type: String,
       required: true,
-      enum: ['CREATED', 'UPDATED', 'AUDITED', 'DELETED', 'RESTORED', 'TRANSFERRED', 'STATUS_CHANGE', 'QR_PRINTED', 'SYNC_IMPORTED'],
+      enum: ['CREATED', 'UPDATED', 'AUDITED', 'DELETED', 'RESTORED', 'TRANSFERRED', 'STATUS_CHANGE', 'QR_PRINTED', 'SYNC_IMPORTED', 'PROJECT_ASSIGNED', 'PROJECT_RETURNED'],
     },
     performedBy: {
       type: String,
@@ -149,6 +149,62 @@ const assetSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
       index: true,
+    },
+    currentAssignment: {
+      assignmentType: {
+        type: String,
+        enum: ['PROJECT', 'DEPARTMENT', 'HEAD_OFFICE', 'UNASSIGNED'],
+        default: 'HEAD_OFFICE',
+      },
+      projectId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'RiskProject',
+        default: null,
+        index: true,
+      },
+      projectCode: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      projectName: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      department: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      location: {
+        type: String,
+        trim: true,
+        default: 'Head Office',
+      },
+      custodianEmployeeId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Employee',
+        default: null,
+      },
+      custodianName: {
+        type: String,
+        trim: true,
+        default: 'Unassigned',
+      },
+      assignedDate: {
+        type: Date,
+        default: null,
+      },
+      expectedReturnDate: {
+        type: Date,
+        default: null,
+      },
+      notes: {
+        type: String,
+        trim: true,
+        default: '',
+      },
     },
     auditTrail: [auditTrailItemSchema],
   },

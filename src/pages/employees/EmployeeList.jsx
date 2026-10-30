@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Plus, Search, Loader2, Users, Building, Mail, 
   Calendar, ChevronRight, Filter, ArrowUpDown, Eye, 
   Edit3, KeyRound, UserX, UserCheck, Trash2, Shield, 
   CheckCircle2, AlertCircle, X, ShieldAlert, Sparkles,
-  Phone, MapPin, Lock, AlertTriangle
+  Phone, MapPin, Lock, AlertTriangle, FolderKanban
 } from 'lucide-react';
 import api from '../../services/api';
 import { formatSafeDate } from '../../utils/date';
+import { useProject } from '../../context/ProjectContext';
+import EmployeeProjectAssignModal from './EmployeeProjectAssignModal';
 
 const DEPARTMENTS = [
   'Engineering & Technology',
@@ -22,10 +24,26 @@ const DEPARTMENTS = [
 ];
 
 export default function EmployeeList() {
+  // Core HR is organization-wide and NEVER driven by Global Project Context (selectedProjectId).
+  // Only `projects` is read to populate optional local assignment filters.
+  const { projects } = useProject();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [assignedProjectFilter, setAssignedProjectFilter] = useState(
+    () => searchParams.get('assignedProjectId') || 'ALL'
+  );
+  const [assignModalEmployee, setAssignModalEmployee] = useState(null);
+
+  useEffect(() => {
+    const queryProjectId = searchParams.get('assignedProjectId');
+    if (queryProjectId) {
+      setAssignedProjectFilter(queryProjectId);
+    }
+  }, [searchParams]);
 
   // Modals state
   const [editModalEmployee, setEditModalEmployee] = useState(null);
@@ -273,7 +291,17 @@ export default function EmployeeList() {
     const status = e.jobDetails?.status || e.status || 'ACTIVE';
     const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const activeAssignments = Array.isArray(e.projectAssignments) ? e.projectAssignments : [];
+    const matchesAssignedProject =
+      assignedProjectFilter === 'ALL'
+        ? true
+        : assignedProjectFilter === 'UNASSIGNED'
+          ? activeAssignments.length === 0
+          : activeAssignments.some(
+              (a) => String(a.projectId) === String(assignedProjectFilter)
+            );
+
+    return matchesSearch && matchesStatus && matchesAssignedProject;
   });
 
   const statusStyles = {
@@ -324,19 +352,68 @@ export default function EmployeeList() {
       </div>
 
       {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search by name, email, ID, or department..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-3.5 py-2.5 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:border-indigo-600 focus:ring-indigo-100 focus:outline-none transition-shadow"
-          />
+      <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by name, email, ID, or department..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-3.5 py-2.5 border border-slate-300 rounded-xl text-xs sm:text-sm text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:border-indigo-600 focus:ring-indigo-100 focus:outline-none transition-shadow"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={assignedProjectFilter}
+              onChange={(e) => {
+                const val = e.target.value;
+                setAssignedProjectFilter(val);
+                if (val === 'ALL' || val === 'UNASSIGNED') {
+                  if (searchParams.has('assignedProjectId')) {
+                    const next = new URLSearchParams(searchParams);
+                    next.delete('assignedProjectId');
+                    setSearchParams(next, { replace: true });
+                  }
+                } else {
+                  setSearchParams({ assignedProjectId: val }, { replace: true });
+                }
+              }}
+              className="px-3 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 bg-white focus:ring-2 focus:border-indigo-600 focus:ring-indigo-100 focus:outline-none"
+              title="Local Core HR Assignment Filter (Independent of Global Project Context)"
+            >
+              <option value="ALL">All Core HR Staff (Any Assignment)</option>
+              <option value="UNASSIGNED">Core HR Only (No Active Project)</option>
+              {(projects || []).map((p) => (
+                <option key={p._id} value={p._id}>
+                  Assigned: {p.projectCode ? `${p.projectCode} — ` : ''}{p.name}
+                </option>
+              ))}
+            </select>
+
+            {assignedProjectFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAssignedProjectFilter('ALL');
+                  if (searchParams.has('assignedProjectId')) {
+                    const next = new URLSearchParams(searchParams);
+                    next.delete('assignedProjectId');
+                    setSearchParams(next, { replace: true });
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold hover:bg-indigo-100 transition cursor-pointer shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Clear Filter</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto pb-1 lg:pb-0">
           {['ALL', 'ACTIVE', 'PROBATION', 'INACTIVE', 'TERMINATED'].map((status) => (
             <button
               key={status}
@@ -376,6 +453,7 @@ export default function EmployeeList() {
                   <th className="py-4 px-6">Personnel Record</th>
                   <th className="py-4 px-6">Employee ID</th>
                   <th className="py-4 px-6">Department &amp; Title</th>
+                  <th className="py-4 px-6">Project Assignments</th>
                   <th className="py-4 px-6">Employment Status</th>
                   <th className="py-4 px-6">Portal Account Status</th>
                   <th className="py-4 px-6 text-right">Administrative Actions</th>
@@ -439,6 +517,38 @@ export default function EmployeeList() {
                         </div>
                       </td>
 
+                      {/* Project Assignments */}
+                      <td className="py-4 px-6">
+                        {Array.isArray(emp.projectAssignments) && emp.projectAssignments.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-[220px]">
+                            {emp.projectAssignments.slice(0, 2).map((asgn) => (
+                              <span
+                                key={asgn._id || `${asgn.projectId}-${asgn.startDate}`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/80"
+                                title={`${asgn.projectName || 'Project'} — ${asgn.roleInProject || 'Member'} (${asgn.allocationPercentage ?? 100}%)`}
+                              >
+                                <FolderKanban className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate max-w-[120px]">
+                                  {asgn.projectCode || asgn.projectName || 'Project'}
+                                </span>
+                                <span className="font-mono text-[9px] text-indigo-500">
+                                  {asgn.allocationPercentage ?? 100}%
+                                </span>
+                              </span>
+                            ))}
+                            {emp.projectAssignments.length > 2 && (
+                              <span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600">
+                                +{emp.projectAssignments.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            Core HR (Unassigned)
+                          </span>
+                        )}
+                      </td>
+
                       {/* Status */}
                       <td className="py-4 px-6 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${statusStyles[status] || 'bg-slate-100 text-slate-700 border-slate-200'}`}>
@@ -478,6 +588,14 @@ export default function EmployeeList() {
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </Link>
+
+                          <button
+                            onClick={() => setAssignModalEmployee(emp)}
+                            className="p-2 rounded-xl bg-violet-50 hover:bg-violet-100 text-violet-700 transition-colors cursor-pointer"
+                            title="Manage Project Assignments"
+                          >
+                            <FolderKanban className="w-3.5 h-3.5" />
+                          </button>
 
                           <button 
                             onClick={() => handleOpenEdit(emp)}
@@ -786,6 +904,17 @@ export default function EmployeeList() {
           </div>
         </div>
       )}
+
+      {/* Modal 4: Independent Core HR Project Assignment Modal */}
+      <EmployeeProjectAssignModal
+        isOpen={Boolean(assignModalEmployee)}
+        onClose={() => setAssignModalEmployee(null)}
+        employee={assignModalEmployee}
+        onUpdated={() => {
+          fetchEmployees();
+          showToast('Employee project assignments updated');
+        }}
+      />
 
     </div>
   );

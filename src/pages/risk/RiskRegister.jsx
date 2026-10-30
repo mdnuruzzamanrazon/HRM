@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -22,24 +22,28 @@ import RiskSummary from './RiskSummary';
 import RiskCategoriesView from './RiskCategoriesView';
 import RiskValidationView from './RiskValidationView';
 import { useProject } from '../../context/ProjectContext';
+import ActiveProjectBanner from '../../components/common/ActiveProjectBanner';
 
 export default function RiskRegister() {
   const { user } = useAuth();
   const {
-    projects: contextProjects,
+    projects,
     selectedProjectId,
     selectedProject,
     switchProject,
+    projectSwitchVersion,
     refreshProjects,
+    createProject,
+    updateProject,
   } = useProject();
 
   // State: Data
-  const [localProjects, setLocalProjects] = useState([]);
-  const projects = contextProjects && contextProjects.length > 0 ? contextProjects : localProjects;
   const [risks, setRisks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const requestSeqRef = useRef(0);
+  const statsSeqRef = useRef(0);
 
   // State: Filters & View
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,10 +88,10 @@ export default function RiskRegister() {
 
   // Find active project object
   const currentProject = useMemo(() => {
-    return selectedProject || projects.find(p => p._id === selectedProjectId) || projects[0] || null;
+    return selectedProject || projects.find(p => String(p._id) === String(selectedProjectId)) || null;
   }, [selectedProject, projects, selectedProjectId]);
 
-  // Initial load: Fetch Projects and Categories & Check URL Tab
+  // Initial load: Fetch Categories & Check URL Tab
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get('tab');
@@ -97,12 +101,32 @@ export default function RiskRegister() {
     fetchInitialData();
   }, []);
 
+  // Reset stale project data, invalid project-scoped filters, and open forms on project switch
+  useEffect(() => {
+    requestSeqRef.current += 1;
+    statsSeqRef.current += 1;
+    setRisks([]);
+    setStats(null);
+    setTotalCount(0);
+    setTotalPages(1);
+    setPage(1);
+    setOwnerFilter('ALL');
+    setIsRiskModalOpen(false);
+    setSelectedRisk(null);
+    setIsDetailModalOpen(false);
+    setDetailRisk(null);
+  }, [selectedProjectId, projectSwitchVersion]);
+
   // Fetch risks whenever project, filters, sorting, or pagination changes
   useEffect(() => {
-    if (selectedProjectId) {
-      fetchRisks();
-      fetchStats();
+    if (!selectedProjectId) {
+      setLoading(false);
+      return;
     }
+    const controller = new AbortController();
+    fetchRisks(selectedProjectId, controller.signal);
+    fetchStats(selectedProjectId, controller.signal);
+    return () => controller.abort();
   }, [
     selectedProjectId,
     categoryFilter,
@@ -119,34 +143,23 @@ export default function RiskRegister() {
 
   const fetchInitialData = async () => {
     try {
-      setLoading(true);
       const catRes = await api.get('/risk/categories');
       if (catRes.data?.success) {
         setCategories(catRes.data.data);
       }
-      if (!contextProjects || contextProjects.length === 0) {
-        const projRes = await api.get('/risk/projects');
-        if (projRes.data?.success && projRes.data.data.length > 0) {
-          setLocalProjects(projRes.data.data);
-          if (!selectedProjectId) {
-            switchProject(projRes.data.data[0]._id);
-          }
-        }
-      }
     } catch (err) {
       console.error('Failed to load initial risk data:', err);
       showToast(err.response?.data?.message || 'Failed to initialize Risk Register', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
-  const fetchRisks = async () => {
-    if (!selectedProjectId) return;
+  const fetchRisks = async (targetProjectId = selectedProjectId, signal = undefined) => {
+    if (!targetProjectId) return;
+    const seq = ++requestSeqRef.current;
     try {
       setLoading(true);
       const params = {
-        projectId: selectedProjectId,
+        projectId: targetProjectId,
         category: categoryFilter,
         subCategory: subCategoryFilter,
         riskRating: ratingFilter,
@@ -159,28 +172,36 @@ export default function RiskRegister() {
         limit
       };
 
-      const res = await api.get('/risk/records', { params });
+      const res = await api.get('/risk/records', { params, signal });
+      if (seq !== requestSeqRef.current) return;
       if (res.data?.success) {
         setRisks(res.data.data);
         setTotalCount(res.data.pagination?.total || 0);
         setTotalPages(res.data.pagination?.totalPages || 1);
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
+      if (seq !== requestSeqRef.current) return;
       console.error('Failed to fetch risk records:', err);
-      showToast('Failed to load risk records', 'error');
+      showToast(err.response?.data?.message || 'Failed to load risk records', 'error');
     } finally {
-      setLoading(false);
+      if (seq === requestSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
 
-  const fetchStats = async () => {
-    if (!selectedProjectId) return;
+  const fetchStats = async (targetProjectId = selectedProjectId, signal = undefined) => {
+    if (!targetProjectId) return;
+    const seq = ++statsSeqRef.current;
     try {
-      const res = await api.get('/risk/stats', { params: { projectId: selectedProjectId } });
+      const res = await api.get('/risk/stats', { params: { projectId: targetProjectId }, signal });
+      if (seq !== statsSeqRef.current) return;
       if (res.data?.success) {
         setStats(res.data.data);
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
       console.error('Failed to load risk stats:', err);
     }
   };
@@ -258,32 +279,26 @@ export default function RiskRegister() {
     }
   };
 
-  // Save / Update Project
+  // Save / Update Project via unified ProjectContext
   const handleSaveProject = async (payload) => {
     try {
       setIsSubmitting(true);
       if (editingProject?._id) {
-        const res = await api.put(`/risk/projects/${editingProject._id}`, payload);
-        if (res.data?.success) {
-          showToast('Project information updated successfully');
-          setIsProjectModalOpen(false);
-          setEditingProject(null);
-          await refreshProjects();
-        }
+        await updateProject(editingProject._id, payload);
+        showToast('Project information updated successfully');
+        setIsProjectModalOpen(false);
+        setEditingProject(null);
       } else {
-        const res = await api.post('/risk/projects', payload);
-        if (res.data?.success) {
-          showToast('New project created successfully');
-          setIsProjectModalOpen(false);
-          await refreshProjects();
-          if (res.data?.data?._id) {
-            switchProject(res.data.data._id);
-          }
+        const created = await createProject(payload);
+        showToast('New project created successfully');
+        setIsProjectModalOpen(false);
+        if (created?._id) {
+          switchProject(created._id, { skipConfirm: true });
         }
       }
     } catch (err) {
       console.error('Failed to save project:', err);
-      showToast(err.response?.data?.message || 'Failed to save project', 'error');
+      showToast(err.response?.data?.message || err.message || 'Failed to save project', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -447,6 +462,9 @@ export default function RiskRegister() {
         </div>
       )}
 
+      {/* Shared Active Project Context Banner */}
+      <ActiveProjectBanner moduleName="Risk Register" />
+
       {/* ========================================================= */}
       {/* REDESIGNED TOP HEADER & MODULE NAVIGATION BAR             */}
       {/* ========================================================= */}
@@ -513,12 +531,13 @@ export default function RiskRegister() {
             )}
 
             <button
+              disabled={!selectedProjectId}
               onClick={() => {
                 setPrefillClassification(null);
                 setSelectedRisk(null);
                 setIsRiskModalOpen(true);
               }}
-              className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-600/25 transition-all cursor-pointer"
+              className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-indigo-600/25 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Add Risk Record</span>
@@ -652,7 +671,7 @@ export default function RiskRegister() {
         <RiskSummary
           project={currentProject}
           projects={projects}
-          onSelectProject={(id) => setSelectedProjectId(id)}
+          onSelectProject={(id) => switchProject(id)}
           onSwitchToRegister={() => {
             setActiveTab('register');
             window.history.replaceState(null, '', window.location.pathname);
@@ -1638,6 +1657,7 @@ export default function RiskRegister() {
         riskRecord={selectedRisk}
         prefillData={prefillClassification}
         projectId={selectedProjectId}
+        projectName={currentProject?.name || ''}
         categories={categories}
         onOpenCategoryModal={() => setIsCategoryModalOpen(true)}
         onOpenGuidance={() => {

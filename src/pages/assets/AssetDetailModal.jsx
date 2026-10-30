@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import api from '../../services/api';
 import {
   X,
   Printer,
@@ -14,12 +15,16 @@ import {
   Tag,
   CheckCircle2,
   AlertTriangle,
-  FolderGit2
+  FolderGit2,
+  ArrowRightLeft,
+  Loader2
 } from 'lucide-react';
 
-export default function AssetDetailModal({ asset, isOpen, onClose, onEdit, onPrintSingle }) {
+export default function AssetDetailModal({ asset, isOpen, onClose, onEdit, onAllocate, onPrintSingle }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
+  const [assignmentHistory, setAssignmentHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (asset && isOpen) {
@@ -34,6 +39,22 @@ export default function AssetDetailModal({ asset, isOpen, onClose, onEdit, onPri
       })
         .then((url) => setQrDataUrl(url))
         .catch((err) => console.error('QR generation error:', err));
+
+      const targetKey = asset._id || asset.assetId;
+      if (targetKey) {
+        setHistoryLoading(true);
+        api
+          .get(`/assets/${targetKey}/assignments`)
+          .then((res) => {
+            if (res.data?.success) {
+              setAssignmentHistory(res.data.data?.history || []);
+            }
+          })
+          .catch(() => setAssignmentHistory([]))
+          .finally(() => setHistoryLoading(false));
+      }
+    } else {
+      setAssignmentHistory([]);
     }
   }, [asset, isOpen]);
 
@@ -315,6 +336,75 @@ export default function AssetDetailModal({ asset, isOpen, onClose, onEdit, onPri
             </div>
           </div>
 
+          {/* Project & Custody Movement History */}
+          <div className="border border-slate-200 rounded-xl p-5 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Project Allocation &amp; Custody Movement Ledger
+                </span>
+              </div>
+              {asset.currentAssignment?.projectName ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Active Project: {asset.currentAssignment.projectCode || asset.currentAssignment.projectName}
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600">
+                  Master Inventory / Head Office
+                </span>
+              )}
+            </div>
+
+            {historyLoading ? (
+              <div className="py-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                <span>Loading custody movement history...</span>
+              </div>
+            ) : assignmentHistory.length === 0 ? (
+              <p className="text-xs text-slate-500 py-2">
+                No project or custodian movement history recorded yet. This asset remains in the central master register.
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {assignmentHistory.map((item) => (
+                  <div
+                    key={item._id}
+                    className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                            item.status === 'ACTIVE'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : item.status === 'TRANSFERRED'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-slate-200/70 text-slate-600'
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                        <span className="font-bold text-slate-800">
+                          {item.projectCode ? `${item.projectCode} — ` : ''}
+                          {item.projectName || item.department || item.assignmentType}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Location: <strong>{item.location || 'N/A'}</strong> &bull; Custodian:{' '}
+                        <strong>{item.custodianName || 'Unassigned'}</strong>
+                      </div>
+                    </div>
+                    <div className="text-[11px] text-slate-400 font-mono shrink-0">
+                      {item.assignedDate ? String(item.assignedDate).slice(0, 10) : ''}
+                      {item.returnedDate ? ` → ${String(item.returnedDate).slice(0, 10)}` : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
 
         {/* Modal Footer */}
@@ -327,6 +417,19 @@ export default function AssetDetailModal({ asset, isOpen, onClose, onEdit, onPri
             Close
           </button>
           <div className="flex items-center gap-3">
+            {onAllocate && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onAllocate(asset);
+                }}
+                className="px-4 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition flex items-center gap-1.5"
+              >
+                <ArrowRightLeft className="w-4 h-4" />
+                Allocate / Transfer
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
