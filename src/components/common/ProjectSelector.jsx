@@ -40,7 +40,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
     };
   }, [isOpen]);
 
-  // Focus search input on open
+  // Focus search input when dropdown opens
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
       setTimeout(() => searchInputRef.current?.focus(), 50);
@@ -113,7 +113,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Modern Capsule Trigger Button */}
+      {/* Capsule Trigger Button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -126,7 +126,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
         title="Switch Active Project Context"
         aria-expanded={isOpen}
       >
-        {/* Dynamic Project Avatar with Glowing Live Status Dot */}
+        {/* Dynamic Project Avatar with Live Status Dot */}
         <div className="relative">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/80 flex items-center justify-center text-indigo-700 flex-shrink-0 group-hover:from-indigo-600 group-hover:to-indigo-700 group-hover:text-white group-hover:border-indigo-600 transition-all duration-200 shadow-2xs">
             <FolderKanban className="w-4 h-4 transition-transform group-hover:scale-105" />
@@ -144,7 +144,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
         </div>
 
         {/* Selected Project Text & Badges */}
-        <div className="flex flex-col min-w-0 max-w-[130px] sm:max-w-[200px] md:max-w-[270px]">
+        <div className="flex flex-col min-w-0 max-w-[130px] sm:max-w-[200px] md:max-w-[260px]">
           <div className="flex items-center gap-1.5 text-[10px] uppercase font-black tracking-wider text-slate-400">
             <span className="truncate">Active Project</span>
             {selectedProject?.code && (
@@ -160,7 +160,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
           </div>
         </div>
 
-        {/* Animated Chevron */}
+        {/* Chevron Icon */}
         <div className="pl-1 border-l border-slate-200/60 ml-0.5">
           <ChevronDown className={cn(
             "w-4 h-4 text-slate-400 flex-shrink-0 transition-transform duration-200 group-hover:text-slate-600",
@@ -169,9 +169,9 @@ export default function ProjectSelector({ onOpenCreateModal }) {
         </div>
       </button>
 
-      {/* Redesigned Floating Popover Menu */}
+      {/* Modern Centered Dropdown Popover */}
       {isOpen && (
-        <div className="absolute left-0 sm:left-auto sm:right-0 md:left-0 mt-2.5 w-[360px] sm:w-[420px] rounded-3xl bg-white shadow-2xl shadow-indigo-950/15 border border-slate-200/90 py-3 z-50 animate-in fade-in zoom-in-95 duration-150 overflow-hidden ring-1 ring-black/5">
+        <div className="absolute left-1/2 -translate-x-1/2 mt-2.5 w-[360px] sm:w-[420px] rounded-3xl bg-white shadow-2xl shadow-indigo-950/15 border border-slate-200/90 py-3.5 z-50 animate-in fade-in zoom-in-95 duration-150 overflow-hidden ring-1 ring-black/5">
           
           {/* Header & Status Filter Bar */}
           <div className="px-4 pb-3 border-b border-slate-100 space-y-2.5">
@@ -181,7 +181,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
                   <FolderKanban className="w-3.5 h-3.5" />
                 </div>
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
-                  Switch Active Project Context
+                  Switch Project Context
                 </h3>
               </div>
               <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold text-slate-600">
@@ -189,7 +189,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
               </span>
             </div>
 
-            {/* Quick Search Input with Clear Button */}
+            {/* Search Input with Clear Button */}
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
@@ -204,7 +204,7 @@ export default function ProjectSelector({ onOpenCreateModal }) {
                 <button
                   type="button"
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-md"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-md cursor-pointer"
                   title="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -214,84 +214,75 @@ export default function ProjectSelector({ onOpenCreateModal }) {
 
             {/* Status Filter Chips */}
             <div className="flex items-center gap-1.5 pt-0.5 overflow-x-auto no-scrollbar">
-              {['ALL', 'ACTIVE', 'ON_HOLD', 'COMPLETED'].map((statusKey) => (
+              {[
+                { key: 'ALL', label: 'All Projects' },
+                { key: 'ACTIVE', label: 'Active' },
+                { key: 'ON_HOLD', label: 'On Hold' },
+                { key: 'COMPLETED', label: 'Completed' }
+              ].map(({ key, label }) => (
                 <button
-                  key={statusKey}
+                  key={key}
                   type="button"
-                  onClick={() => setStatusFilter(statusKey)}
+                  onClick={() => setStatusFilter(key)}
                   className={cn(
-                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all uppercase tracking-wide cursor-pointer whitespace-nowrap",
-                    statusFilter === statusKey
+                    "px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all tracking-wide cursor-pointer whitespace-nowrap",
+                    statusFilter === key
                       ? "bg-indigo-600 text-white shadow-xs"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200/80"
                   )}
                 >
-                  {statusKey === 'ALL' ? 'All Projects' : statusKey.replace('_', ' ')}
+                  {label}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Current Active Workspace Highlight Banner */}
+          {/* Compact Active Workspace Strip */}
           {selectedProject && !search && statusFilter === 'ALL' && (
-            <div className="mx-3 mt-3 p-3 rounded-2xl bg-gradient-to-r from-indigo-900 to-slate-900 text-white shadow-xs border border-indigo-800/60">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-wider text-indigo-300">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                    <span>Currently Active Workspace</span>
-                  </div>
-                  <h4 className="text-xs font-black text-white truncate mt-0.5">
-                    {selectedProject.name}
-                  </h4>
-                  <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-300">
-                    {selectedProject.code && (
-                      <span className="font-mono font-bold text-indigo-200">
-                        {selectedProject.code}
-                      </span>
-                    )}
-                    {selectedProject.location && (
-                      <>
-                        <span>&bull;</span>
-                        <span className="truncate max-w-[130px]">{selectedProject.location}</span>
-                      </>
-                    )}
-                  </div>
+            <div className="mx-3 mt-2.5 px-3.5 py-2.5 rounded-2xl bg-indigo-50/70 border border-indigo-200/70 flex items-center justify-between gap-2.5">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-indigo-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span>Active Workspace</span>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={(e) => handleGoToDashboard(e, selectedProject._id)}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold transition-colors inline-flex items-center gap-1 flex-shrink-0 cursor-pointer border border-white/10"
-                  title="Open Project Workspace Dashboard"
-                >
-                  <span>Dashboard</span>
-                  <ArrowUpRight className="w-3 h-3" />
-                </button>
+                <h4 className="text-xs font-black text-slate-900 truncate mt-0.5">
+                  {selectedProject.name}
+                </h4>
               </div>
+
+              <button
+                type="button"
+                onClick={(e) => handleGoToDashboard(e, selectedProject._id)}
+                className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold transition-all inline-flex items-center gap-1 flex-shrink-0 cursor-pointer shadow-2xs"
+                title="Open Project Workspace Dashboard"
+              >
+                <span>Dashboard</span>
+                <ArrowUpRight className="w-3 h-3" />
+              </button>
             </div>
           )}
 
-          {/* Projects List with Custom Scrollbar */}
-          <div className="px-2 pt-2 pb-1">
-            <p className="px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-              {statusFilter === 'ALL' ? 'Select a Project' : `${statusFilter} Projects`} ({filteredProjects.length})
+          {/* Project Items List Header */}
+          <div className="px-3 pt-2 pb-1">
+            <p className="px-1 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+              {statusFilter === 'ALL' ? 'Select Project' : `${statusFilter} Projects`} ({filteredProjects.length})
             </p>
           </div>
 
-          <div className="max-h-64 sm:max-h-72 overflow-y-auto px-2 space-y-1.5 custom-scrollbar">
+          {/* Projects List */}
+          <div className="max-h-60 sm:max-h-64 overflow-y-auto px-3 space-y-1.5 custom-scrollbar">
             {filteredProjects.length === 0 ? (
-              <div className="text-center py-8 px-4">
-                <FolderOpen className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs font-bold text-slate-700">No matching projects found</p>
+              <div className="text-center py-6 px-4">
+                <FolderOpen className="w-7 h-7 text-slate-300 mx-auto mb-1.5" />
+                <p className="text-xs font-bold text-slate-700">No matching projects</p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  Try searching with a different term or resetting the status filter
+                  Try adjusting search or status filters
                 </p>
                 {(search || statusFilter !== 'ALL') && (
                   <button
                     type="button"
                     onClick={() => { setSearch(''); setStatusFilter('ALL'); }}
-                    className="mt-3 px-3 py-1 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
+                    className="mt-2.5 px-3 py-1 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
                   >
                     Reset Filters
                   </button>
@@ -307,48 +298,46 @@ export default function ProjectSelector({ onOpenCreateModal }) {
                     key={p._id}
                     onClick={() => handleSelect(p._id)}
                     className={cn(
-                      "flex items-start justify-between p-3 rounded-2xl cursor-pointer transition-all duration-150 group border",
+                      "flex items-start justify-between p-2.5 rounded-2xl cursor-pointer transition-all duration-150 group border",
                       isSelected
                         ? "bg-indigo-50/90 border-indigo-200/90 shadow-2xs ring-1 ring-indigo-500/20"
                         : "bg-white hover:bg-slate-50/90 border-slate-100 hover:border-slate-200/80"
                     )}
                   >
-                    <div className="flex items-start gap-3 min-w-0 flex-1 pr-2">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1 pr-1.5">
                       {/* Monogram / Icon Avatar */}
                       <div className={cn(
-                        "w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5 transition-colors shadow-2xs",
+                        "w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5 transition-colors shadow-2xs",
                         isSelected
                           ? "bg-indigo-600 text-white"
                           : "bg-slate-100 text-slate-700 group-hover:bg-indigo-100 group-hover:text-indigo-700"
                       )}>
                         {isSelected ? (
-                          <Check className="w-4 h-4 stroke-[3]" />
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
                         ) : (
                           p.code?.substring(0, 3) || 'PRJ'
                         )}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        {/* Title and Code Row */}
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className={cn(
-                            "text-xs font-bold truncate leading-snug",
-                            isSelected ? "text-indigo-950 font-black" : "text-slate-800 group-hover:text-indigo-600"
-                          )}>
-                            {p.name}
-                          </p>
-                        </div>
+                        {/* Title and Code */}
+                        <p className={cn(
+                          "text-xs font-bold truncate leading-snug",
+                          isSelected ? "text-indigo-950 font-black" : "text-slate-800 group-hover:text-indigo-600"
+                        )}>
+                          {p.name}
+                        </p>
 
-                        {/* Metadata row: Code, Location, Status */}
-                        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 flex-wrap">
+                        {/* Metadata row */}
+                        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 flex-wrap">
                           {p.code && (
-                            <span className="font-mono font-bold text-indigo-700 bg-indigo-50/80 px-1.5 py-0.2 rounded border border-indigo-200/60 text-[10px]">
+                            <span className="font-mono font-bold text-indigo-700 bg-indigo-50/80 px-1 py-0.2 rounded border border-indigo-200/60 text-[9px]">
                               {p.code}
                             </span>
                           )}
                           {p.location && (
-                            <span className="truncate max-w-[120px] text-slate-500 inline-flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-slate-400" />
+                            <span className="truncate max-w-[110px] text-slate-500 inline-flex items-center gap-0.5">
+                              <MapPin className="w-2.5 h-2.5 text-slate-400" />
                               {p.location}
                             </span>
                           )}
@@ -360,23 +349,23 @@ export default function ProjectSelector({ onOpenCreateModal }) {
                           </span>
                         </div>
 
-                        {/* Live Counts Mini Strip (Risks, Complaints, Events, Beneficiaries) */}
+                        {/* Live Counts Mini Strip */}
                         {p.stats && (
-                          <div className="flex items-center gap-2.5 mt-2 pt-1.5 border-t border-slate-100 text-[10px] text-slate-400">
-                            <span title="Risks" className="inline-flex items-center gap-1 hover:text-amber-600">
-                              <ShieldAlert className="w-3 h-3 text-amber-500" />
+                          <div className="flex items-center gap-2.5 mt-1.5 pt-1 border-t border-slate-100 text-[9px] text-slate-400">
+                            <span title="Risks" className="inline-flex items-center gap-0.5">
+                              <ShieldAlert className="w-2.5 h-2.5 text-amber-500" />
                               <strong className="text-slate-600 font-semibold">{p.stats.risks?.total || 0}</strong>
                             </span>
-                            <span title="Complaints" className="inline-flex items-center gap-1 hover:text-indigo-600">
-                              <FolderClock className="w-3 h-3 text-indigo-500" />
+                            <span title="Complaints" className="inline-flex items-center gap-0.5">
+                              <FolderClock className="w-2.5 h-2.5 text-indigo-500" />
                               <strong className="text-slate-600 font-semibold">{p.stats.complaints?.total || 0}</strong>
                             </span>
-                            <span title="Events" className="inline-flex items-center gap-1 hover:text-emerald-600">
-                              <CalendarDays className="w-3 h-3 text-emerald-500" />
+                            <span title="Events" className="inline-flex items-center gap-0.5">
+                              <CalendarDays className="w-2.5 h-2.5 text-emerald-500" />
                               <strong className="text-slate-600 font-semibold">{p.stats.events?.total || 0}</strong>
                             </span>
-                            <span title="Beneficiaries" className="inline-flex items-center gap-1 hover:text-rose-600">
-                              <HeartHandshake className="w-3 h-3 text-rose-500" />
+                            <span title="Beneficiaries" className="inline-flex items-center gap-0.5">
+                              <HeartHandshake className="w-2.5 h-2.5 text-rose-500" />
                               <strong className="text-slate-600 font-semibold">{p.stats.beneficiaries?.total || 0}</strong>
                             </span>
                           </div>
