@@ -44,8 +44,7 @@ export default function EmployeeProjectAssignModal({
 
   const empId = employee?._id;
   const fullName = employee
-    ? `${employee.personalDetails?.firstName || employee.firstName || ''} ${
-        employee.personalDetails?.lastName || employee.lastName || ''
+    ? `${employee.personalDetails?.firstName || employee.firstName || ''} ${employee.personalDetails?.lastName || employee.lastName || ''
       }`.trim() || employee.email || 'Employee'
     : 'Employee';
 
@@ -124,7 +123,7 @@ export default function EmployeeProjectAssignModal({
           endDate: '',
         }));
         await loadAssignments();
-        refreshProjects().catch(() => {});
+        refreshProjects().catch(() => { });
         if (onUpdated) onUpdated();
       }
     } catch (err) {
@@ -146,7 +145,7 @@ export default function EmployeeProjectAssignModal({
         setSuccessMsg(res.data.message || 'Removed from project assignment. Core HR record preserved.');
         if (reassignFromId === assignment._id) setReassignFromId('');
         await loadAssignments();
-        refreshProjects().catch(() => {});
+        refreshProjects().catch(() => { });
         if (onUpdated) onUpdated();
       }
     } catch (err) {
@@ -227,11 +226,10 @@ export default function EmployeeProjectAssignModal({
                 {activeAssignments.map((a) => (
                   <div
                     key={a._id}
-                    className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                      reassignFromId === a._id
-                        ? 'bg-amber-50/80 border-amber-300'
-                        : 'bg-white border-slate-200'
-                    }`}
+                    className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${reassignFromId === a._id
+                      ? 'bg-amber-50/80 border-amber-300'
+                      : 'bg-white border-slate-200'
+                      }`}
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -269,11 +267,10 @@ export default function EmployeeProjectAssignModal({
                             isPrimary: Boolean(a.isPrimary),
                           }));
                         }}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold transition-colors cursor-pointer ${
-                          reassignFromId === a._id
-                            ? 'bg-amber-600 text-white'
-                            : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-                        }`}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl font-bold transition-colors cursor-pointer ${reassignFromId === a._id
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                          }`}
                       >
                         <ArrowRightLeft className="w-3.5 h-3.5" />
                         <span>{reassignFromId === a._id ? 'Reassigning...' : 'Reassign'}</span>

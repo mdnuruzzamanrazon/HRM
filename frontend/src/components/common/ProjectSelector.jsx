@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useProject } from '../../context/ProjectContext';
 import { 
   FolderKanban, ChevronDown, Check, Plus, Search, 
-  ExternalLink, Layers, ShieldCheck, MapPin, Sparkles, Building2,
-  FolderOpen, X, ShieldAlert, FolderClock, CalendarDays, HeartHandshake,
-  CheckCircle2, ArrowUpRight, Users, Briefcase
+  ExternalLink, MapPin, FolderOpen, X, 
+  ShieldAlert, FolderClock, CalendarDays, HeartHandshake,
+  CheckCircle2, ArrowUpRight
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
