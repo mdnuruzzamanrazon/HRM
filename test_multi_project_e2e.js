@@ -15,6 +15,10 @@ import { RiskRecord } from './backend/src/models/RiskRecord.js';
 import { ComplaintRecord } from './backend/src/models/ComplaintRecord.js';
 import EventRecord from './backend/src/models/EventRecord.js';
 import Beneficiary from './backend/src/models/Beneficiary.js';
+import { Employee } from './backend/src/models/Employee.js';
+import Asset from './backend/src/models/Asset.js';
+import { EmployeeProjectAssignment } from './backend/src/models/EmployeeProjectAssignment.js';
+import { AssetAssignment } from './backend/src/models/AssetAssignment.js';
 
 const PORT = 5055;
 const BASE_URL = `http://127.0.0.1:${PORT}/api/v1`;
@@ -450,6 +454,193 @@ async function runTests() {
       const wgeiComplaintsCount = await ComplaintRecord.countDocuments({ projectId: wgeiPrj._id });
       assert(wgeiComplaintsCount > 0, `WGEI Project retains all historical complaints (${wgeiComplaintsCount} records linked)`);
     }
+
+    // 12. Independent Core HR Employee Assignment (Test B)
+    console.log('\n--- Step 11: Independent Core HR Employee Management & Project Assignment (Test B) ---');
+    let empA = await Employee.findOne({ email: 'emp_a_test@cbdp.org' });
+    if (!empA) {
+      empA = await Employee.create({
+        employeeCode: `EMP-${Date.now().toString().slice(-4)}A`,
+        email: 'emp_a_test@cbdp.org',
+        personalDetails: {
+          firstName: 'Anisur',
+          lastName: 'Rahman',
+          phone: '01711223344',
+        },
+        jobDetails: {
+          title: 'Senior Project Coordinator',
+          department: 'Operations',
+          employmentType: 'FULL_TIME',
+          joinDate: new Date('2024-01-01'),
+          status: 'ACTIVE',
+        },
+      });
+    }
+
+    let empB = await Employee.findOne({ email: 'emp_b_test@cbdp.org' });
+    if (!empB) {
+      empB = await Employee.create({
+        employeeCode: `EMP-${Date.now().toString().slice(-4)}B`,
+        email: 'emp_b_test@cbdp.org',
+        personalDetails: {
+          firstName: 'Bilkis',
+          lastName: 'Akter',
+          phone: '01811223344',
+        },
+        jobDetails: {
+          title: 'Field Monitoring Officer',
+          department: 'Programs',
+          employmentType: 'FULL_TIME',
+          joinDate: new Date('2024-03-01'),
+          status: 'ACTIVE',
+        },
+      });
+    }
+
+    assert(empA._id && empB._id, 'Core HR employees exist as independent master records');
+
+    // Assign Employee A to Project A
+    const assignEmpARes = await fetch(`${BASE_URL}/employees/${empA._id}/projects`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: projectA._id,
+        roleInProject: 'Lead Field Coordinator',
+        allocationPercentage: 60,
+        startDate: '2026-01-15',
+        isPrimaryProject: true,
+      })
+    });
+    const assignEmpAData = await assignEmpARes.json();
+    assert(assignEmpARes.ok && assignEmpAData.success, 'Employee A assigned to Project A via /api/v1/employees/:id/projects');
+
+    // Assign Employee B to Project B
+    const assignEmpBRes = await fetch(`${BASE_URL}/employees/${empB._id}/projects`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: projectB._id,
+        roleInProject: 'Monitoring & Evaluation Lead',
+        allocationPercentage: 100,
+        startDate: '2026-03-01',
+        isPrimaryProject: true,
+      })
+    });
+    const assignEmpBData = await assignEmpBRes.json();
+    assert(assignEmpBRes.ok && assignEmpBData.success, 'Employee B assigned to Project B via /api/v1/employees/:id/projects');
+
+    // Assign Employee A also to Project B (Multi-project allocation test)
+    const assignEmpAtoBRes = await fetch(`${BASE_URL}/employees/${empA._id}/projects`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: projectB._id,
+        roleInProject: 'Technical Advisory Specialist',
+        allocationPercentage: 40,
+        startDate: '2026-03-15',
+        isPrimaryProject: false,
+      })
+    });
+    const assignEmpAtoBData = await assignEmpAtoBRes.json();
+    assert(assignEmpAtoBRes.ok && assignEmpAtoBData.success, 'Employee A assigned to second project (Project B) with separate allocation (Multi-project support)');
+
+    // Verify Employee A assignments query returns assignments
+    const getEmpAAssignmentsRes = await fetch(`${BASE_URL}/employees/${empA._id}/projects`, { headers: authHeaders });
+    const getEmpAAssignmentsData = await getEmpAAssignmentsRes.json();
+    const activeAssignments = getEmpAAssignmentsData.data?.activeAssignments || [];
+    assert(
+      getEmpAAssignmentsRes.ok && activeAssignments.length >= 2,
+      'Employee A assignment list accurately reports multiple independent project assignments'
+    );
+
+    // Verify removing an assignment does not delete Core HR master record
+    const targetAssignment = activeAssignments.find(a => 
+      String(a.projectId?._id || a.projectId) === String(projectB._id)
+    );
+    if (targetAssignment) {
+      const removeAsgRes = await fetch(`${BASE_URL}/employees/${empA._id}/projects/${targetAssignment._id}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      const removeAsgData = await removeAsgRes.json();
+      assert(removeAsgRes.ok && removeAsgData.success, 'Assignment removed successfully without deleting master employee record');
+
+      const empAAfterRemove = await Employee.findById(empA._id);
+      assert(empAAfterRemove && (empAAfterRemove.jobDetails?.status === 'ACTIVE' || empAAfterRemove.status === 'ACTIVE' || empAAfterRemove.status === 'Active'), 'Employee master record remains active and unaffected after project unassignment');
+    }
+
+    // 13. Independent Asset Management & Project Allocation (Test C)
+    console.log('\n--- Step 12: Independent Asset Tracker & Project Allocation (Test C) ---');
+    let testAsset = await Asset.findOne({ assetId: 'AST-TEST-PROJ-01' });
+    if (!testAsset) {
+      testAsset = await Asset.create({
+        assetId: 'AST-TEST-PROJ-01',
+        name: 'Field Water Testing Spectrophotometer',
+        category: 'Field Equipment',
+        description: 'Portable water quality salinity and pH digital testing device',
+        condition: 'Good',
+        status: 'In Use',
+        location: 'Patuakhali Field Hub',
+        custodian: 'Field Laboratory Team',
+      });
+    }
+    assert(testAsset && testAsset._id, 'Asset master record exists in Asset Tracker');
+
+    // Allocate Asset to Project A
+    const allocateAssetRes = await fetch(`${BASE_URL}/assets/${testAsset._id}/assign`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        projectId: projectA._id,
+        projectName: projectA.name,
+        projectCode: projectA.code,
+        assignedTo: 'Barishal Field Office',
+        assignedToType: 'PROJECT',
+        location: 'Barishal Field Hub',
+        notes: 'Dedicated project allocation for tidal salinity testing',
+      })
+    });
+    const allocateAssetData = await allocateAssetRes.json();
+    assert(allocateAssetRes.ok && allocateAssetData.success, 'Asset allocated to Project A via /api/v1/assets/:id/assign');
+
+    // Verify Asset history has assignment record
+    const assetHistRes = await fetch(`${BASE_URL}/assets/${testAsset._id}/assignments`, { headers: authHeaders });
+    const assetHistData = await assetHistRes.json();
+    const historyList = assetHistData.data?.history || assetHistData.data || [];
+    assert(assetHistRes.ok && historyList.length >= 1, 'Asset assignment history ledger accurately captures project allocation');
+
+    // Verify Master Asset Record remains intact
+    const verifyAssetMaster = await Asset.findById(testAsset._id);
+    assert(
+      verifyAssetMaster && String(verifyAssetMaster.currentAssignment?.projectId) === String(projectA._id),
+      'Asset master record maintains current project assignment without creating duplicate asset records'
+    );
+
+    // 14. Security & Rejection of Unauthorized/Mismatched Requests (Test D)
+    console.log('\n--- Step 13: Security & Project Isolation Enforcement (Test D) ---');
+    const noProjectRiskRes = await fetch(`${BASE_URL}/risk/records`, { headers: authHeaders });
+    assert(
+      noProjectRiskRes.status === 400,
+      'Backend rejects Risk list request missing projectId with 400 Bad Request'
+    );
+
+    const allProjectComplaintRes = await fetch(`${BASE_URL}/complaints?projectId=ALL`, { headers: authHeaders });
+    assert(
+      allProjectComplaintRes.status === 400,
+      'Backend rejects Complaints list request with projectId=ALL with 400 Bad Request'
+    );
+
+    const noProjectEventRes = await fetch(`${BASE_URL}/events`, { headers: authHeaders });
+    assert(
+      noProjectEventRes.status === 400,
+      'Backend rejects Events list request missing projectId with 400 Bad Request'
+    );
+
+    const noProjectBenRes = await fetch(`${BASE_URL}/beneficiaries`, { headers: authHeaders });
+    assert(
+      noProjectBenRes.status === 400,
+      'Backend rejects Beneficiaries list request missing projectId with 400 Bad Request'
+    );
 
   } catch (err) {
     console.error('Fatal test execution error:', err);

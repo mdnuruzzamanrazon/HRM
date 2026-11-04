@@ -37,6 +37,8 @@ export default function RiskRegister() {
     updateProject,
   } = useProject();
 
+  const canManage = ['SUPER_ADMIN', 'HR_ADMIN', 'HR_MANAGER'].includes(user?.role);
+
   // State: Data
   const [risks, setRisks] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -759,46 +761,24 @@ export default function RiskRegister() {
                 </div>
               </div>
 
-              {/* Project Actions & Switcher */}
-              <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
-                <div className="relative flex-1 min-w-0 sm:w-64 lg:w-72">
-                  <select
-                    value={selectedProjectId}
-                    onChange={(e) => switchProject(e.target.value)}
-                    className="w-full appearance-none pl-3 pr-8 py-2 sm:py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 cursor-pointer shadow-xs truncate"
+              {/* Project Context Confirmation & Quick Edit */}
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                  Shared Active Context
+                </span>
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingProject(currentProject);
+                      setIsProjectModalOpen(true);
+                    }}
+                    className="p-2 sm:p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors cursor-pointer flex-shrink-0"
+                    title="Edit Active Project Details"
                   >
-                    {projects.map(p => (
-                      <option key={p._id} value={p._id}>
-                        {p.name} {p.status !== 'ACTIVE' ? `(${p.status})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-
-                <button
-                  onClick={() => {
-                    setEditingProject(currentProject);
-                    setIsProjectModalOpen(true);
-                  }}
-                  className="p-2 sm:p-1.5 rounded-xl border border-slate-200 text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors cursor-pointer flex-shrink-0"
-                  title="Edit Project Details"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    setEditingProject(null);
-                    setIsProjectModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white transition-colors cursor-pointer shadow-xs flex-shrink-0"
-                  title="Create New Project"
-                >
-                  <FolderPlus className="w-3.5 h-3.5 text-slate-300" />
-                  <span>New</span>
-                  <span className="hidden sm:inline">Project</span>
-                </button>
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
 

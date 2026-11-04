@@ -22,6 +22,7 @@ export default function ProjectManagement() {
   const navigate = useNavigate();
   const { 
     projects, 
+    selectedProject,
     selectedProjectId, 
     setSelectedProjectId, 
     loadingProjects, 
@@ -140,6 +141,13 @@ export default function ProjectManagement() {
     setSelectedProjectId(id);
     showToast('Active workspace project switched successfully');
     navigate(`/projects/${id}/dashboard`);
+  };
+
+  const handleSelectActiveProject = (id, name) => {
+    const success = setSelectedProjectId(id);
+    if (success !== false) {
+      showToast(`Active project context switched to "${name}"`);
+    }
   };
 
   const handleSaveProject = async (formData) => {
@@ -299,6 +307,152 @@ export default function ProjectManagement() {
           <p className="text-xl sm:text-2xl font-black text-slate-800 mt-1">{overallStats.totalBeneficiaries}</p>
         </div>
       </div>
+
+      {/* Active Project Workspace Context Showcase */}
+      {selectedProject && (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white p-6 sm:p-7 shadow-xl border border-indigo-900/60 animate-in fade-in duration-200">
+          <div className="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-20 -bottom-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-2.5 min-w-0 max-w-3xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>Current Active Project Context</span>
+                </span>
+                {selectedProject.code && (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-indigo-500/25 text-indigo-200 border border-indigo-400/40">
+                    {selectedProject.code}
+                  </span>
+                )}
+                <span className={cn(
+                  "px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border",
+                  selectedProject.status === 'ACTIVE'
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/30"
+                    : "bg-slate-700/60 text-slate-300 border-slate-600"
+                )}>
+                  {selectedProject.status}
+                </span>
+              </div>
+
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {selectedProject.name}
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed line-clamp-2">
+                  {selectedProject.description || 'Active project workspace context currently powering the Risk Register, Complaints & Feedback, Event Tracker, and Beneficiary Information modules.'}
+                </p>
+              </div>
+
+              {/* Metadata chips */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-300 pt-1">
+                {selectedProject.location && (
+                  <span className="inline-flex items-center gap-1.5 text-slate-300">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                    <span>{selectedProject.location}</span>
+                  </span>
+                )}
+                {selectedProject.officeResponsible && (
+                  <span className="inline-flex items-center gap-1.5 text-slate-300">
+                    <Building2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                    <span>{selectedProject.officeResponsible}</span>
+                  </span>
+                )}
+                {selectedProject.projectManager && (
+                  <span className="inline-flex items-center gap-1.5 text-slate-300">
+                    <Users className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                    <span>Lead: <strong className="text-white">{selectedProject.projectManager}</strong></span>
+                  </span>
+                )}
+                {selectedProject.period && (
+                  <span className="inline-flex items-center gap-1.5 text-slate-300">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                    <span>{selectedProject.period}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Quick module jump pills */}
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 flex-shrink-0 lg:min-w-[240px]">
+              <div className="text-[11px] font-bold text-indigo-300 flex items-center justify-between">
+                <span>Direct Access to Linked Records:</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/risk-register')}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 cursor-pointer"
+                  title="View Risks under this project"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Risks</span>
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-[10px]">
+                    {selectedProject.stats?.risks?.total || 0}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/complaints-register')}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 cursor-pointer"
+                  title="View Complaints under this project"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <FolderClock className="w-3.5 h-3.5 text-indigo-300" />
+                    <span>Complaints</span>
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-[10px]">
+                    {selectedProject.stats?.complaints?.total || 0}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/event-tracker')}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 cursor-pointer"
+                  title="View Events under this project"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <CalendarDays className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Events</span>
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-[10px]">
+                    {selectedProject.stats?.events?.total || 0}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/beneficiaries')}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 cursor-pointer"
+                  title="View Beneficiaries under this project"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <HeartHandshake className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Beneficiaries</span>
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded-md bg-white/20 text-[10px]">
+                    {selectedProject.stats?.beneficiaries?.total || 0}
+                  </span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate(`/projects/${selectedProject._id}/dashboard`)}
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+              >
+                <span>Open Project Workspace</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filter & Search Toolbar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
@@ -585,19 +739,27 @@ export default function ProjectManagement() {
                       Dashboard
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => handleOpenProject(p._id)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer",
-                        isCurrentlySelected
-                          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                          : "bg-slate-900 hover:bg-slate-800 text-white"
-                      )}
-                    >
-                      <span>{isCurrentlySelected ? 'Selected' : 'Open Project'}</span>
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </button>
+                    {isCurrentlySelected ? (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenProject(p._id)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs cursor-pointer"
+                        title="Open project workspace dashboard"
+                      >
+                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        <span>Active Context</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectActiveProject(p._id, p.name)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-slate-900 hover:bg-indigo-600 text-white transition-all shadow-xs cursor-pointer"
+                        title="Establish this project as active context for Risk, Complaints, Events & Beneficiaries"
+                      >
+                        <FolderKanban className="w-3.5 h-3.5 text-indigo-300" />
+                        <span>Select Context</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -674,18 +836,27 @@ export default function ProjectManagement() {
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenProject(p._id)}
-                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors cursor-pointer"
-                          >
-                            {isCurrentlySelected ? 'Selected' : 'Open'}
-                          </button>
+                          {isCurrentlySelected ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                              <span>Active</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectActiveProject(p._id, p.name)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-slate-900 hover:bg-indigo-600 text-white transition-colors cursor-pointer"
+                              title="Set as active project context"
+                            >
+                              <FolderKanban className="w-3 h-3 text-indigo-300" />
+                              <span>Select</span>
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => navigate(`/projects/${p._id}/dashboard`)}
-                            className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                            title="Dashboard"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            title="Open Project Workspace Dashboard"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                           </button>
